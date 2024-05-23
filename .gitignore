@@ -1,9 +1,13 @@
-# Docker Compose
 .DS_Store
 .DS_Store?
 
-docker-compore.yml
+# Docker Compose
+docker-compose.yaml
 
 # Config file
-/config
+/config/config.prod.yaml
+/config/config.dev.yaml
+/config/config.local.yaml
 
+# Makefile
+Makefile
