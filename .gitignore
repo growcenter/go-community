@@ -1,0 +1,9 @@
+# Docker Compose
+.DS_Store
+.DS_Store?
+
+docker-compore.yml
+
+# Config file
+/config
+
