@@ -15,7 +15,7 @@ type coolCategoryUsecase struct {
 	ccr	pgsql.CoolCategoryRepository
 }
 
-func NewCoolDivisionUsecase(ccr pgsql.CoolCategoryRepository) *coolCategoryUsecase {
+func NewCoolCategoryUsecase(ccr pgsql.CoolCategoryRepository) *coolCategoryUsecase {
 	return &coolCategoryUsecase{
 		ccr: ccr,
 	}
