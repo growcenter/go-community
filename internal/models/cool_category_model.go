@@ -15,22 +15,22 @@ type CoolCategory struct {
 	UpdatedAt   *time.Time
 }
 
-func (cd *CoolCategory) ToResponse() *CoolCategoryResponse {
+func (cc *CoolCategory) ToResponse() *CoolCategoryResponse {
 	return &CoolCategoryResponse{
 		Type:        TYPE_COOL_CATEGORY,
-		Code: 		 cd.Code,
-		Name:        cd.Name,
-		AgeStart: 	 cd.AgeStart,
-		AgeEnd:		 cd.AgeEnd,
-		Status:      cd.Status,
+		Code: 		 cc.Code,
+		Name:        cc.Name,
+		AgeStart: 	 cc.AgeStart,
+		AgeEnd:		 cc.AgeEnd,
+		Status:      cc.Status,
 	}
 }
 
 type CreateCoolCategoryRequest struct {
-	Code        string	`json:"code" validate:"required,numerical,min=3,max=3" example:"001"`
+	Code        string	`json:"code" validate:"required,min=3,max=3" example:"001"`
 	Name        string 	`json:"name" validate:"required,min=1,max=50,nospecial,noStartEndSpaces" example:"Professionals"`
-	AgeStart	int		`json:"ageStart" validate:"required,numerical,nospecial,noStartEndSpaces" example:"21"`
-	AgeEnd		int		`json:"ageEnd" validate:"required,numerical,nospecial,noStartEndSpaces" example:"32"`
+	AgeStart	int		`json:"ageStart" validate:"required,noStartEndSpaces" example:"21"`
+	AgeEnd		int		`json:"ageEnd" validate:"required,noStartEndSpaces" example:"32"`
 	Status      string	`json:"status" validate:"required,oneof=active inactive" example:"active"`
 }
 
