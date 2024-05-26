@@ -35,6 +35,10 @@ func (ccu *coolCategoryUsecase) Create(ctx context.Context, request *models.Crea
 		return nil, models.ErrorAlreadyExist
 	}
 
+	if request.AgeEnd < request.AgeStart || request.AgeStart > request.AgeEnd {
+		return nil, models.ErrorAgeRange
+	}
+
 	input := models.CoolCategory{
 		Code: request.Code,
 		Name: request.Name,

@@ -14,6 +14,9 @@ var (
 	ErrorUnauthorized = errors.New("request not authenticated due to missing, invalid, or expired token")
 	ErrorNoRows	= sql.ErrNoRows
 
+	// Specific for COOL Category
+	ErrorAgeRange = errors.New("ageStart should be less than ageEnd")
+
 	// Special for Validation Error
 	ErrorInvalidInput = errors.New("invalid request input")
 	ErrorEmailInput = errors.New("email format is invalid, should be: xxxx@xxxx.com")
@@ -76,6 +79,12 @@ func ErrorMapping(err error) ErrorResponse {
 			Message: err.Error(),
 		}
 	case ErrorEmailInput:
+		return ErrorResponse{
+			Code: http.StatusBadRequest,
+			Status: "INVALID_ARGUMENT",
+			Message: err.Error(),
+		}
+	case ErrorAgeRange:
 		return ErrorResponse{
 			Code: http.StatusBadRequest,
 			Status: "INVALID_ARGUMENT",
