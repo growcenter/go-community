@@ -8,7 +8,7 @@ import (
 
 type CoolCategoryUsecase interface {
 	Create(ctx context.Context, request *models.CreateCoolCategoryRequest) (coolCategory *models.CoolCategory, err error)
-	GetAll(ctx context.Context) (coolCategories []*models.CoolCategory, err error)
+	GetAll(ctx context.Context) (coolCategories []models.CoolCategory, err error)
 }
 
 type coolCategoryUsecase struct {
