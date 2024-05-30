@@ -20,7 +20,8 @@ func NewCampusHandler(api *echo.Group, u *usecases.Usecases) {
     // Define campus routes
 	endpoint := api.Group("/campus")
     endpoint.POST("", handler.Create)
-	endpoint.GET("", handler.GetAllCampus) 
+	endpoint.GET("", handler.GetAllCampus)
+	endpoint.GET("/:code", handler.GetByCode)  
 }
 
 func (ch *CampusHandler) Create(ctx echo.Context) error {
@@ -57,4 +58,13 @@ func (ch *CampusHandler) GetAllCampus(ctx echo.Context) error {
 	}
 
 	return response.SuccessList(ctx, http.StatusOK, len(res), res)
+}
+func (ch *CampusHandler) GetByCode(ctx echo.Context) error {
+    code := ctx.Param("code")
+    campus, err := ch.usecase.Campus.GetByCode(ctx.Request().Context(), code)
+    if err != nil {
+        return response.Error(ctx, err)
+    }
+
+    return response.Success(ctx, http.StatusOK, campus.ToResponse())
 }
