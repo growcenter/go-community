@@ -15,7 +15,7 @@ type Usecases struct {
 func New(d Dependencies) *Usecases{
 	health := NewHealthUsecase(d.Repository.Health)
 	campus := NewCampusUsecase(d.Repository.Campus)
-	coolCategory := NewCoolDivisionUsecase(d.Repository.CoolCategory)
+	coolCategory := NewCoolCategoryUsecase(d.Repository.CoolCategory)
 
 	return &Usecases{
 		Health: *health,

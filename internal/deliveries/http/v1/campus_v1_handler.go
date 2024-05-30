@@ -19,7 +19,8 @@ func NewCampusHandler(api *echo.Group, u *usecases.Usecases) {
 
     // Define campus routes
 	endpoint := api.Group("/campus")
-    endpoint.POST("", handler.Create) 
+    endpoint.POST("", handler.Create)
+	endpoint.GET("", handler.GetAllCampus) 
 }
 
 func (ch *CampusHandler) Create(ctx echo.Context) error {
@@ -42,4 +43,18 @@ func (ch *CampusHandler) Create(ctx echo.Context) error {
 
 	return response.Success(ctx, http.StatusCreated, new.ToResponse())
 
+}
+
+func (ch *CampusHandler) GetAllCampus(ctx echo.Context) error {
+	data, err := ch.usecase.Campus.GetAll(ctx.Request().Context())
+	if err != nil {
+		return response.Error(ctx, err)
+	}
+
+	var res []models.CampusResponse
+	for _, v := range data {
+		res = append(res, *v.ToResponse())
+	}
+
+	return response.SuccessList(ctx, http.StatusOK, len(res), res)
 }

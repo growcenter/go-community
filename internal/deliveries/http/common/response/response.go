@@ -25,6 +25,16 @@ func ErrorValidation(ctx echo.Context, errors interface{}) error {
 	return ctx.JSON(res.Code, res)
 }
 
-func Success(ctx echo.Context, code int,  response interface{}) error {
+func Success(ctx echo.Context, code int, response interface{}) error {
     return ctx.JSON(code, response)
+}
+
+func SuccessList(ctx echo.Context, code int, totalRows int, data interface{}) error {
+	response := models.List{
+		Type: "collection",
+		Data: data,
+		TotalRows: totalRows,
+	}
+
+	return ctx.JSON(code, response)
 }

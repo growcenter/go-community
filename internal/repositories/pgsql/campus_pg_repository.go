@@ -10,6 +10,7 @@ import (
 type CampusRepository interface {
 	Create(ctx context.Context, campus *models.Campus) (err error)
 	GetByCode(ctx context.Context, code string) (campus models.Campus, err error)
+	GetAll(ctx context.Context) (campus []models.Campus, err error)
 }
 
 type campusRepository struct {
@@ -38,6 +39,17 @@ func (cr *campusRepository) GetByCode(ctx context.Context, code string) (campus 
 
 	var c models.Campus
 	err = cr.db.Where("code = ?", code).Find(&c).Error
+
+	return c, err
+}
+
+func (cr *campusRepository) GetAll(ctx context.Context) (campus []models.Campus, err error) {
+	defer func ()  {
+		LogRepository(ctx, err)
+	}()
+
+	var c []models.Campus
+	err = cr.db.Find(&c).Error
 
 	return c, err
 }

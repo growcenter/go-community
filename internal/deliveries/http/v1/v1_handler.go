@@ -9,6 +9,7 @@ import (
 func NewV1Handler(g *echo.Group, u *usecases.Usecases) {
     v1 := g.Group("/v1")
 
-    // Initialize user handler
+    // Initialize handlers
     NewCampusHandler(v1, u)
+	NewCoolHandler(v1, u)
 }
