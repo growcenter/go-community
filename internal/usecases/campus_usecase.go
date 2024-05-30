@@ -10,6 +10,7 @@ import (
 type CampusUsecase interface {
 	Create(ctx context.Context, request *models.CreateCampusRequest) (user *models.Campus, err error)
 	GetAll(ctx context.Context) (campus []models.Campus, err error)
+	GetByCode(ctx context.Context, code string) (campus *models.Campus, err error)
 }
 
 type campusUsecase struct {
@@ -64,4 +65,21 @@ func (cu *campusUsecase) GetAll(ctx context.Context) (campus []models.Campus, er
 	}
 
 	return data, nil
+}
+
+func (cu *campusUsecase) GetByCode(ctx context.Context, code string) (campus *models.Campus, err error) {
+    defer func() {
+        LogService(ctx, err)
+    }()
+
+    campusData, err := cu.cr.GetByCode(ctx, code)
+    if err != nil {
+        return nil, err
+    }
+
+    if campusData.ID == 0 {
+        return nil, models.ErrorDataNotFound
+    }
+
+    return &campusData, nil
 }
