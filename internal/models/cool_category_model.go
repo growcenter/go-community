@@ -5,7 +5,7 @@ import "time"
 var TYPE_COOL_CATEGORY = "coolCategory"
 
 type CoolCategory struct {
-	ID          int
+	ID          int			
 	Code		string
 	Name        string
 	AgeStart   	int
