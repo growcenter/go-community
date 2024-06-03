@@ -12,4 +12,5 @@ func NewV1Handler(g *echo.Group, u *usecases.Usecases) {
     // Initialize handlers
     NewCampusHandler(v1, u)
 	NewCoolHandler(v1, u)
+	NewLocationHandler(v1, u)
 }
