@@ -32,7 +32,6 @@ func New(e *echo.Echo, u *usecases.Usecases) {
 
 	// Input swagger initalization here
 
-
 	e.GET("/", func(ctx echo.Context) error {
 		message := "Welcome to GROW Center API Service"
 		return ctx.String(http.StatusOK, message)
@@ -45,29 +44,3 @@ func New(e *echo.Echo, u *usecases.Usecases) {
 	health.NewHealhHandler(api, *u)
 	v1.NewV1Handler(api, u)
 }
-
-
-
-
-// func (h *Handler) Start(ctx context.Context, contract *contract.Contract) *echo.Echo {
-// 	router := echo.New()
-
-// 	middleware := middleware.New(router, contract)
-// 	middleware.Default()
-
-// 	// Put Swagger HERE
-
-// 	// Initialize router
-// 	router.GET("/", func(ctx echo.Context) error {
-// 		message := fmt.Sprintf("Welcome to %s", contract.Config.Application.Name)
-// 		return ctx.String(http.StatusOK, message)
-// 	})
-
-// 	// Grouping API
-// 	api := router.Group("/api")
-
-// 	// Initialize handlers from Health and V1
-// 	health.New(api, contract.Usecase.Health)
-
-// 	return router
-// }

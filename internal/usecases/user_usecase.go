@@ -3,11 +3,13 @@ package usecases
 import (
 	"context"
 	"go-community/internal/models"
+	"go-community/internal/pkg/generator"
 	"go-community/internal/repositories/pgsql"
+	"strings"
 )
 
 type UserUsecase interface {
-	Create(ctx context.Context, request *models.CreateUserCoolRequest) (user *models.User, err error)
+	CreateCool(ctx context.Context, request *models.CreateUserCoolRequest) (user *models.User, err error)
 }
 
 type userUsecase struct {
@@ -22,7 +24,7 @@ func NewUserUsecase(ur pgsql.UserRepository, cr pgsql.CampusRepository, ccr pgsq
 	}
 }
 
-func (uu *userUsecase) Create(ctx context.Context, request *models.CreateUserCoolRequest) (user *models.User, err error) {
+func (uu *userUsecase) CreateCool(ctx context.Context, request *models.CreateUserCoolRequest) (user *models.User, err error) {
 	defer func() {
 		LogService(ctx, err)
 	}()
@@ -63,19 +65,27 @@ func (uu *userUsecase) Create(ctx context.Context, request *models.CreateUserCoo
 		return nil, models.ErrorDataNotFound
 	}
 
-	return
+	accountNumber, err := generator.AccountNumber(&campus, &coolCategory)
+	if err != nil {
+		return nil, err
+	}
 
-	// input := models.CoolCategory{
-	// 	Code:     request,
-	// 	Name:     request.Name,
-	// 	AgeStart: request.AgeStart,
-	// 	AgeEnd:   request.AgeEnd,
-	// 	Status:   request.Status,
-	// }
+	input := models.User{
+		AccountNumber:    accountNumber,
+		Name:             request.Name,
+		PhoneNumber:      request.PhoneNumber,
+		Email:            strings.ToLower(request.Email),
+		UserType:         "REQUEST_COOL",
+		Status:           "active",
+		Gender:           request.Gender,
+		CampusCode:       request.CampusCode,
+		CoolCategoryCode: request.CoolCategoryCode,
+		MaritalStatus:    request.MaritalStatus,
+	}
 
-	// if err := ccu.ccr.Create(ctx, &input); err != nil {
-	// 	return nil, err
-	// }
+	if err := uu.ur.Create(ctx, &input); err != nil {
+		return nil, err
+	}
 
-	// return &input, nil
+	return &input, nil
 }
