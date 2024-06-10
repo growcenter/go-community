@@ -17,7 +17,7 @@ type CoolHandler struct {
 func NewCoolHandler(api *echo.Group, u *usecases.Usecases) {
     handler := &CoolHandler{usecase: u}
 
-    // Define campus routes
+	// Define campus routes
 	endpoint := api.Group("/cool")
     endpoint.POST("/category", handler.CreateCategory)
 	endpoint.GET("/category", handler.GetAllCategory)

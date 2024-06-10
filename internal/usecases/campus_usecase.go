@@ -14,7 +14,7 @@ type CampusUsecase interface {
 }
 
 type campusUsecase struct {
-	cr	pgsql.CampusRepository
+	cr pgsql.CampusRepository
 }
 
 func NewCampusUsecase(cr pgsql.CampusRepository) *campusUsecase {
@@ -25,8 +25,8 @@ func NewCampusUsecase(cr pgsql.CampusRepository) *campusUsecase {
 
 func (cu *campusUsecase) Create(ctx context.Context, request *models.CreateCampusRequest) (user *models.Campus, err error) {
 	defer func() {
-        LogService(ctx, err)
-    }()
+		LogService(ctx, err)
+	}()
 
 	code := strings.ToUpper(request.Code)
 	exist, err := cu.cr.GetByCode(ctx, code)
@@ -39,12 +39,12 @@ func (cu *campusUsecase) Create(ctx context.Context, request *models.CreateCampu
 	}
 
 	input := models.Campus{
-		Code: code,
-		Region: request.Region,
-		Name: request.Name,
+		Code:     code,
+		Region:   request.Region,
+		Name:     request.Name,
 		Location: request.Location,
-		Address: request.Address,
-		Status: request.Status,
+		Address:  request.Address,
+		Status:   request.Status,
 	}
 
 	if err := cu.cr.Create(ctx, &input); err != nil {
@@ -56,8 +56,8 @@ func (cu *campusUsecase) Create(ctx context.Context, request *models.CreateCampu
 
 func (cu *campusUsecase) GetAll(ctx context.Context) (campus []models.Campus, err error) {
 	defer func() {
-        LogService(ctx, err)
-    }()
+		LogService(ctx, err)
+	}()
 
 	data, err := cu.cr.GetAll(ctx)
 	if err != nil {
@@ -68,18 +68,18 @@ func (cu *campusUsecase) GetAll(ctx context.Context) (campus []models.Campus, er
 }
 
 func (cu *campusUsecase) GetByCode(ctx context.Context, code string) (campus *models.Campus, err error) {
-    defer func() {
-        LogService(ctx, err)
-    }()
+	defer func() {
+		LogService(ctx, err)
+	}()
 
-    campusData, err := cu.cr.GetByCode(ctx, code)
-    if err != nil {
-        return nil, err
-    }
+	campusData, err := cu.cr.GetByCode(ctx, code)
+	if err != nil {
+		return nil, err
+	}
 
-    if campusData.ID == 0 {
-        return nil, models.ErrorDataNotFound
-    }
+	if campusData.ID == 0 {
+		return nil, models.ErrorDataNotFound
+	}
 
-    return &campusData, nil
+	return &campusData, nil
 }

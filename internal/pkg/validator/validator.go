@@ -19,6 +19,8 @@ func init() {
 	registerNoSpacesAtStartOrEnd()
 	registerDate()
 	registerDatetime()
+	registerEmailFormat()
+	registerPhoneFormat()
 }
 
 func Validate(request interface{}) error {
@@ -76,7 +78,6 @@ func Validate(request interface{}) error {
 	return errs.ErrorOrNil()
 }
 
-
 func registerNoSpecialCharacters() {
 	valid.RegisterValidation("nospecial", func(fl v10.FieldLevel) bool {
 		input := fl.Field().String()
@@ -106,6 +107,22 @@ func registerDatetime() {
 	valid.RegisterValidation("datetime", func(fl v10.FieldLevel) bool {
 		input := fl.Field().String()
 		pattern := `\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}`
+		return regexp.MustCompile(pattern).MatchString(input)
+	})
+}
+
+func registerEmailFormat() {
+	valid.RegisterValidation("emailFormat", func(fl v10.FieldLevel) bool {
+		input := fl.Field().String()
+		pattern := `^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$`
+		return regexp.MustCompile(pattern).MatchString(input)
+	})
+}
+
+func registerPhoneFormat() {
+	valid.RegisterValidation("phoneFormat", func(fl v10.FieldLevel) bool {
+		input := fl.Field().String()
+		pattern := `^\+?(\d{1,3})?[-.\s]?\(?\d{3}\)?[-.\s]?\d{3}[-.\s]?\d{4}$`
 		return regexp.MustCompile(pattern).MatchString(input)
 	})
 }
