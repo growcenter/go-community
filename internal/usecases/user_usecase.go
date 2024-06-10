@@ -2,6 +2,7 @@ package usecases
 
 import (
 	"context"
+	"fmt"
 	"go-community/internal/models"
 	"go-community/internal/pkg/generator"
 	"go-community/internal/repositories/pgsql"
@@ -10,6 +11,7 @@ import (
 
 type UserUsecase interface {
 	CreateCool(ctx context.Context, request *models.CreateUserCoolRequest) (user *models.User, err error)
+	GetByAccountNumber(ctx context.Context, accountNumber string) (user *models.User, err error)
 }
 
 type userUsecase struct {
@@ -20,7 +22,9 @@ type userUsecase struct {
 
 func NewUserUsecase(ur pgsql.UserRepository, cr pgsql.CampusRepository, ccr pgsql.CoolCategoryRepository) *userUsecase {
 	return &userUsecase{
-		ur: ur,
+		ur:  ur,
+		cr:  cr,
+		ccr: ccr,
 	}
 }
 
@@ -34,6 +38,8 @@ func (uu *userUsecase) CreateCool(ctx context.Context, request *models.CreateUse
 		return nil, err
 	}
 
+	fmt.Println("1ok")
+
 	if existEmail.ID != 0 {
 		return nil, models.ErrorAlreadyExist
 	}
@@ -42,16 +48,16 @@ func (uu *userUsecase) CreateCool(ctx context.Context, request *models.CreateUse
 	if err != nil {
 		return nil, err
 	}
-
+	fmt.Println("2ok")
 	if existPhone.ID != 0 {
 		return nil, models.ErrorAlreadyExist
 	}
-
+	fmt.Println("3ok")
 	campus, err := uu.cr.GetByCode(ctx, request.CampusCode)
 	if err != nil {
 		return nil, err
 	}
-
+	fmt.Println("4ok")
 	if campus.ID == 0 {
 		return nil, models.ErrorDataNotFound
 	}
@@ -73,7 +79,7 @@ func (uu *userUsecase) CreateCool(ctx context.Context, request *models.CreateUse
 	input := models.User{
 		AccountNumber:    accountNumber,
 		Name:             request.Name,
-		PhoneNumber:      request.PhoneNumber,
+		PhoneNumber:      fmt.Sprintf("+62%s", request.PhoneNumber),
 		Email:            strings.ToLower(request.Email),
 		UserType:         "REQUEST_COOL",
 		Status:           "active",
@@ -88,4 +94,21 @@ func (uu *userUsecase) CreateCool(ctx context.Context, request *models.CreateUse
 	}
 
 	return &input, nil
+}
+
+func (uu *userUsecase) GetByAccountNumber(ctx context.Context, accountNumber string) (user *models.User, err error) {
+	defer func() {
+		LogService(ctx, err)
+	}()
+
+	data, err := uu.ur.GetByAccountNumber(ctx, accountNumber)
+	if err != nil {
+		return nil, err
+	}
+
+	if data.ID == 0 {
+		return nil, models.ErrorDataNotFound
+	}
+
+	return &data, nil
 }

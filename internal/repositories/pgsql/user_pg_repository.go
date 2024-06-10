@@ -39,7 +39,7 @@ func (ur *userRepository) GetByAccountNumber(ctx context.Context, accountNumber 
 	}()
 
 	var u models.User
-	err = ur.db.Where("account_number = ?", accountNumber).First(&u).Error
+	err = ur.db.Where("account_number = ?", accountNumber).Find(&u).Error
 
 	return u, err
 }
@@ -50,7 +50,7 @@ func (ur *userRepository) GetByEmail(ctx context.Context, email string) (user mo
 	}()
 
 	var u models.User
-	err = ur.db.Where("email = ?", email).First(&u).Error
+	err = ur.db.Where("email = ?", email).Find(&u).Error
 
 	return u, err
 }
@@ -61,7 +61,7 @@ func (ur *userRepository) GetByPhoneNumber(ctx context.Context, phoneNumber stri
 	}()
 
 	var u models.User
-	err = ur.db.Where("phone_number = ?", phoneNumber).First(&u).Error
+	err = ur.db.Where("phone_number = ?", phoneNumber).Find(&u).Error
 
 	return u, err
 }

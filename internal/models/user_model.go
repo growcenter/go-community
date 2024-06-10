@@ -15,7 +15,7 @@ type User struct {
 	Email            string
 	UserType         string
 	Status           string
-	Roles            []string
+	Roles            string
 	Token            string
 	Gender           string
 	Address          string
@@ -24,7 +24,7 @@ type User struct {
 	DateOfBirth      *time.Time
 	PlaceOfBirth     string
 	MaritalStatus    string
-	DateOfMarriage   string
+	DateOfMarriage   *time.Time
 	EmploymentStatus string
 	EducationLevel   string
 	KKJNumber        string
@@ -32,12 +32,9 @@ type User struct {
 	CreatedAt        *time.Time
 	UpdatedAt        *time.Time
 	DeletedAt        sql.NullTime
-
-	Campus       Campus
-	CoolCategory CoolCategory
 }
 
-func (u *User) ToCreateUserCoolUser() *CreateUserCoolResponse {
+func (u *User) ToCreateUserCool() *CreateUserCoolResponse {
 	return &CreateUserCoolResponse{
 		Type:             TYPE_USER,
 		AccountNumber:    u.AccountNumber,
@@ -57,7 +54,7 @@ type CreateUserCoolRequest struct {
 	Name             string `json:"name" validate:"required,min=1,max=50,nospecial,noStartEndSpaces" example:"Professionals"`
 	Gender           string `json:"gender" validate:"required,oneof=male female" example:"female"`
 	Age              int    `json:"age" validate:"required,noStartEndSpaces" example:"21"`
-	PhoneNumber      string `json:"phoneNumber" validate:"required,noStartEndSpaces"`
+	PhoneNumber      string `json:"phoneNumber" validate:"required,noStartEndSpaces,phoneFormat"`
 	Email            string `json:"email" validate:"required,noStartEndSpaces,emailFormat" example:"32"`
 	CampusCode       string `json:"campusCode" validate:"required,min=3,max=3" example:"001"`
 	CoolCategoryCode string `json:"coolCategoryCode" validate:"required,min=3,max=3" example:"001"`
@@ -74,10 +71,7 @@ type CreateUserCoolResponse struct {
 	PhoneNumber      string     `json:"phoneNumber"`
 	Email            string     `json:"email"`
 	CampusCode       string     `json:"campusCode"`
-	CampusName       string     `json:"campusName"`
-	Region           string     `json:"region"`
 	CoolCategoryCode string     `json:"coolCategoryCode"`
-	CoolCategoryName string     `json:"coolCategoryName"`
 	MaritalStatus    string     `json:"maritalStatus"`
 	Status           string     `json:"status" example:"active"`
 	CreatedAt        *time.Time `json:"-" example:"2006-01-02 15:04:05"`

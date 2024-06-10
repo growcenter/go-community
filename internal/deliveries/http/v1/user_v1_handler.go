@@ -18,7 +18,8 @@ func NewUserHandler(api *echo.Group, u *usecases.Usecases) {
 	handler := &UserHandler{usecase: u}
 
 	endpoint := api.Group("/user")
-	endpoint.POST("", handler.CreateCool)
+	endpoint.POST("/cool", handler.CreateCool)
+	// endpoint.GET("/:accountNumber")
 }
 
 func (uh *UserHandler) CreateCool(ctx echo.Context) error {
@@ -36,5 +37,5 @@ func (uh *UserHandler) CreateCool(ctx echo.Context) error {
 		return response.Error(ctx, err)
 	}
 
-	return response.Success(ctx, http.StatusCreated, new.ToCreateUserCoolUser())
+	return response.Success(ctx, http.StatusCreated, new.ToCreateUserCool())
 }
