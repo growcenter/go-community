@@ -8,7 +8,7 @@ var KIND_CAMPUS = "campus"
 
 type Campus struct {
 	ID        int
-	Code      string
+	Code      string `gorm:"primaryKey"`
 	Region    string
 	Name      string
 	Location  string

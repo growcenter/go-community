@@ -14,7 +14,7 @@ type CampusRepository interface {
 }
 
 type campusRepository struct {
-	db	*gorm.DB
+	db  *gorm.DB
 	trx TransactionRepository
 }
 
@@ -23,7 +23,7 @@ func NewCampusRepository(db *gorm.DB, trx TransactionRepository) CampusRepositor
 }
 
 func (cr *campusRepository) Create(ctx context.Context, campus *models.Campus) (err error) {
-	defer func ()  {
+	defer func() {
 		LogRepository(ctx, err)
 	}()
 
@@ -33,7 +33,7 @@ func (cr *campusRepository) Create(ctx context.Context, campus *models.Campus) (
 }
 
 func (cr *campusRepository) GetByCode(ctx context.Context, code string) (campus models.Campus, err error) {
-	defer func ()  {
+	defer func() {
 		LogRepository(ctx, err)
 	}()
 
@@ -44,7 +44,7 @@ func (cr *campusRepository) GetByCode(ctx context.Context, code string) (campus 
 }
 
 func (cr *campusRepository) GetAll(ctx context.Context) (campus []models.Campus, err error) {
-	defer func ()  {
+	defer func() {
 		LogRepository(ctx, err)
 	}()
 
