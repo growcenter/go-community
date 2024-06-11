@@ -10,6 +10,7 @@ import (
 type UserRepository interface {
 	Create(ctx context.Context, user *models.User) (err error)
 	GetByAccountNumber(ctx context.Context, accountNumber string) (user models.User, err error)
+	GetOneByAccountNumber(ctx context.Context, accountNumber string) (user models.User, err error)
 	GetByEmail(ctx context.Context, email string) (user models.User, err error)
 	GetByPhoneNumber(ctx context.Context, phoneNumber string) (user models.User, err error)
 }
@@ -39,7 +40,18 @@ func (ur *userRepository) GetByAccountNumber(ctx context.Context, accountNumber 
 	}()
 
 	var u models.User
-	err = ur.db.Where("account_number = ?", accountNumber).Find(&u).Error
+	err = ur.db.Where("account_number = ?", accountNumber).Preload("Campus").Preload("CoolCategory").Find(&u).Error
+
+	return u, err
+}
+
+func (ur *userRepository) GetOneByAccountNumber(ctx context.Context, accountNumber string) (user models.User, err error) {
+	defer func() {
+		LogRepository(ctx, err)
+	}()
+
+	var u models.User
+	err = ur.db.Where("account_number = ?", accountNumber).Preload("Campus").Preload("CoolCategory").First(&u).Error
 
 	return u, err
 }
