@@ -11,6 +11,7 @@ import (
 
 type UserUsecase interface {
 	CreateCool(ctx context.Context, request *models.CreateUserCoolRequest) (user *models.User, err error)
+	CreateUser(ctx context.Context, request *models.CreateUserRequest) (user *models.User, err error)
 	GetByAccountNumber(ctx context.Context, accountNumber string) (user *models.User, err error)
 }
 
@@ -96,6 +97,14 @@ func (uu *userUsecase) CreateCool(ctx context.Context, request *models.CreateUse
 	return &input, nil
 }
 
+func (uu *userUsecase) CreateUser(ctx context.Context, request *models.CreateUserRequest) (user *models.User, err error) {
+	defer func() {
+		LogService(ctx, err)
+	}()
+
+	return
+}
+
 func (uu *userUsecase) GetByAccountNumber(ctx context.Context, accountNumber string) (user *models.User, err error) {
 	defer func() {
 		LogService(ctx, err)
@@ -111,4 +120,13 @@ func (uu *userUsecase) GetByAccountNumber(ctx context.Context, accountNumber str
 	}
 
 	return &data, nil
+}
+
+func (uu *userUsecase) validateUser(ctx context.Context, request *models.CreateUserRequest) (bool, error) {
+	user, _ := uu.ur.GetByEmail(ctx, strings.ToLower(request.Email))
+	if user.ID != 0 {
+		return true, nil
+	}
+
+	return false, nil
 }
