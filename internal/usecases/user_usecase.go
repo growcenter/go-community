@@ -39,8 +39,6 @@ func (uu *userUsecase) CreateCool(ctx context.Context, request *models.CreateUse
 		return nil, err
 	}
 
-	fmt.Println("1ok")
-
 	if existEmail.ID != 0 {
 		return nil, models.ErrorAlreadyExist
 	}
@@ -49,16 +47,16 @@ func (uu *userUsecase) CreateCool(ctx context.Context, request *models.CreateUse
 	if err != nil {
 		return nil, err
 	}
-	fmt.Println("2ok")
+
 	if existPhone.ID != 0 {
 		return nil, models.ErrorAlreadyExist
 	}
-	fmt.Println("3ok")
+
 	campus, err := uu.cr.GetByCode(ctx, request.CampusCode)
 	if err != nil {
 		return nil, err
 	}
-	fmt.Println("4ok")
+
 	if campus.ID == 0 {
 		return nil, models.ErrorDataNotFound
 	}
@@ -72,7 +70,7 @@ func (uu *userUsecase) CreateCool(ctx context.Context, request *models.CreateUse
 		return nil, models.ErrorDataNotFound
 	}
 
-	accountNumber, err := generator.AccountNumber(&campus, &coolCategory)
+	accountNumber, err := generator.AccountNumber()
 	if err != nil {
 		return nil, err
 	}
@@ -83,7 +81,7 @@ func (uu *userUsecase) CreateCool(ctx context.Context, request *models.CreateUse
 		PhoneNumber:      fmt.Sprintf("+62%s", request.PhoneNumber),
 		Email:            strings.ToLower(request.Email),
 		UserType:         "REQUEST_COOL",
-		Status:           "active",
+		Status:           "NOT_REGISTERED",
 		Gender:           request.Gender,
 		CampusCode:       request.CampusCode,
 		CoolCategoryCode: request.CoolCategoryCode,
@@ -101,6 +99,94 @@ func (uu *userUsecase) CreateUser(ctx context.Context, request *models.CreateUse
 	defer func() {
 		LogService(ctx, err)
 	}()
+
+	exist, err := uu.ur.GetByEmail(ctx, strings.ToLower(request.Email))
+	if err != nil {
+		return nil, err
+	}
+
+	campus, err := uu.cr.GetByCode(ctx, strings.ToUpper(request.CampusCode))
+	if err != nil {
+		return nil, err
+	}
+
+	if campus.ID == 0 {
+		return nil, models.ErrorDataNotFound
+	}
+
+	switch {
+	case exist.ID != 0 && exist.UserType == "REQUEST_COOL":
+		token := "Trial"
+		password := request.Password
+
+		var input models.User
+
+		if request.CoolCategoryCode != "" {
+			input = models.User{
+				UserType: "NON_KKJ_MEMBER",
+				Status:   "NOT_REGISTERED",
+				Roles:    "STANDARD_MEMBER",
+				Password: password,
+				Token:    token,
+			}
+		}
+
+		coolCategory, err := uu.ccr.GetByCode(ctx, strings.ToUpper(request.CoolCategoryCode))
+		if err != nil {
+			return nil, err
+		}
+
+		if coolCategory.ID == 0 {
+			return nil, models.ErrorDataNotFound
+		}
+
+		input = models.User{
+			UserType:         "NON_KKJ_MEMBER",
+			Status:           "NOT_REGISTERED",
+			Roles:            "COOL_MEMBER",
+			CoolCategoryCode: request.CoolCategoryCode,
+			Password:         password,
+			Token:            token,
+		}
+
+		if err := uu.ur.Update(ctx, &input); err != nil {
+			return nil, err
+		}
+
+	case exist.ID != 0 && exist.UserType != "REQUEST_COOL":
+		return nil, models.ErrorAlreadyExist
+	default:
+		coolCategory, err := uu.ccr.GetByCode(ctx, strings.ToUpper(request.CoolCategoryCode))
+		if err != nil {
+			return nil, err
+		}
+
+		if coolCategory.ID == 0 {
+			return nil, models.ErrorDataNotFound
+		}
+
+		accountNumber, err := generator.AccountNumber()
+		if err != nil {
+			return nil, err
+		}
+
+		input := models.User{
+			AccountNumber:    accountNumber,
+			Name:             request.Name,
+			PhoneNumber:      fmt.Sprintf("+62%s", request.PhoneNumber),
+			Email:            strings.ToLower(request.Email),
+			UserType:         "REQUEST_COOL",
+			Status:           "NOT_REGISTERED",
+			Gender:           request.Gender,
+			CampusCode:       request.CampusCode,
+			CoolCategoryCode: request.CoolCategoryCode,
+			MaritalStatus:    request.MaritalStatus,
+		}
+
+		if err := uu.ur.Create(ctx, &input); err != nil {
+			return nil, err
+		}
+	}
 
 	return
 }
@@ -120,13 +206,4 @@ func (uu *userUsecase) GetByAccountNumber(ctx context.Context, accountNumber str
 	}
 
 	return &data, nil
-}
-
-func (uu *userUsecase) validateUser(ctx context.Context, request *models.CreateUserRequest) (bool, error) {
-	user, _ := uu.ur.GetByEmail(ctx, strings.ToLower(request.Email))
-	if user.ID != 0 {
-		return true, nil
-	}
-
-	return false, nil
 }

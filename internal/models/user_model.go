@@ -13,6 +13,7 @@ type User struct {
 	Name             string
 	PhoneNumber      string
 	Email            string
+	Password         string
 	UserType         string
 	Status           string
 	Roles            string

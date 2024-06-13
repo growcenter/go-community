@@ -2,12 +2,11 @@ package generator
 
 import (
 	"fmt"
-	"go-community/internal/models"
 	"math/rand"
 	"time"
 )
 
-func AccountNumber(campus *models.Campus, coolCategory *models.CoolCategory) (accountNumber string, err error) {
+func AccountNumber() (accountNumber string, err error) {
 	// if campus.ID == 0 || coolCategory.ID == 0 {
 	// 	return "", err
 	// }
