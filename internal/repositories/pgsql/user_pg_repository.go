@@ -9,6 +9,7 @@ import (
 
 type UserRepository interface {
 	Create(ctx context.Context, user *models.User) (err error)
+	Update(ctx context.Context, user *models.User) (err error)
 	GetByAccountNumber(ctx context.Context, accountNumber string) (user models.User, err error)
 	GetByEmail(ctx context.Context, email string) (user models.User, err error)
 	GetByPhoneNumber(ctx context.Context, phoneNumber string) (user models.User, err error)
@@ -30,6 +31,16 @@ func (ur *userRepository) Create(ctx context.Context, user *models.User) (err er
 
 	return ur.trx.Transaction(func(dtx *gorm.DB) error {
 		return ur.db.Create(&user).Error
+	})
+}
+
+func (ur *userRepository) Update(ctx context.Context, user *models.User) (err error) {
+	defer func() {
+		LogRepository(ctx, err)
+	}()
+
+	return ur.trx.Transaction(func(dtx *gorm.DB) error {
+		return ur.db.Save(&user).Error
 	})
 }
 
