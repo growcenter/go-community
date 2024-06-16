@@ -80,6 +80,20 @@ type (
 	}
 )
 
+func (u *User) ToCreateUser() *CreateUserResponse {
+	return &CreateUserResponse{
+		Type:             TYPE_USER,
+		Name:             u.Name,
+		Email:            u.Email,
+		Gender:           u.Gender,
+		Age:              u.Age,
+		PhoneNumber:      u.PhoneNumber,
+		CampusCode:       u.CampusCode,
+		CoolCategoryCode: u.CoolCategoryCode,
+		MaritalStatus:    u.MaritalStatus,
+	}
+}
+
 type (
 	CreateUserRequest struct {
 		Email            string `json:"email" validate:"required,noStartEndSpaces,emailFormat" example:"32"`
@@ -92,4 +106,31 @@ type (
 		CoolCategoryCode string `json:"coolCategoryCode" validate:"omitempty,min=3,max=3" example:"001"`
 		MaritalStatus    string `json:"maritalStatus" validate:"omitempty,oneof=single married others" example:"active"`
 	}
+	CreateUserResponse struct {
+		Type             string `json:"type" example:"coolCategory"`
+		Name             string `json:"name"`
+		Email            string `json:"email"`
+		Gender           string `json:"gender"`
+		Age              int    `json:"age"`
+		PhoneNumber      string `json:"phoneNumber"`
+		CampusCode       string `json:"campusCode"`
+		CoolCategoryCode string `json:"coolCategoryCode"`
+		MaritalStatus    string `json:"maritalStatus"`
+	}
 )
+
+func (u *CheckUserEmailResponse) ToCheck() *CheckUserEmailResponse {
+	return &CheckUserEmailResponse{
+		Type:     TYPE_USER,
+		Email:    u.Email,
+		IsExist:  false,
+		UserType: u.UserType,
+	}
+}
+
+type CheckUserEmailResponse struct {
+	Type     string `json:"type" example:"coolCategory"`
+	Email    string `json:"email"`
+	IsExist  bool   `json:"isExist"`
+	UserType string `json:"userType"`
+}

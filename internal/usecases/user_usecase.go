@@ -12,6 +12,7 @@ import (
 type UserUsecase interface {
 	CreateCool(ctx context.Context, request *models.CreateUserCoolRequest) (user *models.User, err error)
 	CreateUser(ctx context.Context, request *models.CreateUserRequest) (user *models.User, err error)
+	Login(ctx context.Context) (user *models.User, err error)
 	GetByAccountNumber(ctx context.Context, accountNumber string) (user *models.User, err error)
 }
 
@@ -153,18 +154,9 @@ func (uu *userUsecase) CreateUser(ctx context.Context, request *models.CreateUse
 			return nil, err
 		}
 
-	case exist.ID != 0 && exist.UserType != "REQUEST_COOL":
+	case exist.ID != 0 && exist.UserType != "NON_KKJ_MEMBER":
 		return nil, models.ErrorAlreadyExist
 	default:
-		coolCategory, err := uu.ccr.GetByCode(ctx, strings.ToUpper(request.CoolCategoryCode))
-		if err != nil {
-			return nil, err
-		}
-
-		if coolCategory.ID == 0 {
-			return nil, models.ErrorDataNotFound
-		}
-
 		accountNumber, err := generator.AccountNumber()
 		if err != nil {
 			return nil, err
@@ -206,4 +198,25 @@ func (uu *userUsecase) GetByAccountNumber(ctx context.Context, accountNumber str
 	}
 
 	return &data, nil
+}
+
+func (uu *userUsecase) CheckByEmail(ctx context.Context, email string) (isExist bool, user *models.User, err error) {
+	defer func() {
+		LogService(ctx, err)
+	}()
+
+	data, err := uu.ur.GetByEmail(ctx, email)
+	if err != nil {
+		return false, nil, err
+	}
+
+	if data.ID != 0 && data.UserType != "REQUEST_COOL" {
+		return true, nil, models.ErrorAlreadyExist
+	}
+
+	if data.ID != 0 && data.UserType == "REQUEST_COOL" {
+		return true, &data, nil
+	}
+
+	return false, &data, nil
 }
