@@ -1,9 +1,16 @@
 package usecases
 
-import "go-community/internal/repositories/pgsql"
+import (
+	"go-community/internal/pkg/authorization"
+	"go-community/internal/pkg/google"
+	"go-community/internal/repositories/pgsql"
+)
 
 type Dependencies struct {
-	Repository *pgsql.PostgreRepositories
+	Repository    *pgsql.PostgreRepositories
+	Google        *google.GoogleAuth
+	Authorization *authorization.Auth
+	Salt          []byte
 }
 
 type Usecases struct {
@@ -12,6 +19,7 @@ type Usecases struct {
 	CoolCategory coolCategoryUsecase
 	Location     locationUsecase
 	User         userUsecase
+	EventUser    eventUserUsecase
 }
 
 func New(d Dependencies) *Usecases {
@@ -20,6 +28,7 @@ func New(d Dependencies) *Usecases {
 	coolCategory := NewCoolCategoryUsecase(d.Repository.CoolCategory)
 	location := NewLocationUsecase(d.Repository.Location, d.Repository.Campus)
 	user := NewUserUsecase(d.Repository.User, d.Repository.Campus, d.Repository.CoolCategory)
+	eventUser := NewEventUserUsecase(d.Repository.EventUser, *d.Google, *d.Authorization, d.Salt)
 
 	return &Usecases{
 		Health:       *health,
@@ -27,5 +36,6 @@ func New(d Dependencies) *Usecases {
 		CoolCategory: *coolCategory,
 		Location:     *location,
 		User:         *user,
+		EventUser:    *eventUser,
 	}
 }

@@ -14,4 +14,5 @@ func NewV1Handler(g *echo.Group, u *usecases.Usecases) {
 	NewCoolHandler(v1, u)
 	NewLocationHandler(v1, u)
 	NewUserHandler(v1, u)
+	NewEventUserHandler(v1, u)
 }
