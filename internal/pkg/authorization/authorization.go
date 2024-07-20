@@ -33,7 +33,7 @@ type Claims struct {
 }
 
 func (a *Auth) Generate(accountNumber string) (string, error) {
-	duration := time.Now().Add(time.Duration(a.bearerDuration) * time.Hour)
+	duration := time.Now().Add(time.Duration(a.bearerDuration) * time.Minute)
 	claims := &Claims{
 		AccountNumber: accountNumber,
 		RegisteredClaims: jwt.RegisteredClaims{

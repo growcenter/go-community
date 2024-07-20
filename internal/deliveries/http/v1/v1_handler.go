@@ -1,12 +1,13 @@
 package v1
 
 import (
+	"go-community/internal/config"
 	"go-community/internal/usecases"
 
 	"github.com/labstack/echo/v4"
 )
 
-func NewV1Handler(g *echo.Group, u *usecases.Usecases) {
+func NewV1Handler(g *echo.Group, u *usecases.Usecases, c *config.Configuration) {
 	v1 := g.Group("/v1")
 
 	// Initialize handlers
@@ -14,5 +15,5 @@ func NewV1Handler(g *echo.Group, u *usecases.Usecases) {
 	NewCoolHandler(v1, u)
 	NewLocationHandler(v1, u)
 	NewUserHandler(v1, u)
-	NewEventUserHandler(v1, u)
+	NewEventUserHandler(v1, u, c)
 }

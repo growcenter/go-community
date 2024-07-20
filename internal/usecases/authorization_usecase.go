@@ -1,5 +1,6 @@
 package usecases
 
+// NOT USED
 import (
 	"errors"
 	"time"

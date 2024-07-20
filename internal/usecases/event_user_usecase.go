@@ -17,6 +17,7 @@ type EventUserUsecase interface {
 	Account(ctx context.Context, state string, code string) (eventUser *models.EventUser, token string, statusCode int, err error)
 	ManualRegister(ctx context.Context, request models.CreateEventUserManualRequest) (eventUser *models.EventUser, token string, err error)
 	ManualLogin(ctx context.Context, request models.LoginEventUserManualRequest) (eventUser *models.EventUser, token string, err error)
+	GetByAccountNumber(ctx context.Context, accountNumber string) (eventUser *models.EventUser, err error)
 }
 
 type eventUserUsecase struct {
@@ -46,6 +47,10 @@ func (euu *eventUserUsecase) Redirect(ctx context.Context) (authUrl string, err 
 }
 
 func (euu *eventUserUsecase) Account(ctx context.Context, state string, code string) (eventUser *models.EventUser, token string, statusCode int, err error) {
+	defer func() {
+		LogService(ctx, err)
+	}()
+
 	googleData, err := euu.g.Fetch(state, code)
 	if err != nil {
 		return nil, "", http.StatusInternalServerError, models.ErrorFetchGoogle
@@ -92,6 +97,10 @@ func (euu *eventUserUsecase) Account(ctx context.Context, state string, code str
 }
 
 func (euu *eventUserUsecase) ManualRegister(ctx context.Context, request models.CreateEventUserManualRequest) (eventUser *models.EventUser, token string, err error) {
+	defer func() {
+		LogService(ctx, err)
+	}()
+
 	switch {
 	case request.Email != "" && request.PhoneNumber == "":
 		exist, err := euu.eur.GetByEmail(ctx, strings.ToLower(request.Email))
@@ -181,6 +190,10 @@ func (euu *eventUserUsecase) ManualRegister(ctx context.Context, request models.
 }
 
 func (euu *eventUserUsecase) ManualLogin(ctx context.Context, request models.LoginEventUserManualRequest) (eventUser *models.EventUser, token string, err error) {
+	defer func() {
+		LogService(ctx, err)
+	}()
+
 	user, err := euu.eur.GetByEmailPhone(ctx, request.Identifier)
 	if err != nil {
 		return nil, "", err
@@ -201,4 +214,21 @@ func (euu *eventUserUsecase) ManualLogin(ctx context.Context, request models.Log
 	}
 
 	return &user, bearerToken, nil
+}
+
+func (euu *eventUserUsecase) GetByAccountNumber(ctx context.Context, accountNumber string) (eventUser *models.EventUser, err error) {
+	defer func() {
+		LogService(ctx, err)
+	}()
+
+	user, err := euu.eur.GetByAccountNumber(ctx, accountNumber)
+	if err != nil {
+		return nil, err
+	}
+
+	if user.ID == 0 {
+		return nil, models.ErrorUserNotFound
+	}
+
+	return &user, nil
 }

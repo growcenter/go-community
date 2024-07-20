@@ -1,6 +1,7 @@
 package http
 
 import (
+	"go-community/internal/config"
 	"go-community/internal/deliveries/http/health"
 	"go-community/internal/deliveries/http/middleware"
 	v1 "go-community/internal/deliveries/http/v1"
@@ -25,7 +26,7 @@ import (
 // @host localhost:8080
 // @BasePath /api
 // @schemes https
-func New(e *echo.Echo, u *usecases.Usecases) {
+func New(e *echo.Echo, u *usecases.Usecases, c *config.Configuration) {
 	// Middleware for Recover and Logging
 	middleware := middleware.New(e)
 	middleware.Default()
@@ -42,5 +43,5 @@ func New(e *echo.Echo, u *usecases.Usecases) {
 
 	// Initialize Health & V1 Handlers
 	health.NewHealhHandler(api, *u)
-	v1.NewV1Handler(api, u)
+	v1.NewV1Handler(api, u, c)
 }

@@ -22,6 +22,27 @@ type EventUser struct {
 	DeletedAt     sql.NullTime
 }
 
+func (eu *EventUser) ToResponse() *GetEventUserResponse {
+	return &GetEventUserResponse{
+		Type:          TYPE_EVENT_USER,
+		Name:          eu.Name,
+		AccountNumber: eu.AccountNumber,
+		Email:         eu.Email,
+		Status:        eu.Status,
+		Role:          eu.Role,
+	}
+}
+
+type GetEventUserResponse struct {
+	Type          string `json:"type" example:"coolCategory"`
+	Name          string `json:"name"`
+	Email         string `json:"email,omitempty"`
+	PhoneNumber   string `json:"phoneNumber,omitempty"`
+	AccountNumber string `json:"accountNumber"`
+	Role          string `json:"role"`
+	Status        string `json:"status" example:"active"`
+}
+
 func (eu *CreateEventUserResponse) ToCreateEventUser() *CreateEventUserResponse {
 	return &CreateEventUserResponse{
 		Type:          TYPE_EVENT_USER,

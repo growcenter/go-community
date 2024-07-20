@@ -2,7 +2,9 @@ package v1
 
 import (
 	"fmt"
+	"go-community/internal/config"
 	"go-community/internal/deliveries/http/common/response"
+	"go-community/internal/deliveries/http/middleware"
 	"go-community/internal/models"
 	"go-community/internal/pkg/validator"
 	"go-community/internal/usecases"
@@ -15,7 +17,7 @@ type EventUserHandler struct {
 	usecase *usecases.Usecases
 }
 
-func NewEventUserHandler(api *echo.Group, u *usecases.Usecases) {
+func NewEventUserHandler(api *echo.Group, u *usecases.Usecases, c *config.Configuration) {
 	handler := &EventUserHandler{usecase: u}
 
 	// Define campus routes
@@ -26,7 +28,9 @@ func NewEventUserHandler(api *echo.Group, u *usecases.Usecases) {
 	eventUserEndpoint := api.Group("/event/user")
 	eventUserEndpoint.POST("/login", handler.ManualLogin)
 	eventUserEndpoint.POST("/register", handler.ManualRegister)
-
+	authEventUserEndpoint := eventUserEndpoint.Group("")
+	authEventUserEndpoint.Use(middleware.JWTMiddleware(c))
+	authEventUserEndpoint.GET("", handler.GetByToken)
 }
 
 func (euh *EventUserHandler) GoogleRedirect(ctx echo.Context) error {
@@ -89,4 +93,15 @@ func (euh *EventUserHandler) ManualRegister(ctx echo.Context) error {
 
 	res := models.CreateEventUserManualResponse{Type: models.TYPE_EVENT_USER, Name: user.Name, Email: user.Email, PhoneNumber: user.PhoneNumber, AccountNumber: user.AccountNumber, Role: user.Role, Token: token, Status: user.Status}
 	return response.Success(ctx, http.StatusCreated, res.ToCreateEventUserManual())
+}
+
+func (euh *EventUserHandler) GetByToken(ctx echo.Context) error {
+	accountNumber := ctx.Get("accountNumber").(string)
+
+	user, err := euh.usecase.EventUser.GetByAccountNumber(ctx.Request().Context(), accountNumber)
+	if err != nil {
+		return response.Error(ctx, err)
+	}
+
+	return response.Success(ctx, http.StatusOK, user.ToResponse())
 }

@@ -67,7 +67,7 @@ func New(config *config.Configuration) *Contract {
 	})
 
 	// Register Handler
-	handler.New(e, usecase)
+	handler.New(e, usecase, config)
 
 	return &Contract{
 		echo: e,
