@@ -20,7 +20,8 @@ google:
   redirect: ""
   state: ""
 auth:
-  secret: ""
+  bearer_secret: ""
+  bearer_duration: ""
   token_expiry:
 hash:
   salt: ""

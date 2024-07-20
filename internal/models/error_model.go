@@ -8,14 +8,27 @@ import (
 
 var (
 	// Errors
-	ErrorUserNotFound = errors.New("user is not found")
-	ErrorDataNotFound = errors.New("a specified resource is not found")
-	ErrorAlreadyExist = errors.New("the resource that a client tried to create already exists")
-	ErrorUnauthorized = errors.New("request not authenticated due to missing, invalid, or expired token")
-	ErrorNoRows       = sql.ErrNoRows
+	ErrorUserNotFound    = errors.New("user is not registered yet")
+	ErrorInvalidPassword = errors.New("invalid password")
+	ErrorDataNotFound    = errors.New("a specified resource is not found")
+	ErrorAlreadyExist    = errors.New("the resource that a client tried to create already exists")
+	ErrorUnauthorized    = errors.New("request not authenticated due to missing, invalid, or expired token")
+	ErrorNoRows          = sql.ErrNoRows
 
 	// Specific for COOL Category
 	ErrorAgeRange = errors.New("ageStart should be less than ageEnd")
+
+	// Event User
+	ErrorEmailPhoneNumberEmpty = errors.New("you should enter either phone number or email")
+
+	// Google Error
+	ErrorFetchGoogle = errors.New("error while retrieving user from google")
+
+	// Auth Error
+	ErrorTokenSignature = errors.New("invalid signature")
+	ErrorInvalidToken   = errors.New("token is invalid")
+	ErrorExpiredToken   = errors.New("token is expired. please login again to use the account")
+	ErrorEmptyToken     = errors.New("token is empty")
 
 	// Special for Validation Error
 	ErrorInvalidInput = errors.New("invalid request input")
@@ -88,6 +101,48 @@ func ErrorMapping(err error) ErrorResponse {
 		return ErrorResponse{
 			Code:    http.StatusBadRequest,
 			Status:  "INVALID_ARGUMENT",
+			Message: err.Error(),
+		}
+	case ErrorFetchGoogle:
+		return ErrorResponse{
+			Code:    http.StatusInternalServerError,
+			Status:  "INTERNAL_SERVER_ERROR",
+			Message: err.Error(),
+		}
+	case ErrorTokenSignature:
+		return ErrorResponse{
+			Code:    http.StatusUnauthorized,
+			Status:  "INVALID_TOKEN_SIGNATURE",
+			Message: err.Error(),
+		}
+	case ErrorInvalidToken:
+		return ErrorResponse{
+			Code:    http.StatusUnauthorized,
+			Status:  "INVALID_TOKEN",
+			Message: err.Error(),
+		}
+	case ErrorExpiredToken:
+		return ErrorResponse{
+			Code:    http.StatusUnauthorized,
+			Status:  "EXPIRED_TOKEN",
+			Message: err.Error(),
+		}
+	case ErrorEmptyToken:
+		return ErrorResponse{
+			Code:    http.StatusUnauthorized,
+			Status:  "MISSING_TOKEN",
+			Message: err.Error(),
+		}
+	case ErrorEmailPhoneNumberEmpty:
+		return ErrorResponse{
+			Code:    http.StatusBadRequest,
+			Status:  "MISSING_FIELD",
+			Message: err.Error(),
+		}
+	case ErrorInvalidPassword:
+		return ErrorResponse{
+			Code:    http.StatusForbidden,
+			Status:  "INVALID_CREDENTIALS",
 			Message: err.Error(),
 		}
 	default:

@@ -5,7 +5,9 @@ import (
 	"fmt"
 	"go-community/internal/config"
 	handler "go-community/internal/deliveries/http"
+	"go-community/internal/pkg/authorization"
 	"go-community/internal/pkg/database/postgre"
+	"go-community/internal/pkg/google"
 	"go-community/internal/pkg/logger"
 	"go-community/internal/repositories/pgsql"
 	"go-community/internal/usecases"
@@ -16,14 +18,13 @@ import (
 )
 
 type Contract struct {
-	
-	echo	*echo.Echo
+	echo *echo.Echo
 }
 
 func New(config *config.Configuration) *Contract {
 	// Initialize Echo Framework
 	var e = echo.New()
-	
+
 	// Initialize logger
 	logger.Init(config)
 
@@ -43,16 +44,30 @@ func New(config *config.Configuration) *Contract {
 		logger.Logger.Fatal(fmt.Sprintf("[DATABASE_ERROR] Failed to connect the database - %v", err), zap.Error(err))
 	}
 
+	// Google
+	oauthGoogle, err := google.NewGoogle(config)
+	if err != nil {
+		logger.Logger.Fatal(fmt.Sprintf("[GOOGLE_ERROR] Failed to setup google oauth - %v", err), zap.Error(err))
+	}
+
+	// Auth
+	auth, err := authorization.NewAuthorization(config)
+	if err != nil {
+		logger.Logger.Fatal(fmt.Sprintf("[AUTH_ERROR] Failed to setup auth - %v", err), zap.Error(err))
+	}
+
 	// Register Repository
 	postgreRepository := pgsql.New(psql)
 
 	// Register Service
 	usecase := usecases.New(usecases.Dependencies{
-		Repository: postgreRepository,
+		Repository:    postgreRepository,
+		Google:        oauthGoogle,
+		Authorization: auth,
 	})
 
 	// Register Handler
-	handler.New(e, usecase)
+	handler.New(e, usecase, config)
 
 	return &Contract{
 		echo: e,

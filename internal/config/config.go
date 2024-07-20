@@ -11,33 +11,38 @@ import (
 
 type (
 	Configuration struct {
-		Application		Application		`mapstructure:"app"`
-		PostgreSQL		PostgreSQL		`mapstructure:"psql"`
-		Google			Google			`mapstructure:"google"`
+		Application Application `mapstructure:"app"`
+		PostgreSQL  PostgreSQL  `mapstructure:"psql"`
+		Google      Google      `mapstructure:"google"`
+		Auth        Auth        `mapstructure:"auth"`
 	}
 	Application struct {
-		Name			string			`mapstructure:"name"`
-		Version			string			`mapstructure:"version"`
-		Port			int				`mapstructure:"port"`
-		Environment		string			`mapstructure:"environment"`
-		Host			string			`mapstructure:"host"`
-		Timeout			time.Duration	`mapstructure:"timeout"`
-		LogOption		string			`mapstructure:"log_option"`
-		LogLevel		string			`mapstructure:"log_level"`
+		Name        string        `mapstructure:"name"`
+		Version     string        `mapstructure:"version"`
+		Port        int           `mapstructure:"port"`
+		Environment string        `mapstructure:"environment"`
+		Host        string        `mapstructure:"host"`
+		Timeout     time.Duration `mapstructure:"timeout"`
+		LogOption   string        `mapstructure:"log_option"`
+		LogLevel    string        `mapstructure:"log_level"`
 	}
 	PostgreSQL struct {
-		User			string			`mapstructure:"user"`
-		Password		string			`mapstructure:"password"`
-		Host			string			`mapstructure:"host"`
-		Name			string			`mapstructure:"name"`
-		Port			int				`mapstructure:"port"`
-		SSLMode			string			`mapstructure:"ssl_mode"`
+		User     string `mapstructure:"user"`
+		Password string `mapstructure:"password"`
+		Host     string `mapstructure:"host"`
+		Name     string `mapstructure:"name"`
+		Port     int    `mapstructure:"port"`
+		SSLMode  string `mapstructure:"ssl_mode"`
 	}
 	Google struct {
-		ClientID		string			`mapstructure:"client_id"`
-		ClientSecret	string			`mapstructure:"client_secret"`
-		Redirect		string			`mapstructure:"redirect"`
-		State			string			`mapstructure:"state"`
+		ClientID     string `mapstructure:"client_id"`
+		ClientSecret string `mapstructure:"client_secret"`
+		Redirect     string `mapstructure:"redirect"`
+		State        string `mapstructure:"state"`
+	}
+	Auth struct {
+		BearerSecret   string `mapstructure:"bearer_secret"`
+		BearerDuration int    `mapstructure:"bearer_duration"`
 	}
 )
 

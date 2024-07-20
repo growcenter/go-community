@@ -1,6 +1,6 @@
 CREATE TABLE "users" (
     "id" BIGSERIAL NOT NULL PRIMARY KEY,
-    "account_number" varchar(17) UNIQUE NOT NULL,
+    "account_number" varchar(15) UNIQUE NOT NULL,
     "name" varchar(100) UNIQUE NOT NULL,
     "phone_number" varchar(15) UNIQUE NOT NULL,
     "email" varchar(50) UNIQUE NOT NULL,
