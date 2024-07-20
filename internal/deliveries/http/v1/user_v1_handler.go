@@ -20,7 +20,7 @@ func NewUserHandler(api *echo.Group, u *usecases.Usecases) {
 	endpoint := api.Group("/user")
 	endpoint.POST("/cool", handler.CreateCool)
 	endpoint.GET("/check", handler.Check)
-	// endpoint.GET("/:accountNumber")
+	endpoint.GET("/:accountNumber", handler.GetByAccountNumber)
 }
 
 func (uh *UserHandler) CreateCool(ctx echo.Context) error {
@@ -69,4 +69,14 @@ func (uh *UserHandler) Check(ctx echo.Context) error {
 
 	res := models.CheckUserEmailResponse{IsExist: isExist, UserType: data.UserType, Email: request}
 	return response.Success(ctx, http.StatusOK, res.ToCheck())
+}
+
+func (uh *UserHandler) GetByAccountNumber(ctx echo.Context) error {
+	data, err := uh.usecase.User.GetByAccountNumber(ctx.Request().Context(), ctx.Param("accountNumber"))
+	if err != nil {
+		return response.Error(ctx, err)
+	}
+
+	return response.Success(ctx, http.StatusOK, data.ToGetUserByAccountNumber())
+
 }

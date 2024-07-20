@@ -33,6 +33,9 @@ type User struct {
 	CreatedAt        *time.Time
 	UpdatedAt        *time.Time
 	DeletedAt        sql.NullTime
+
+	Campus       Campus       `gorm:"foreignKey:CampusCode"`
+	CoolCategory CoolCategory `gorm:"foreignKey:CoolCategoryCode"`
 }
 
 func (u *User) ToCreateUserCool() *CreateUserCoolResponse {
@@ -133,4 +136,40 @@ type CheckUserEmailResponse struct {
 	Email    string `json:"email"`
 	IsExist  bool   `json:"isExist"`
 	UserType string `json:"userType"`
+}
+
+func (u *User) ToGetUserByAccountNumber() *GetUserByAccountNumber {
+	return &GetUserByAccountNumber{
+		Type:             TYPE_USER,
+		AccountNumber:    u.AccountNumber,
+		Name:             u.Name,
+		Gender:           u.Gender,
+		Age:              u.Age,
+		PhoneNumber:      u.PhoneNumber,
+		Email:            u.Email,
+		CampusCode:       u.CampusCode,
+		CampusName:       u.Campus.Name,
+		CoolCategoryCode: u.CoolCategoryCode,
+		CoolCategoryName: u.CoolCategory.Name,
+		MaritalStatus:    u.MaritalStatus,
+		Status:           u.Status,
+	}
+}
+
+type GetUserByAccountNumber struct {
+	Type             string `json:"type" example:"coolCategory"`
+	ID               int    `json:"-" example:"1"`
+	AccountNumber    string `json:"accountNumber"`
+	Name             string `json:"name" example:"Profesionals"`
+	Gender           string `json:"gender"`
+	Age              int    `json:"age"`
+	PhoneNumber      string `json:"phoneNumber"`
+	Email            string `json:"email"`
+	CampusCode       string `json:"campusCode"`
+	CampusName       string `json:"campusCodeName"`
+	CoolCategoryCode string `json:"coolCategoryCode"`
+	CoolCategoryName string `json:"coolCategoryName"`
+	Roles            string `json:"roles"`
+	MaritalStatus    string `json:"maritalStatus"`
+	Status           string `json:"status" example:"active"`
 }
