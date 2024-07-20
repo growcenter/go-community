@@ -8,7 +8,7 @@ import (
 )
 
 type CampusUsecase interface {
-	Create(ctx context.Context, request *models.CreateCampusRequest) (user *models.Campus, err error)
+	Create(ctx context.Context, request *models.CreateCampusRequest) (campus *models.Campus, err error)
 	GetAll(ctx context.Context) (campus []models.Campus, err error)
 	GetByCode(ctx context.Context, code string) (campus *models.Campus, err error)
 }

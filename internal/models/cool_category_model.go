@@ -6,7 +6,7 @@ var TYPE_COOL_CATEGORY = "coolCategory"
 
 type CoolCategory struct {
 	ID        int
-	Code      string
+	Code      string `gorm:"primaryKey"`
 	Name      string
 	AgeStart  int
 	AgeEnd    int

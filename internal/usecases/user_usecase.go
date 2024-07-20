@@ -87,6 +87,7 @@ func (uu *userUsecase) CreateCool(ctx context.Context, request *models.CreateUse
 		CampusCode:       request.CampusCode,
 		CoolCategoryCode: request.CoolCategoryCode,
 		MaritalStatus:    request.MaritalStatus,
+		Age:              request.Age,
 	}
 
 	if err := uu.ur.Create(ctx, &input); err != nil {
@@ -188,9 +189,9 @@ func (uu *userUsecase) GetByAccountNumber(ctx context.Context, accountNumber str
 		LogService(ctx, err)
 	}()
 
-	data, err := uu.ur.GetByAccountNumber(ctx, accountNumber)
+	data, err := uu.ur.GetOneByAccountNumber(ctx, accountNumber)
 	if err != nil {
-		return nil, err
+		return nil, models.ErrorDataNotFound
 	}
 
 	if data.ID == 0 {
