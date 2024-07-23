@@ -18,8 +18,10 @@ var (
 	// Specific for COOL Category
 	ErrorAgeRange = errors.New("ageStart should be less than ageEnd")
 
-	// Event User
+	// Event
 	ErrorEmailPhoneNumberEmpty = errors.New("you should enter either phone number or email")
+	ErrorCannotRegisterYet     = errors.New("you cannot register yet, wait until the time allowed first")
+	ErrorRegistrationDisabled  = errors.New("you cannot register anymore, since the time is already closed")
 
 	// Google Error
 	ErrorFetchGoogle = errors.New("error while retrieving user from google")
@@ -141,8 +143,20 @@ func ErrorMapping(err error) ErrorResponse {
 		}
 	case ErrorInvalidPassword:
 		return ErrorResponse{
-			Code:    http.StatusForbidden,
+			Code:    http.StatusUnauthorized,
 			Status:  "INVALID_CREDENTIALS",
+			Message: err.Error(),
+		}
+	case ErrorCannotRegisterYet:
+		return ErrorResponse{
+			Code:    http.StatusForbidden,
+			Status:  "FORBIDDEN_REGISTRATION",
+			Message: err.Error(),
+		}
+	case ErrorRegistrationDisabled:
+		return ErrorResponse{
+			Code:    http.StatusForbidden,
+			Status:  "FORBIDDEN_REGISTRATION",
 			Message: err.Error(),
 		}
 	default:

@@ -9,13 +9,13 @@ import (
 )
 
 func Error(ctx echo.Context, err error) error {
-    errorResponse := models.ErrorMapping(err)
-    return ctx.JSON(errorResponse.Code, errorResponse)
+	errorResponse := models.ErrorMapping(err)
+	return ctx.JSON(errorResponse.Code, errorResponse)
 }
 
 func ErrorValidation(ctx echo.Context, errors interface{}) error {
 	res := models.ErrorValidationResponse{
-		Code:  http.StatusUnprocessableEntity,
+		Code:    http.StatusUnprocessableEntity,
 		Message: "Validation failed for one or more fields.",
 	}
 	if data, ok := errors.(*multierror.Error); ok {
@@ -26,13 +26,24 @@ func ErrorValidation(ctx echo.Context, errors interface{}) error {
 }
 
 func Success(ctx echo.Context, code int, response interface{}) error {
-    return ctx.JSON(code, response)
+	return ctx.JSON(code, response)
 }
 
 func SuccessList(ctx echo.Context, code int, totalRows int, data interface{}) error {
 	response := models.List{
-		Type: "collection",
-		Data: data,
+		Type:      "collection",
+		Data:      data,
+		TotalRows: totalRows,
+	}
+
+	return ctx.JSON(code, response)
+}
+
+func SuccessListWithDetail(ctx echo.Context, code int, totalRows int, detail interface{}, data interface{}) error {
+	response := models.ListWithDetail{
+		Type:      "collection",
+		Details:   detail,
+		Data:      data,
 		TotalRows: totalRows,
 	}
 
