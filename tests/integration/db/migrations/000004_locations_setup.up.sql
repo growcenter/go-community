@@ -1,3 +1,5 @@
+SET TIME ZONE 'Asia/Jakarta';
+
 CREATE TABLE "locations" (
     "id" BIGSERIAL NOT NULL PRIMARY KEY,
     "code" varchar(5) UNIQUE NOT NULL,

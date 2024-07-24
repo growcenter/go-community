@@ -2,10 +2,9 @@ package usecases
 
 import (
 	"context"
-	"fmt"
+	"go-community/internal/common"
 	"go-community/internal/models"
 	"go-community/internal/repositories/pgsql"
-	"time"
 )
 
 type EventGeneralUsecase interface {
@@ -32,17 +31,17 @@ func (egu *eventGeneralUsecase) GetAll(ctx context.Context) (details models.GetG
 		return
 	}
 
-	currentTime := time.Now()
-	fmt.Printf("======= TIME NOW: %s =======", currentTime)
 	for _, event := range data {
-		if currentTime.After(event.OpenRegistration) && currentTime.Before(event.ClosedRegistration) {
-			event.Status = "active"
-		} else {
+		switch {
+		case common.Now().Before(event.OpenRegistration.In(common.GetLocation())):
 			event.Status = "closed"
+		case common.Now().After(event.ClosedRegistration.In(common.GetLocation())):
+			event.Status = "closed"
+		default:
+			event.Status = "active"
 		}
 
 		if err = egu.egr.BulkUpdate(ctx, event); err != nil {
-			fmt.Println("=============error here")
 			return
 		}
 	}
@@ -54,7 +53,7 @@ func (egu *eventGeneralUsecase) GetAll(ctx context.Context) (details models.GetG
 
 	detail := models.GetGeneralEventDetailResponse{
 		Type:        models.TYPE_DETAIL,
-		CurrentTime: currentTime,
+		CurrentTime: common.Now(),
 		IsUserValid: true,
 	}
 

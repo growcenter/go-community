@@ -1,3 +1,5 @@
+SET TIME ZONE 'Asia/Jakarta';
+
 CREATE TABLE "users" (
     "id" BIGSERIAL NOT NULL PRIMARY KEY,
     "account_number" varchar(15) UNIQUE NOT NULL,

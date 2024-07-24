@@ -11,26 +11,26 @@ import (
 	"github.com/labstack/echo/v4"
 )
 
-type EventGeneralHandler struct {
+type EventSessionHandler struct {
 	usecase *usecases.Usecases
 }
 
-func NewEventGeneralHandler(api *echo.Group, u *usecases.Usecases, c *config.Configuration) {
-	handler := &EventGeneralHandler{usecase: u}
+func NewEventSessionHandler(api *echo.Group, u *usecases.Usecases, c *config.Configuration) {
+	handler := &EventSessionHandler{usecase: u}
 
 	// Define campus routes
 	eventGeneralEndpoint := api.Group("/events")
 	eventGeneralEndpoint.Use(middleware.JWTMiddleware(c))
-	eventGeneralEndpoint.GET("", handler.GetAll)
+	eventGeneralEndpoint.GET("/:eventCode/sessions", handler.GetAll)
 }
 
-func (egh *EventGeneralHandler) GetAll(ctx echo.Context) error {
-	detail, data, err := egh.usecase.EventGeneral.GetAll(ctx.Request().Context())
+func (esh *EventSessionHandler) GetAll(ctx echo.Context) error {
+	detail, data, err := esh.usecase.EventSession.GetAllByEventCode(ctx.Request().Context(), ctx.Param("eventCode"))
 	if err != nil {
 		return response.Error(ctx, err)
 	}
 
-	var res []models.GetGeneralEventDataResponse
+	var res []models.GetEventSessionsDataResponse
 	for _, v := range data {
 		res = append(res, *v.ToResponse())
 	}

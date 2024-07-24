@@ -1,3 +1,5 @@
+SET TIME ZONE 'Asia/Jakarta';
+
 CREATE TABLE "cool_categories" (
     "id" BIGSERIAL NOT NULL PRIMARY KEY,
     "code" varchar(3) UNIQUE NOT NULL,

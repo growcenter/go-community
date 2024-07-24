@@ -2,28 +2,46 @@ package usecases
 
 import (
 	"context"
+	"go-community/internal/common"
 	"go-community/internal/models"
 	"go-community/internal/repositories/pgsql"
 )
 
 type EventSessionUsecase interface {
-	GetAllByEventCode(ctx context.Context, eventCode string) (eventSessions []models.EventSession, err error)
+	GetAllByEventCode(ctx context.Context, eventCode string) (details models.GetEventSessionsDetailResponse, eventSessions []models.EventSession, err error)
 }
 
 type eventSessionUsecase struct {
 	esr pgsql.EventSessionRepository
+	egr pgsql.EventGeneralRepository
 }
 
-func NewEventSessionUsecase(esr pgsql.EventSessionRepository) *eventSessionUsecase {
+func NewEventSessionUsecase(esr pgsql.EventSessionRepository, egr pgsql.EventGeneralRepository) *eventSessionUsecase {
 	return &eventSessionUsecase{
 		esr: esr,
+		egr: egr,
 	}
 }
 
-func (esu *eventSessionUsecase) GetAllByEventCode(ctx context.Context, eventCode string) (eventSessions []models.EventSession, err error) {
+func (esu *eventSessionUsecase) GetAllByEventCode(ctx context.Context, eventCode string) (details models.GetEventSessionsDetailResponse, eventSessions []models.EventSession, err error) {
 	defer func() {
 		LogService(ctx, err)
 	}()
+
+	event, err := esu.egr.GetByCode(ctx, eventCode)
+	if err != nil {
+		return
+	}
+
+	if common.Now().Before(event.OpenRegistration) {
+		err = models.ErrorCannotRegisterYet
+		return
+	}
+
+	if common.Now().After(event.ClosedRegistration) {
+		err = models.ErrorRegistrationDisabled
+		return
+	}
 
 	data, err := esu.esr.GetAllByEventCode(ctx, eventCode)
 	if err != nil {
@@ -35,31 +53,28 @@ func (esu *eventSessionUsecase) GetAllByEventCode(ctx context.Context, eventCode
 		return
 	}
 
-	// currentTime := time.Now()
-	// fmt.Printf("======= TIME NOW: %s =======", currentTime)
-	// for _, event := range data {
-	// 	if currentTime.After(event.OpenRegistration) && currentTime.Before(event.ClosedRegistration) {
-	// 		event.Status = "active"
-	// 	} else {
-	// 		event.Status = "closed"
-	// 	}
+	for _, session := range data {
+		if session.AvailableSeats == 0 {
+			session.Status = "full"
+		}
 
-	// 	if err = egu.egr.BulkUpdate(ctx, event); err != nil {
-	// 		fmt.Println("=============error here")
-	// 		return
-	// 	}
-	// }
+		if err = esu.esr.BulkUpdate(ctx, session); err != nil {
+			return
+		}
+	}
 
-	// new, err := egu.egr.GetAll(ctx)
-	// if err != nil {
-	// 	return
-	// }
+	new, err := esu.esr.GetAllByEventCode(ctx, eventCode)
+	if err != nil {
+		return
+	}
 
-	// detail := models.GetEventSessionsDetailResponse{
-	// 	Type:        models.TYPE_DETAIL,
-	// 	CurrentTime: currentTime,
-	// 	IsUserValid: true,
-	// }
+	detail := models.GetEventSessionsDetailResponse{
+		Type:        models.TYPE_DETAIL,
+		EventCode:   event.Code,
+		EventName:   event.Name,
+		CurrentTime: common.Now(),
+		IsUserValid: true,
+	}
 
-	return data, nil
+	return detail, new, nil
 }

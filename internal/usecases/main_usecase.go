@@ -21,6 +21,7 @@ type Usecases struct {
 	User         userUsecase
 	EventUser    eventUserUsecase
 	EventGeneral eventGeneralUsecase
+	EventSession eventSessionUsecase
 }
 
 func New(d Dependencies) *Usecases {
@@ -31,6 +32,7 @@ func New(d Dependencies) *Usecases {
 	user := NewUserUsecase(d.Repository.User, d.Repository.Campus, d.Repository.CoolCategory)
 	eventUser := NewEventUserUsecase(d.Repository.EventUser, *d.Google, *d.Authorization, d.Salt)
 	eventGeneral := NewEventGeneralUsecase(d.Repository.EventGeneral)
+	eventSession := NewEventSessionUsecase(d.Repository.EventSession, d.Repository.EventGeneral)
 
 	return &Usecases{
 		Health:       *health,
@@ -40,5 +42,6 @@ func New(d Dependencies) *Usecases {
 		User:         *user,
 		EventUser:    *eventUser,
 		EventGeneral: *eventGeneral,
+		EventSession: *eventSession,
 	}
 }

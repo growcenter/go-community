@@ -9,9 +9,7 @@ import (
 
 type EventSessionRepository interface {
 	GetAllByEventCode(ctx context.Context, eventCode string) (eventSessions []models.EventSession, err error)
-	// // UpdateStatusByTimeOpen(ctx context.Context, changes string) (err error)
-	// BulkUpdate(ctx context.Context, eventGeneral models.EventGeneral) (err error)
-	// Update(ctx context.Context, eventGeneral models.EventGeneral) (err error)
+	BulkUpdate(ctx context.Context, eventSession models.EventSession) (err error)
 }
 
 type eventSessionRepository struct {
@@ -32,4 +30,15 @@ func (esr *eventSessionRepository) GetAllByEventCode(ctx context.Context, eventC
 	err = esr.db.Where("event_code = ?", eventCode).Find(&es).Error
 
 	return es, err
+}
+
+func (esr *eventSessionRepository) BulkUpdate(ctx context.Context, eventSession models.EventSession) (err error) {
+	defer func() {
+		LogRepository(ctx, err)
+	}()
+
+	return esr.trx.Transaction(func(dtx *gorm.DB) error {
+		session := models.EventSession{}
+		return esr.db.Model(&session).Where("id = ?", eventSession.ID).Updates(eventSession).Error
+	})
 }
