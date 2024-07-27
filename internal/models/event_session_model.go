@@ -11,7 +11,7 @@ type EventSession struct {
 	ID              int
 	EventCode       string
 	Name            string
-	Code            string
+	Code            string `gorm:"primaryKey"`
 	Status          string
 	Description     string
 	Time            time.Time

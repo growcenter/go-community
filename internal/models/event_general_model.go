@@ -10,7 +10,7 @@ var TYPE_EVENT_GENERAL = "generalEvent"
 type EventGeneral struct {
 	ID                 int
 	Name               string
-	Code               string
+	Code               string `gorm:"primaryKey"`
 	CampusCode         string
 	Status             string
 	Description        string

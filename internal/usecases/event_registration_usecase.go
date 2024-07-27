@@ -11,7 +11,8 @@ import (
 )
 
 type EventRegistrationUsecase interface {
-	Create(ctx context.Context, request models.CreateEventRegistrationRequest) (eventRegistration *models.EventRegistration, err error)
+	Create(ctx context.Context, request models.CreateEventRegistrationRequest) (eventRegistration models.CreateEventRegistrationResponse, err error)
+	GetRegistered(ctx context.Context, registeredBy string) (eventRegistrations models.GetRegisteredResponse, err error)
 }
 
 type eventRegistrationUsecase struct {
@@ -30,7 +31,7 @@ func NewEventRegistrationUsecase(rer pgsql.EventRegistrationRepository, egr pgsq
 	}
 }
 
-func (eru *eventRegistrationUsecase) Create(ctx context.Context, request models.CreateEventRegistrationRequest) (main models.CreateEventRegistrationResponse, err error) {
+func (eru *eventRegistrationUsecase) Create(ctx context.Context, request models.CreateEventRegistrationRequest) (eventRegistration models.CreateEventRegistrationResponse, err error) {
 	defer func() {
 		LogService(ctx, err)
 	}()
@@ -234,28 +235,32 @@ func (eru *eventRegistrationUsecase) Create(ctx context.Context, request models.
 	return mainResponse, nil
 }
 
-// for _, event := range data {
-// 	switch {
-// 	case common.Now().Before(event.OpenRegistration.In(common.GetLocation())):
-// 		event.Status = "closed"
-// 	case common.Now().After(event.ClosedRegistration.In(common.GetLocation())):
-// 		event.Status = "closed"
-// 	default:
-// 		event.Status = "active"
-// 	}
+func (eru *eventRegistrationUsecase) GetRegistered(ctx context.Context, registeredBy string) (eventRegistrations []models.GetRegisteredResponse, err error) {
+	defer func() {
+		LogService(ctx, err)
+	}()
 
-// 	if err = egu.egr.BulkUpdate(ctx, event); err != nil {
-// 		return
-// 	}
-// }
+	registers, err := eru.rer.GetSpecificByRegisteredBy(ctx, registeredBy)
+	if err != nil {
+		return
+	}
 
-// new, err := egu.egr.GetAll(ctx)
-// if err != nil {
-// 	return
-// }
+	response := make([]models.GetRegisteredResponse, len(registers))
+	for i, p := range registers {
+		response[i] = models.GetRegisteredResponse{
+			Type:          models.TYPE_EVENT_REGISTRATION,
+			Name:          p.EventRegistration.Name,
+			Identifier:    p.EventRegistration.Identifier,
+			Address:       p.EventRegistration.Address,
+			AccountNumber: p.EventRegistration.AccountNumber,
+			Code:          p.EventRegistration.Code,
+			EventCode:     p.EventRegistration.EventCode,
+			EventName:     p.EventGeneral.Name,
+			SessionCode:   p.EventRegistration.SessionCode,
+			SessionName:   p.EventSession.Name,
+			Status:        p.EventRegistration.Status,
+		}
+	}
 
-// detail := models.GetGeneralEventDetailResponse{
-// 	Type:        models.TYPE_DETAIL,
-// 	CurrentTime: common.Now(),
-// 	IsUserValid: true,
-// }
+	return response, nil
+}

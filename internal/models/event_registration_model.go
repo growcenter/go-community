@@ -23,8 +23,8 @@ type EventRegistration struct {
 	UpdatedAt     time.Time
 	DeletedAt     sql.NullTime
 
-	EventGeneral EventGeneral `gorm:"foreignKey:EventCode"`
-	EventSession EventSession `gorm:"foreignKey:SessionCode"`
+	EventGeneral EventGeneral `gorm:"foreignKey:EventCode`
+	EventSession EventSession `gorm:"foreignKey:SessionCode`
 }
 
 func (er *CreateEventRegistrationResponse) ToCreate() *CreateEventRegistrationResponse {
@@ -83,5 +83,66 @@ type (
 		Name    string `json:"name"`
 		Address string `json:"address"`
 		Code    string `json:"code"`
+	}
+)
+
+func (er *GetRegisteredResponse) ToResponse() *GetRegisteredResponse {
+	return &GetRegisteredResponse{
+		Type:          TYPE_EVENT_REGISTRATION,
+		Name:          er.Name,
+		Identifier:    er.Identifier,
+		Address:       er.Address,
+		AccountNumber: er.AccountNumber,
+		Code:          er.Code,
+		EventCode:     er.EventCode,
+		EventName:     er.EventGeneral.Name,
+		SessionCode:   er.SessionCode,
+		SessionName:   er.EventSession.Name,
+		Status:        er.Status,
+		// Others:        er.Others,
+	}
+}
+
+type (
+	GetRegisteredRequest struct {
+		RegisteredBy string `json:"registeredBy" query:"registeredBy" validate:"required,emailPhoneFormat" example:"tono@amartha.com"`
+	}
+	GetRegisteredResponse struct {
+		Type          string `json:"type"`
+		Name          string `json:"name"`
+		Identifier    string `json:"identifier"`
+		Address       string `json:"address"`
+		AccountNumber string `json:"accountNumber,omitempty"`
+		Code          string `json:"code"`
+		EventCode     string `json:"eventCode"`
+		EventName     string `json:"eventName"`
+		SessionCode   string `json:"sessionCode"`
+		SessionName   string `json:"sessionName"`
+		Status        string `json:"status"`
+
+		EventGeneral EventGeneral `json:"-"`
+		EventSession EventSession `json:"-"`
+	}
+
+	GetRegisteredRepository struct {
+		EventRegistration EventRegistration
+		EventGeneral      EventGeneral
+		EventSession      EventSession
+	}
+
+	GetRegisteredRaw struct {
+		ID            uint   `gorm:"column:id"`
+		Name          string `gorm:"column:name"`
+		Identifier    string `gorm:"column:identifier"`
+		Address       string `gorm:"column:address"`
+		AccountNumber string `gorm:"column:account_number"`
+		Code          string `gorm:"column:code"`
+		EventCode     string `gorm:"column:event_code"`
+		SessionCode   string `gorm:"column:session_code"`
+		RegisteredBy  string `gorm:"column:registered_by"`
+		UpdatedBy     string `gorm:"column:updated_by"`
+		Status        string `gorm:"column:status"`
+		GeneralName   string
+		SessionName   string
 	}
 )
