@@ -39,7 +39,7 @@ func (esu *eventSessionUsecase) GetAllByEventCode(ctx context.Context, eventCode
 	}
 
 	if common.Now().After(event.ClosedRegistration) {
-		err = models.ErrorRegistrationDisabled
+		err = models.ErrorRegistrationTimeDisabled
 		return
 	}
 

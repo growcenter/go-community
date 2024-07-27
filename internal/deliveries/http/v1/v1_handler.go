@@ -2,6 +2,7 @@ package v1
 
 import (
 	"go-community/internal/config"
+	"go-community/internal/deliveries/http/middleware"
 	"go-community/internal/usecases"
 
 	"github.com/labstack/echo/v4"
@@ -9,6 +10,7 @@ import (
 
 func NewV1Handler(g *echo.Group, u *usecases.Usecases, c *config.Configuration) {
 	v1 := g.Group("/v1")
+	v1.Use(middleware.InternalMiddleware(c))
 
 	// Initialize handlers
 	NewCampusHandler(v1, u)
@@ -18,4 +20,5 @@ func NewV1Handler(g *echo.Group, u *usecases.Usecases, c *config.Configuration) 
 	NewEventUserHandler(v1, u, c)
 	NewEventGeneralHandler(v1, u, c)
 	NewEventSessionHandler(v1, u, c)
+	NewEventRegistrationHandler(v1, u, c)
 }

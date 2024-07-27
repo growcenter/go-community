@@ -23,5 +23,6 @@ auth:
   bearer_secret: ""
   bearer_duration: ""
   token_expiry:
+  api_key:
 hash:
   salt: ""

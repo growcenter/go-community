@@ -20,7 +20,7 @@ func NewEventGeneralHandler(api *echo.Group, u *usecases.Usecases, c *config.Con
 
 	// Define campus routes
 	eventGeneralEndpoint := api.Group("/events")
-	eventGeneralEndpoint.Use(middleware.JWTMiddleware(c))
+	eventGeneralEndpoint.Use(middleware.UserMiddleware(c))
 	eventGeneralEndpoint.GET("", handler.GetAll)
 }
 

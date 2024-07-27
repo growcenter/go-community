@@ -14,34 +14,27 @@ type Dependencies struct {
 }
 
 type Usecases struct {
-	Health       healthUsecase
-	Campus       campusUsecase
-	CoolCategory coolCategoryUsecase
-	Location     locationUsecase
-	User         userUsecase
-	EventUser    eventUserUsecase
-	EventGeneral eventGeneralUsecase
-	EventSession eventSessionUsecase
+	Health            healthUsecase
+	Campus            campusUsecase
+	CoolCategory      coolCategoryUsecase
+	Location          locationUsecase
+	User              userUsecase
+	EventUser         eventUserUsecase
+	EventGeneral      eventGeneralUsecase
+	EventSession      eventSessionUsecase
+	EventRegistration eventRegistrationUsecase
 }
 
 func New(d Dependencies) *Usecases {
-	health := NewHealthUsecase(d.Repository.Health)
-	campus := NewCampusUsecase(d.Repository.Campus)
-	coolCategory := NewCoolCategoryUsecase(d.Repository.CoolCategory)
-	location := NewLocationUsecase(d.Repository.Location, d.Repository.Campus)
-	user := NewUserUsecase(d.Repository.User, d.Repository.Campus, d.Repository.CoolCategory)
-	eventUser := NewEventUserUsecase(d.Repository.EventUser, *d.Google, *d.Authorization, d.Salt)
-	eventGeneral := NewEventGeneralUsecase(d.Repository.EventGeneral)
-	eventSession := NewEventSessionUsecase(d.Repository.EventSession, d.Repository.EventGeneral)
-
 	return &Usecases{
-		Health:       *health,
-		Campus:       *campus,
-		CoolCategory: *coolCategory,
-		Location:     *location,
-		User:         *user,
-		EventUser:    *eventUser,
-		EventGeneral: *eventGeneral,
-		EventSession: *eventSession,
+		Health:            *NewHealthUsecase(d.Repository.Health),
+		Campus:            *NewCampusUsecase(d.Repository.Campus),
+		CoolCategory:      *NewCoolCategoryUsecase(d.Repository.CoolCategory),
+		Location:          *NewLocationUsecase(d.Repository.Location, d.Repository.Campus),
+		User:              *NewUserUsecase(d.Repository.User, d.Repository.Campus, d.Repository.CoolCategory),
+		EventUser:         *NewEventUserUsecase(d.Repository.EventUser, *d.Google, *d.Authorization, d.Salt),
+		EventGeneral:      *NewEventGeneralUsecase(d.Repository.EventGeneral),
+		EventSession:      *NewEventSessionUsecase(d.Repository.EventSession, d.Repository.EventGeneral),
+		EventRegistration: *NewEventRegistrationUsecase(d.Repository.EventRegistration, d.Repository.EventGeneral, d.Repository.EventSession, d.Repository.EventUser),
 	}
 }

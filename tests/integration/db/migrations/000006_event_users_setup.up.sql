@@ -7,6 +7,7 @@ CREATE TABLE "event_users" (
     "phone_number" varchar(15) NULL,
     "email" varchar(50) NULL,
     "password" varchar(255),
+    "address" varchar(255) NOT NULL,
     "state" varchar(20) NOT NULL,
     "status" varchar(20) NOT NULL,
     "role" varchar(20) NOT NULL,

@@ -19,18 +19,25 @@ var (
 	ErrorAgeRange = errors.New("ageStart should be less than ageEnd")
 
 	// Event
-	ErrorEmailPhoneNumberEmpty = errors.New("you should enter either phone number or email")
-	ErrorCannotRegisterYet     = errors.New("you cannot register yet, wait until the time allowed first")
-	ErrorRegistrationDisabled  = errors.New("you cannot register anymore, since the time is already closed")
+	ErrorEmailPhoneNumberEmpty     = errors.New("you should enter either phone number or email")
+	ErrorCannotRegisterYet         = errors.New("you cannot register yet, wait until the time allowed first")
+	ErrorRegistrationTimeDisabled  = errors.New("you cannot register anymore, since the time is already closed")
+	ErrorEventNotValid             = errors.New("event code is not valid")
+	ErrorExceedMaxSeating          = errors.New("you cannot register more than 4 people")
+	ErrorRegisterQuotaNotAvailable = errors.New("you cannot register anymore, since there are no available seats anymore")
 
 	// Google Error
 	ErrorFetchGoogle = errors.New("error while retrieving user from google")
 
-	// Auth Error
+	// User Auth Error
 	ErrorTokenSignature = errors.New("invalid signature")
 	ErrorInvalidToken   = errors.New("token is invalid")
 	ErrorExpiredToken   = errors.New("token is expired. please login again to use the account")
 	ErrorEmptyToken     = errors.New("token is empty")
+
+	// API Auth Error
+	ErrorInvalidAPIKey = errors.New("api key is invalid")
+	ErrorEmptyAPIKey   = errors.New("no api key is found")
 
 	// Special for Validation Error
 	ErrorInvalidInput = errors.New("invalid request input")
@@ -153,7 +160,37 @@ func ErrorMapping(err error) ErrorResponse {
 			Status:  "FORBIDDEN_REGISTRATION",
 			Message: err.Error(),
 		}
-	case ErrorRegistrationDisabled:
+	case ErrorRegistrationTimeDisabled:
+		return ErrorResponse{
+			Code:    http.StatusForbidden,
+			Status:  "FORBIDDEN_REGISTRATION",
+			Message: err.Error(),
+		}
+	case ErrorInvalidAPIKey:
+		return ErrorResponse{
+			Code:    http.StatusUnauthorized,
+			Status:  "INVALID_KEY",
+			Message: err.Error(),
+		}
+	case ErrorEmptyAPIKey:
+		return ErrorResponse{
+			Code:    http.StatusUnauthorized,
+			Status:  "MISSING_KEY",
+			Message: err.Error(),
+		}
+	case ErrorEventNotValid:
+		return ErrorResponse{
+			Code:    http.StatusBadRequest,
+			Status:  "INVALID_INPUT",
+			Message: err.Error(),
+		}
+	case ErrorExceedMaxSeating:
+		return ErrorResponse{
+			Code:    http.StatusBadRequest,
+			Status:  "FORBIDDEN_REGISTRATION",
+			Message: err.Error(),
+		}
+	case ErrorRegisterQuotaNotAvailable:
 		return ErrorResponse{
 			Code:    http.StatusForbidden,
 			Status:  "FORBIDDEN_REGISTRATION",

@@ -43,6 +43,7 @@ type (
 	Auth struct {
 		BearerSecret   string `mapstructure:"bearer_secret"`
 		BearerDuration int    `mapstructure:"bearer_duration"`
+		APIKey         string `mapstructure:"api_key"`
 	}
 )
 

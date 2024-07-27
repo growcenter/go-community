@@ -14,6 +14,7 @@ type EventUser struct {
 	PhoneNumber   string
 	Email         string
 	Password      string
+	Address       string
 	Status        string
 	State         string
 	Role          string
@@ -28,6 +29,8 @@ func (eu *EventUser) ToResponse() *GetEventUserResponse {
 		Name:          eu.Name,
 		AccountNumber: eu.AccountNumber,
 		Email:         eu.Email,
+		PhoneNumber:   eu.PhoneNumber,
+		Address:       eu.Address,
 		Status:        eu.Status,
 		Role:          eu.Role,
 	}
@@ -39,6 +42,7 @@ type GetEventUserResponse struct {
 	Email         string `json:"email,omitempty"`
 	PhoneNumber   string `json:"phoneNumber,omitempty"`
 	AccountNumber string `json:"accountNumber"`
+	Address       string `json:"address"`
 	Role          string `json:"role"`
 	Status        string `json:"status" example:"active"`
 }
@@ -111,6 +115,7 @@ func (eu *LoginEventUserManualResponse) ToLoginEventUserManual() LoginEventUserM
 		Email:         eu.Email,
 		PhoneNumber:   eu.PhoneNumber,
 		AccountNumber: eu.AccountNumber,
+		Address:       eu.Address,
 		Role:          eu.Role,
 		Token:         eu.Token,
 		Status:        eu.Status,
@@ -128,25 +133,9 @@ type (
 		Email         string `json:"email,omitempty"`
 		PhoneNumber   string `json:"phoneNumber,omitempty"`
 		AccountNumber string `json:"accountNumber"`
+		Address       string `json:"address"`
 		Token         string `json:"token"`
 		Role          string `json:"role"`
 		Status        string `json:"status" example:"active"`
 	}
 )
-
-// type (
-// 	InquiryUserRequest struct {
-// 		AccountNumber string         `json:"accountNumber" binding:"required"`
-// 		Additional    AdditionalInfo `json:"additionalInfo"`
-// 	}
-
-// 	InquiryUserResponse struct {
-// 		ResponseCode    string `json:"responseCode"`
-// 		ResponseMessage string `json:"responseMessage"`
-// 		AccountNumber   string `json:"accountNumber"`
-// 		Name            string `json:"name"`
-// 		State           string `json:"state"`
-// 		Role            string `json:"role"`
-// 		Email           string `json:"email"`
-// 	}
-// )

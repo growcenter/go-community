@@ -21,6 +21,7 @@ func init() {
 	registerDatetime()
 	registerEmailFormat()
 	registerPhoneFormat()
+	registerEmailPhoneFormat()
 }
 
 func Validate(request interface{}) error {
@@ -123,6 +124,14 @@ func registerPhoneFormat() {
 	valid.RegisterValidation("phoneFormat", func(fl v10.FieldLevel) bool {
 		input := fl.Field().String()
 		pattern := `^\+?(\d{1,3})?[-.\s]?\(?\d{3}\)?[-.\s]?\d{3}[-.\s]?\d{4}$`
+		return regexp.MustCompile(pattern).MatchString(input)
+	})
+}
+
+func registerEmailPhoneFormat() {
+	valid.RegisterValidation("emailPhoneFormat", func(fl v10.FieldLevel) bool {
+		input := fl.Field().String()
+		pattern := `^\+62\d{10,}$|^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$`
 		return regexp.MustCompile(pattern).MatchString(input)
 	})
 }

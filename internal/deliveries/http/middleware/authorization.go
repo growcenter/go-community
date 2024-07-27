@@ -15,7 +15,7 @@ type jwtClaims struct {
 	jwt.RegisteredClaims
 }
 
-func JWTMiddleware(config *config.Configuration) echo.MiddlewareFunc {
+func UserMiddleware(config *config.Configuration) echo.MiddlewareFunc {
 	return func(next echo.HandlerFunc) echo.HandlerFunc {
 		return func(ctx echo.Context) error {
 			header := ctx.Request().Header.Get("Authorization")
@@ -48,6 +48,23 @@ func JWTMiddleware(config *config.Configuration) echo.MiddlewareFunc {
 			}
 
 			ctx.Set("accountNumber", claims.AccountNumber)
+			return next(ctx)
+		}
+	}
+}
+
+func InternalMiddleware(config *config.Configuration) echo.MiddlewareFunc {
+	return func(next echo.HandlerFunc) echo.HandlerFunc {
+		return func(ctx echo.Context) error {
+			key := ctx.Request().Header.Get("X-API-Key")
+			if key == "" {
+				return response.Error(ctx, models.ErrorEmptyAPIKey)
+			}
+
+			if key != config.Auth.APIKey {
+				return response.Error(ctx, models.ErrorInvalidAPIKey)
+			}
+
 			return next(ctx)
 		}
 	}

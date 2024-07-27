@@ -29,7 +29,7 @@ func NewEventUserHandler(api *echo.Group, u *usecases.Usecases, c *config.Config
 	eventUserEndpoint.POST("/login", handler.ManualLogin)
 	eventUserEndpoint.POST("/register", handler.ManualRegister)
 	authEventUserEndpoint := eventUserEndpoint.Group("")
-	authEventUserEndpoint.Use(middleware.JWTMiddleware(c))
+	authEventUserEndpoint.Use(middleware.UserMiddleware(c))
 	authEventUserEndpoint.GET("", handler.GetByToken)
 }
 
