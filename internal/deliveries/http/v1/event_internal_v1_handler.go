@@ -22,7 +22,8 @@ func NewEventInternalHandler(api *echo.Group, u *usecases.Usecases, c *config.Co
 	// Define campus routes
 	eventEndpoint := api.Group("/internal/events")
 	eventEndpoint.Use(middleware.UserMiddleware(c))
-	eventEndpoint.GET("", handler.GetRegistered)
+	eventRegistrationEndpoint := eventEndpoint.Group("/registrations")
+	eventRegistrationEndpoint.GET("", handler.GetRegistered)
 }
 
 func (eih *EventInternalHandler) GetRegistered(ctx echo.Context) error {
