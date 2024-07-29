@@ -146,3 +146,58 @@ type (
 		SessionName   string
 	}
 )
+
+func (er *GetAllRegisteredResponse) ToResponse() *GetAllRegisteredResponse {
+	return &GetAllRegisteredResponse{
+		Type:          TYPE_EVENT_REGISTRATION,
+		Name:          er.Name,
+		Identifier:    er.Identifier,
+		Address:       er.Address,
+		AccountNumber: er.AccountNumber,
+		Code:          er.Code,
+		RegisteredBy:  er.RegisteredBy,
+		UpdatedBy:     er.UpdatedBy,
+		EventCode:     er.EventCode,
+		EventName:     er.EventGeneral.Name,
+		SessionCode:   er.SessionCode,
+		SessionName:   er.EventSession.Name,
+		Status:        er.Status,
+		// Others:        er.Others,
+	}
+}
+
+type (
+	GetAllPaginationParams struct {
+		Page              int
+		Limit             int
+		Sort              string
+		Search            string
+		FilterSessionCode string
+		FilterEventCode   string
+	}
+
+	GetAllPaginationParamsResponse struct {
+		Search            string `json:"search,omitempty"`
+		FilterSessionCode string `json:"sessionCode,omitempty"`
+		FilterEventCode   string `json:"eventCode,omitempty"`
+	}
+
+	GetAllRegisteredResponse struct {
+		Type          string `json:"type"`
+		Name          string `json:"name"`
+		Identifier    string `json:"identifier"`
+		Address       string `json:"address"`
+		AccountNumber string `json:"accountNumber,omitempty"`
+		Code          string `json:"code"`
+		RegisteredBy  string `json:"registeredBy"`
+		UpdatedBy     string `json:"updatedBy"`
+		EventCode     string `json:"eventCode"`
+		EventName     string `json:"eventName"`
+		SessionCode   string `json:"sessionCode"`
+		SessionName   string `json:"sessionName"`
+		Status        string `json:"status"`
+
+		EventGeneral EventGeneral `json:"-"`
+		EventSession EventSession `json:"-"`
+	}
+)

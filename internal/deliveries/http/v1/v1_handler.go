@@ -21,4 +21,5 @@ func NewV1Handler(g *echo.Group, u *usecases.Usecases, c *config.Configuration) 
 	NewEventGeneralHandler(v1, u, c)
 	NewEventSessionHandler(v1, u, c)
 	NewEventRegistrationHandler(v1, u, c)
+	NewEventInternalHandler(v1, u, c)
 }

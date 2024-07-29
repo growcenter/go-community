@@ -2,6 +2,7 @@ package pgsql
 
 import (
 	"context"
+	"fmt"
 	"go-community/internal/models"
 
 	"gorm.io/gorm"
@@ -11,6 +12,7 @@ type EventRegistrationRepository interface {
 	Create(ctx context.Context, eventRegistration *models.EventRegistration) (err error)
 	BulkCreate(ctx context.Context, eventRegistrations *[]models.EventRegistration) (err error)
 	GetAll(ctx context.Context) (eventRegistrations []models.EventRegistration, err error)
+	GetAllWithParams(ctx context.Context, params models.GetAllPaginationParams) (eventRegistrations []models.GetRegisteredRepository, count int64, err error)
 	GetByIdentifier(ctx context.Context, identifier string) (eventRegistrations []models.EventRegistration, err error)
 	GetByCode(ctx context.Context, code string) (eventRegistration models.EventRegistration, err error)
 	GetByRegisteredBy(ctx context.Context, registeredBy string) (eventRegistration []models.EventRegistration, err error)
@@ -57,6 +59,109 @@ func (rer *eventRegistrationRepository) GetAll(ctx context.Context) (eventRegist
 	err = rer.db.Find(&er).Error
 
 	return er, err
+}
+
+func (rer *eventRegistrationRepository) GetAllWithParams(ctx context.Context, params models.GetAllPaginationParams) (eventRegistrations []models.GetRegisteredRepository, count int64, err error) {
+	var results []models.GetRegisteredRepository
+	var rawResults []models.GetRegisteredRaw
+	var totalCount int64
+
+	// Build the base query
+	query := `
+        SELECT er.*, 
+               eg."name" AS general_name, 
+               es."name" AS session_name
+        FROM event_registrations er
+        JOIN event_generals eg ON er.event_code = eg.code
+        JOIN event_sessions es ON er.session_code = es.code
+        WHERE 1=1
+    `
+
+	// Add filters
+	if params.Search != "" {
+		searchPattern := fmt.Sprintf("%%%s%%", params.Search)
+		query += fmt.Sprintf(" AND (er.name ILIKE '%s' OR er.registered_by ILIKE '%s' OR er.identifier ILIKE '%s')", searchPattern, searchPattern, searchPattern)
+	}
+	if params.FilterSessionCode != "" {
+		query += fmt.Sprintf(" AND er.session_code = '%s'", params.FilterSessionCode)
+	}
+	if params.FilterEventCode != "" {
+		query += fmt.Sprintf(" AND er.event_code = '%s'", params.FilterEventCode)
+	}
+
+	// Add sorting
+	if params.Sort != "" {
+		query += fmt.Sprintf(" ORDER BY %s", params.Sort)
+	} else {
+		query += " ORDER BY er.id DESC" // default sort
+	}
+
+	// Pagination
+	offset := (params.Page - 1) * params.Limit
+	query += fmt.Sprintf(" LIMIT %d OFFSET %d", params.Limit, offset)
+
+	// Fetch total count for pagination
+	countQuery := `
+        SELECT COUNT(*)
+        FROM event_registrations er
+        JOIN event_generals eg ON er.event_code = eg.code
+        JOIN event_sessions es ON er.session_code = es.code
+        WHERE 1=1
+    `
+
+	// Add the same filters to count query
+	if params.Search != "" {
+		searchPattern := fmt.Sprintf("%%%s%%", params.Search)
+		countQuery += fmt.Sprintf(" AND (er.name ILIKE '%s' OR er.registered_by ILIKE '%s' OR er.identifier ILIKE '%s')", searchPattern, searchPattern, searchPattern)
+	}
+	if params.FilterSessionCode != "" {
+		countQuery += fmt.Sprintf(" AND er.session_code = '%s'", params.FilterSessionCode)
+	}
+	if params.FilterEventCode != "" {
+		countQuery += fmt.Sprintf(" AND er.event_code = '%s'", params.FilterEventCode)
+	}
+
+	// Execute count query
+	err = rer.db.Raw(countQuery).Scan(&totalCount).Error
+	if err != nil {
+		return nil, 0, err
+	}
+
+	// Execute main query
+	err = rer.db.Raw(query).Scan(&rawResults).Error
+	if err != nil {
+		return nil, 0, err
+	}
+
+	// Map raw results to composite struct
+	for _, raw := range rawResults {
+		result := models.GetRegisteredRepository{
+			EventRegistration: models.EventRegistration{
+				Name:          raw.Name,
+				Identifier:    raw.Identifier,
+				Address:       raw.Address,
+				AccountNumber: raw.AccountNumber,
+				Code:          raw.Code,
+				EventCode:     raw.EventCode,
+				SessionCode:   raw.SessionCode,
+				RegisteredBy:  raw.RegisteredBy,
+				UpdatedBy:     raw.UpdatedBy,
+				Status:        raw.Status,
+			},
+			EventGeneral: models.EventGeneral{
+				Name: raw.GeneralName,
+			},
+			EventSession: models.EventSession{
+				Name: raw.SessionName,
+			},
+		}
+		results = append(results, result)
+	}
+
+	fmt.Println(results)
+
+	return results, totalCount, nil
+
 }
 
 func (rer *eventRegistrationRepository) GetByIdentifier(ctx context.Context, identifier string) (eventRegistrations []models.EventRegistration, err error) {

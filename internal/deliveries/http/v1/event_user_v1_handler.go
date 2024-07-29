@@ -73,7 +73,7 @@ func (euh *EventUserHandler) ManualLogin(ctx echo.Context) error {
 	fmt.Println("bearer2: " + token)
 
 	res := models.LoginEventUserManualResponse{Type: models.TYPE_EVENT_USER, PhoneNumber: user.PhoneNumber, Name: user.Name, AccountNumber: user.AccountNumber, Email: user.Email, Role: user.Role, Status: user.Status, Token: token}
-	return response.Success(ctx, http.StatusCreated, res.ToLoginEventUserManual())
+	return response.Success(ctx, http.StatusOK, res.ToLoginEventUserManual())
 }
 
 func (euh *EventUserHandler) ManualRegister(ctx echo.Context) error {

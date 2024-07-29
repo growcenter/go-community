@@ -19,3 +19,17 @@ type ListWithDetail struct {
 	Data      interface{} `json:"data"`
 	TotalRows int         `json:"totalRows"`
 }
+
+type Pagination struct {
+	Type           string      `json:"type"`
+	Data           interface{} `json:"data"`
+	PaginationInfo interface{} `json:"pagination"`
+}
+
+type PaginationInfo struct {
+	CurrentPage int         `json:"page"`
+	TotalPages  int         `json:"totalPages"`
+	TotalData   int         `json:"totalData"`
+	Limit       int         `json:"limit"`
+	Parameter   interface{} `json:"parameters,omitempty"`
+}

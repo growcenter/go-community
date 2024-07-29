@@ -12,7 +12,10 @@ import (
 
 type EventRegistrationUsecase interface {
 	Create(ctx context.Context, request models.CreateEventRegistrationRequest) (eventRegistration models.CreateEventRegistrationResponse, err error)
-	GetRegistered(ctx context.Context, registeredBy string) (eventRegistrations models.GetRegisteredResponse, err error)
+	GetRegistered(ctx context.Context, registeredBy string) (eventRegistrations []models.GetRegisteredResponse, err error)
+
+	// Internal
+	GetAll(ctx context.Context, params models.GetAllPaginationParams) (eventRegistrations []models.GetRegisteredResponse, err error)
 }
 
 type eventRegistrationUsecase struct {
@@ -263,4 +266,36 @@ func (eru *eventRegistrationUsecase) GetRegistered(ctx context.Context, register
 	}
 
 	return response, nil
+}
+
+func (eru *eventRegistrationUsecase) GetAll(ctx context.Context, params models.GetAllPaginationParams) (eventRegistrations []models.GetAllRegisteredResponse, count int64, err error) {
+	defer func() {
+		LogService(ctx, err)
+	}()
+
+	registers, count, err := eru.rer.GetAllWithParams(ctx, params)
+	if err != nil {
+		return
+	}
+
+	response := make([]models.GetAllRegisteredResponse, len(registers))
+	for i, p := range registers {
+		response[i] = models.GetAllRegisteredResponse{
+			Type:          models.TYPE_EVENT_REGISTRATION,
+			Name:          p.EventRegistration.Name,
+			Identifier:    p.EventRegistration.Identifier,
+			Address:       p.EventRegistration.Address,
+			AccountNumber: p.EventRegistration.AccountNumber,
+			Code:          p.EventRegistration.Code,
+			RegisteredBy:  p.EventRegistration.RegisteredBy,
+			UpdatedBy:     p.EventRegistration.UpdatedBy,
+			EventCode:     p.EventRegistration.EventCode,
+			EventName:     p.EventGeneral.Name,
+			SessionCode:   p.EventRegistration.SessionCode,
+			SessionName:   p.EventSession.Name,
+			Status:        p.EventRegistration.Status,
+		}
+	}
+
+	return response, count, nil
 }

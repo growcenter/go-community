@@ -49,3 +49,13 @@ func SuccessListWithDetail(ctx echo.Context, code int, totalRows int, detail int
 
 	return ctx.JSON(code, response)
 }
+
+func SuccessPagination(ctx echo.Context, code int, pagination interface{}, data interface{}) error {
+	response := models.Pagination{
+		Type:           "collection",
+		PaginationInfo: pagination,
+		Data:           data,
+	}
+
+	return ctx.JSON(code, response)
+}
