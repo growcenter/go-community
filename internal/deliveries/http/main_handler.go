@@ -29,7 +29,7 @@ import (
 func New(e *echo.Echo, u *usecases.Usecases, c *config.Configuration) {
 	// Middleware for Recover and Logging
 	middleware := middleware.New(e)
-	middleware.Default()
+	middleware.Default(c)
 
 	// Input swagger initalization here
 
