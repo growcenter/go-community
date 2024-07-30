@@ -139,3 +139,23 @@ type (
 		Status        string `json:"status" example:"active"`
 	}
 )
+
+func (eu *UpdateAccountRoleResponse) ToUpdateAccountRole() UpdateAccountRoleResponse {
+	return UpdateAccountRoleResponse{
+		Type:           TYPE_EVENT_USER,
+		AccountNumbers: eu.AccountNumbers,
+		Role:           eu.Role,
+	}
+}
+
+type (
+	UpdateAccountRoleRequest struct {
+		AccountNumbers []string `json:"accountNumbers" validate:"required,numerical,noStartEndSpaces"`
+		Role           string   `json:"role" validate:"required,oneof=user admin" example:"female"`
+	}
+	UpdateAccountRoleResponse struct {
+		Type           string   `json:"type" example:"coolCategory"`
+		AccountNumbers []string `json:"accountNumbers"`
+		Role           string   `json:"role" validate:"required,oneof=user admin"`
+	}
+)

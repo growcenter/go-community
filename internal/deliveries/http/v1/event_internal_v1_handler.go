@@ -5,6 +5,7 @@ import (
 	"go-community/internal/deliveries/http/common/response"
 	"go-community/internal/deliveries/http/middleware"
 	"go-community/internal/models"
+	"go-community/internal/pkg/validator"
 	"go-community/internal/usecases"
 	"net/http"
 	"strconv"
@@ -21,9 +22,14 @@ func NewEventInternalHandler(api *echo.Group, u *usecases.Usecases, c *config.Co
 
 	// Define campus routes
 	eventEndpoint := api.Group("/internal/events")
-	eventEndpoint.Use(middleware.UserMiddleware(c))
+	eventEndpoint.Use(middleware.AdminMiddleware(c))
 	eventRegistrationEndpoint := eventEndpoint.Group("/registrations")
 	eventRegistrationEndpoint.GET("", handler.GetRegistered)
+	eventRegistrationEndpoint.PATCH("", handler.UpdateStatus)
+
+	// No need for bearer or role
+	noBearerEventEndpoint := api.Group("/users")
+	noBearerEventEndpoint.PATCH("", handler.UpdateAccountRole)
 }
 
 func (eih *EventInternalHandler) GetRegistered(ctx echo.Context) error {
@@ -72,4 +78,42 @@ func (eih *EventInternalHandler) GetRegistered(ctx echo.Context) error {
 	}
 
 	return response.SuccessPagination(ctx, http.StatusOK, info, registers)
+}
+
+func (eih *EventInternalHandler) UpdateStatus(ctx echo.Context) error {
+	var request models.UpdateRegistrationRequest
+	if err := ctx.Bind(&request); err != nil {
+		return response.Error(ctx, models.ErrorInvalidInput)
+	}
+
+	if err := validator.Validate(request); err != nil {
+		return response.ErrorValidation(ctx, err)
+	}
+
+	accountNumber := ctx.Get("accountNumber").(string)
+
+	updated, err := eih.usecase.EventRegistration.UpdateStatus(ctx.Request().Context(), request, accountNumber)
+	if err != nil {
+		return response.Error(ctx, err)
+	}
+
+	return response.Success(ctx, http.StatusOK, updated.ToUpdate())
+}
+
+func (eih *EventInternalHandler) UpdateAccountRole(ctx echo.Context) error {
+	var request models.UpdateAccountRoleRequest
+	if err := ctx.Bind(&request); err != nil {
+		return response.Error(ctx, models.ErrorInvalidInput)
+	}
+
+	if err := validator.Validate(request); err != nil {
+		return response.ErrorValidation(ctx, err)
+	}
+
+	updated, err := eih.usecase.EventUser.UpdateRole(ctx.Request().Context(), request)
+	if err != nil {
+		return response.Error(ctx, err)
+	}
+
+	return response.Success(ctx, http.StatusOK, updated.ToUpdateAccountRole())
 }

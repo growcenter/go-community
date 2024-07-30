@@ -4,6 +4,7 @@ import (
 	"errors"
 	"go-community/internal/config"
 	"go-community/internal/models"
+	"strings"
 	"time"
 
 	"github.com/golang-jwt/jwt/v5"
@@ -29,13 +30,15 @@ func NewAuthorization(config *config.Configuration) (*Auth, error) {
 
 type Claims struct {
 	AccountNumber string `json:"accountNumber"`
+	Role          string `json:"role"`
 	jwt.RegisteredClaims
 }
 
-func (a *Auth) Generate(accountNumber string) (string, error) {
+func (a *Auth) Generate(accountNumber string, role string) (string, error) {
 	duration := time.Now().Add(time.Duration(a.bearerDuration) * time.Minute)
 	claims := &Claims{
 		AccountNumber: accountNumber,
+		Role:          strings.ToLower(role),
 		RegisteredClaims: jwt.RegisteredClaims{
 			ExpiresAt: jwt.NewNumericDate(duration),
 		},

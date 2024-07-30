@@ -201,3 +201,34 @@ type (
 		EventSession EventSession `json:"-"`
 	}
 )
+
+func (er *EventRegistration) ToUpdate() *UpdateRegistrationResponse {
+	return &UpdateRegistrationResponse{
+		Type:          TYPE_EVENT_REGISTRATION,
+		Name:          er.Name,
+		Identifier:    er.Identifier,
+		AccountNumber: er.AccountNumber,
+		Code:          er.Code,
+		RegisteredBy:  er.RegisteredBy,
+		UpdatedBy:     er.UpdatedBy,
+		Status:        er.Status,
+	}
+}
+
+type (
+	UpdateRegistrationRequest struct {
+		Code        string `param:"code" validate:"required,uuid"`
+		Status      string `json:"status" validate:"required,oneof=active cancelled verified" example:"female"`
+		SessionCode string `json:"sessionCode" validate:"required,min=1,max=30,noStartEndSpaces" example:"Professionals"`
+	}
+	UpdateRegistrationResponse struct {
+		Type          string `json:"type"`
+		Name          string `json:"name"`
+		Identifier    string `json:"identifier"`
+		AccountNumber string `json:"accountNumber,omitempty"`
+		Code          string `json:"code"`
+		RegisteredBy  string `json:"registeredBy"`
+		UpdatedBy     string `json:"updatedBy"`
+		Status        string `json:"status"`
+	}
+)

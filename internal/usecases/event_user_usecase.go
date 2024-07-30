@@ -18,6 +18,7 @@ type EventUserUsecase interface {
 	ManualRegister(ctx context.Context, request models.CreateEventUserManualRequest) (eventUser *models.EventUser, token string, err error)
 	ManualLogin(ctx context.Context, request models.LoginEventUserManualRequest) (eventUser *models.EventUser, token string, err error)
 	GetByAccountNumber(ctx context.Context, accountNumber string) (eventUser *models.EventUser, err error)
+	UpdateRole(ctx context.Context, request models.UpdateAccountRoleRequest) (response *models.UpdateAccountRoleResponse, err error)
 }
 
 type eventUserUsecase struct {
@@ -62,7 +63,8 @@ func (euu *eventUserUsecase) Account(ctx context.Context, state string, code str
 	}
 
 	if exist.ID != 0 {
-		bearerToken, err := euu.a.Generate(exist.AccountNumber)
+		exist.Role = "user"
+		bearerToken, err := euu.a.Generate(exist.AccountNumber, exist.Role)
 		if err != nil {
 			return nil, "", http.StatusInternalServerError, err
 		}
@@ -78,7 +80,7 @@ func (euu *eventUserUsecase) Account(ctx context.Context, state string, code str
 	input := models.EventUser{
 		Name:          googleData.Name,
 		Email:         strings.ToLower(googleData.Email),
-		Role:          "USER",
+		Role:          "user",
 		State:         "1",
 		Status:        "active",
 		AccountNumber: accountNumber,
@@ -88,7 +90,7 @@ func (euu *eventUserUsecase) Account(ctx context.Context, state string, code str
 		return nil, "", http.StatusInternalServerError, err
 	}
 
-	bearerToken, err := euu.a.Generate(accountNumber)
+	bearerToken, err := euu.a.Generate(accountNumber, input.Role)
 	if err != nil {
 		return nil, "", http.StatusInternalServerError, err
 	}
@@ -126,7 +128,7 @@ func (euu *eventUserUsecase) ManualRegister(ctx context.Context, request models.
 		input := models.EventUser{
 			Name:          request.Name,
 			Email:         strings.ToLower(request.Email),
-			Role:          "USER",
+			Role:          "user",
 			State:         "1",
 			Status:        "active",
 			AccountNumber: accountNumber,
@@ -137,7 +139,7 @@ func (euu *eventUserUsecase) ManualRegister(ctx context.Context, request models.
 			return nil, "", err
 		}
 
-		bearerToken, err := euu.a.Generate(accountNumber)
+		bearerToken, err := euu.a.Generate(accountNumber, input.Role)
 		if err != nil {
 			return nil, "", err
 		}
@@ -167,7 +169,7 @@ func (euu *eventUserUsecase) ManualRegister(ctx context.Context, request models.
 		input := models.EventUser{
 			Name:          request.Name,
 			PhoneNumber:   request.PhoneNumber,
-			Role:          "USER",
+			Role:          "user",
 			State:         "1",
 			Status:        "active",
 			AccountNumber: accountNumber,
@@ -178,7 +180,7 @@ func (euu *eventUserUsecase) ManualRegister(ctx context.Context, request models.
 			return nil, "", err
 		}
 
-		bearerToken, err := euu.a.Generate(accountNumber)
+		bearerToken, err := euu.a.Generate(accountNumber, input.Role)
 		if err != nil {
 			return nil, "", err
 		}
@@ -208,7 +210,7 @@ func (euu *eventUserUsecase) ManualLogin(ctx context.Context, request models.Log
 		return nil, "", models.ErrorInvalidPassword
 	}
 
-	bearerToken, err := euu.a.Generate(user.AccountNumber)
+	bearerToken, err := euu.a.Generate(user.AccountNumber, strings.ToLower(user.Role))
 	if err != nil {
 		return nil, "", err
 	}
@@ -231,4 +233,33 @@ func (euu *eventUserUsecase) GetByAccountNumber(ctx context.Context, accountNumb
 	}
 
 	return &user, nil
+}
+
+func (euu *eventUserUsecase) UpdateRole(ctx context.Context, request models.UpdateAccountRoleRequest) (response *models.UpdateAccountRoleResponse, err error) {
+	defer func() {
+		LogService(ctx, err)
+	}()
+
+	for _, accountNumber := range request.AccountNumbers {
+		user, err := euu.eur.GetByAccountNumber(ctx, accountNumber)
+		if err != nil {
+			return nil, err
+		}
+
+		if user.ID == 0 {
+			return nil, models.ErrorUserNotFound
+		}
+	}
+
+	if err := euu.eur.BulkUpateRoleByAccountNumbers(ctx, request.AccountNumbers, strings.ToLower(request.Role)); err != nil {
+		return nil, err
+	}
+
+	response = &models.UpdateAccountRoleResponse{
+		Type:           models.TYPE_EVENT_REGISTRATION,
+		AccountNumbers: request.AccountNumbers,
+		Role:           strings.ToLower(request.Role),
+	}
+
+	return response, nil
 }

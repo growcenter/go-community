@@ -14,6 +14,7 @@ type EventUserRepository interface {
 	GetByAccountNumber(ctx context.Context, accountNumber string) (eventUser models.EventUser, err error)
 	GetByPhoneNumber(ctx context.Context, phoneNumber string) (eventUser models.EventUser, err error)
 	GetByEmailPhone(ctx context.Context, identifier string) (eventUser models.EventUser, err error)
+	BulkUpateRoleByAccountNumbers(ctx context.Context, accountNumbers []string, role string) (err error)
 }
 
 type eventUserRepository struct {
@@ -87,4 +88,15 @@ func (eur *eventUserRepository) GetByEmailPhone(ctx context.Context, identifier 
 	err = eur.db.Where("phone_number = ? OR email = ?", identifier, identifier).Find(&eu).Error
 
 	return eu, err
+}
+
+func (eur *eventUserRepository) BulkUpateRoleByAccountNumbers(ctx context.Context, accountNumbers []string, role string) (err error) {
+	defer func() {
+		LogRepository(ctx, err)
+	}()
+
+	return eur.trx.Transaction(func(dtx *gorm.DB) error {
+		eventRegistration := models.EventRegistration{}
+		return eur.db.Model(eventRegistration).Where("account_number IN ?", accountNumbers).Update("role", role).Error
+	})
 }

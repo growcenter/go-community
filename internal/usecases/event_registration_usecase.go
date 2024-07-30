@@ -16,6 +16,7 @@ type EventRegistrationUsecase interface {
 
 	// Internal
 	GetAll(ctx context.Context, params models.GetAllPaginationParams) (eventRegistrations []models.GetRegisteredResponse, err error)
+	UpdateStatus(ctx context.Context, request models.UpdateRegistrationRequest, accountNumber string) (eventRegistration *models.EventRegistration, err error)
 }
 
 type eventRegistrationUsecase struct {
@@ -298,4 +299,61 @@ func (eru *eventRegistrationUsecase) GetAll(ctx context.Context, params models.G
 	}
 
 	return response, count, nil
+}
+
+func (eru *eventRegistrationUsecase) UpdateStatus(ctx context.Context, request models.UpdateRegistrationRequest, accountNumber string) (eventRegistration *models.EventRegistration, err error) {
+	defer func() {
+		LogService(ctx, err)
+	}()
+
+	register, err := eru.rer.GetByCode(ctx, request.Code)
+	if err != nil {
+		return nil, err
+	}
+
+	if register.ID == 0 {
+		return nil, models.ErrorDataNotFound
+	}
+
+	switch {
+	case register.Status == "cancelled":
+		return nil, models.ErrorRegistrationAlreadyCancel
+	case register.Status == "verified":
+		return nil, models.ErrorRegistrationAlreadyVerified
+	case register.SessionCode != request.SessionCode:
+		return nil, models.ErrorRegistrationWrongTime
+	}
+
+	// _, err := eru.egr.GetByCode(ctx, register.EventCode)
+	// if err != nil {
+	// 	return nil, err
+	// }
+
+	session, err := eru.esr.GetByCode(ctx, register.SessionCode)
+	if err != nil {
+		return nil, err
+	}
+
+	internalUser, err := eru.eur.GetByAccountNumber(ctx, accountNumber)
+	if err != nil {
+		return nil, err
+	}
+
+	register.Status = "verified"
+	register.UpdatedBy = internalUser.PhoneNumber
+	if internalUser.Email != "" {
+		register.UpdatedBy = strings.ToLower(internalUser.Email)
+	}
+
+	session.ScannedSeats += 1
+
+	if err := eru.rer.Update(ctx, register); err != nil {
+		return nil, err
+	}
+
+	if err := eru.esr.Update(ctx, session); err != nil {
+		return nil, err
+	}
+
+	return &register, nil
 }
