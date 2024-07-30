@@ -104,6 +104,53 @@ func (euu *eventUserUsecase) ManualRegister(ctx context.Context, request models.
 	}()
 
 	switch {
+	case request.Email != "" && request.PhoneNumber != "":
+		existEmail, err := euu.eur.GetByEmail(ctx, strings.ToLower(request.Email))
+		if err != nil {
+			return nil, "", err
+		}
+
+		existPhone, err := euu.eur.GetByPhoneNumber(ctx, strings.ToLower(request.PhoneNumber))
+		if err != nil {
+			return nil, "", err
+		}
+
+		if existEmail.ID != 0 || existPhone.ID != 0 || strings.ToLower(request.Email) == strings.ToLower(existEmail.Email) || request.PhoneNumber == existPhone.PhoneNumber {
+			return nil, "", models.ErrorAlreadyExist
+		}
+
+		accountNumber, err := generator.AccountNumber()
+		if err != nil {
+			return nil, "", err
+		}
+
+		salted := append([]byte(request.Password), euu.s...)
+		password, err := hash.Generate(salted)
+		if err != nil {
+			return nil, "", err
+		}
+
+		input := models.EventUser{
+			Name:          request.Name,
+			Email:         strings.ToLower(request.Email),
+			PhoneNumber:   request.PhoneNumber,
+			Role:          "user",
+			State:         "1",
+			Status:        "active",
+			AccountNumber: accountNumber,
+			Password:      password,
+		}
+
+		if err := euu.eur.Create(ctx, &input); err != nil {
+			return nil, "", err
+		}
+
+		bearerToken, err := euu.a.Generate(accountNumber, input.Role)
+		if err != nil {
+			return nil, "", err
+		}
+
+		return &input, bearerToken, nil
 	case request.Email != "" && request.PhoneNumber == "":
 		exist, err := euu.eur.GetByEmail(ctx, strings.ToLower(request.Email))
 		if err != nil {

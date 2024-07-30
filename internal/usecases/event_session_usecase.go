@@ -33,6 +33,11 @@ func (esu *eventSessionUsecase) GetAllByEventCode(ctx context.Context, eventCode
 		return
 	}
 
+	if event.ID == 0 {
+		err = models.ErrorDataNotFound
+		return
+	}
+
 	if common.Now().Before(event.OpenRegistration) {
 		err = models.ErrorCannotRegisterYet
 		return
