@@ -96,7 +96,7 @@ func (eur *eventUserRepository) BulkUpateRoleByAccountNumbers(ctx context.Contex
 	}()
 
 	return eur.trx.Transaction(func(dtx *gorm.DB) error {
-		eventRegistration := models.EventRegistration{}
-		return eur.db.Model(eventRegistration).Where("account_number IN ?", accountNumbers).Update("role", role).Error
+		eventUser := models.EventUser{}
+		return eur.db.Model(eventUser).Where("account_number IN ?", accountNumbers).Update("role", role).Error
 	})
 }

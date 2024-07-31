@@ -25,7 +25,8 @@ func NewEventInternalHandler(api *echo.Group, u *usecases.Usecases, c *config.Co
 	eventEndpoint.Use(middleware.AdminMiddleware(c))
 	eventRegistrationEndpoint := eventEndpoint.Group("/registrations")
 	eventRegistrationEndpoint.GET("", handler.GetRegistered)
-	eventRegistrationEndpoint.PATCH("", handler.UpdateStatus)
+	eventRegistrationEndpoint.PATCH("/:code", handler.Verify)
+	eventRegistrationEndpoint.GET("/:eventCode/summary", handler.GetSummary)
 
 	// No need for bearer or role
 	noBearerEventEndpoint := api.Group("/users")
@@ -80,8 +81,11 @@ func (eih *EventInternalHandler) GetRegistered(ctx echo.Context) error {
 	return response.SuccessPagination(ctx, http.StatusOK, info, registers)
 }
 
-func (eih *EventInternalHandler) UpdateStatus(ctx echo.Context) error {
-	var request models.UpdateRegistrationRequest
+func (eih *EventInternalHandler) Verify(ctx echo.Context) error {
+	code := ctx.Param("code")
+
+	var request models.VerifyRegistrationRequest
+	request.Code = code
 	if err := ctx.Bind(&request); err != nil {
 		return response.Error(ctx, models.ErrorInvalidInput)
 	}
@@ -92,7 +96,7 @@ func (eih *EventInternalHandler) UpdateStatus(ctx echo.Context) error {
 
 	accountNumber := ctx.Get("accountNumber").(string)
 
-	updated, err := eih.usecase.EventRegistration.UpdateStatus(ctx.Request().Context(), request, accountNumber)
+	updated, err := eih.usecase.EventRegistration.Verify(ctx.Request().Context(), request, accountNumber)
 	if err != nil {
 		return response.Error(ctx, err)
 	}
@@ -116,4 +120,18 @@ func (eih *EventInternalHandler) UpdateAccountRole(ctx echo.Context) error {
 	}
 
 	return response.Success(ctx, http.StatusOK, updated.ToUpdateAccountRole())
+}
+
+func (eih *EventInternalHandler) GetSummary(ctx echo.Context) error {
+	detail, data, err := eih.usecase.EventSession.GetAllByEventCode(ctx.Request().Context(), ctx.Param("eventCode"))
+	if err != nil {
+		return response.Error(ctx, err)
+	}
+
+	var res []models.GetEventSessionsDataResponse
+	for _, v := range data {
+		res = append(res, *v.ToResponse())
+	}
+
+	return response.SuccessListWithDetail(ctx, http.StatusOK, len(res), detail, res)
 }

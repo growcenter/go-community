@@ -31,6 +31,7 @@ func NewEventUserHandler(api *echo.Group, u *usecases.Usecases, c *config.Config
 	authEventUserEndpoint := eventUserEndpoint.Group("")
 	authEventUserEndpoint.Use(middleware.UserMiddleware(c))
 	authEventUserEndpoint.GET("", handler.GetByToken)
+	authEventUserEndpoint.PATCH("/logout", handler.Logout)
 }
 
 func (euh *EventUserHandler) GoogleRedirect(ctx echo.Context) error {
@@ -104,4 +105,15 @@ func (euh *EventUserHandler) GetByToken(ctx echo.Context) error {
 	}
 
 	return response.Success(ctx, http.StatusOK, user.ToResponse())
+}
+
+func (euh *EventUserHandler) Logout(ctx echo.Context) error {
+	accountNumber := ctx.Get("accountNumber").(string)
+
+	logout, err := euh.usecase.EventUser.Logout(ctx.Request().Context(), accountNumber)
+	if err != nil {
+		return response.Error(ctx, err)
+	}
+
+	return response.Success(ctx, http.StatusOK, logout)
 }

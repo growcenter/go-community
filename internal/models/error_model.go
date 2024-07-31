@@ -29,6 +29,7 @@ var (
 	ErrorRegistrationWrongTime       = errors.New("your registration is not valid for this session, please check again")
 	ErrorRegistrationAlreadyCancel   = errors.New("you already cancelled the registration")
 	ErrorRegistrationAlreadyVerified = errors.New("your registration code is already verified")
+	ErrorNoRegistrationNeeded        = errors.New("you do not need to register for this session")
 
 	// Google Error
 	ErrorFetchGoogle = errors.New("error while retrieving user from google")
@@ -39,6 +40,7 @@ var (
 	ErrorExpiredToken   = errors.New("token is expired. please login again to use the account")
 	ErrorEmptyToken     = errors.New("token is empty")
 	ErrorForbiddenRole  = errors.New("you are not allowed to access this feature")
+	ErrorLoggedOut      = errors.New("you are already logged out")
 
 	// API Auth Error
 	ErrorInvalidAPIKey = errors.New("api key is invalid")
@@ -229,6 +231,18 @@ func ErrorMapping(err error) ErrorResponse {
 		return ErrorResponse{
 			Code:    http.StatusBadRequest,
 			Status:  "INVALID_ARGUMENT",
+			Message: err.Error(),
+		}
+	case ErrorNoRegistrationNeeded:
+		return ErrorResponse{
+			Code:    http.StatusForbidden,
+			Status:  "FORBIDDEN_REGISTRATION",
+			Message: err.Error(),
+		}
+	case ErrorLoggedOut:
+		return ErrorResponse{
+			Code:    http.StatusUnauthorized,
+			Status:  "LOGGED_OUT",
 			Message: err.Error(),
 		}
 	default:

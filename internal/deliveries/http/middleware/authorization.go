@@ -14,6 +14,7 @@ import (
 type jwtClaims struct {
 	AccountNumber string `json:"accountNumber"`
 	Role          string `json:"role"`
+	Status        string `json:"status"`
 	jwt.RegisteredClaims
 }
 
@@ -47,6 +48,10 @@ func UserMiddleware(config *config.Configuration) echo.MiddlewareFunc {
 
 			if claims.ExpiresAt.Time.Before(time.Now()) {
 				return response.Error(ctx, models.ErrorExpiredToken)
+			}
+
+			if strings.ToLower(claims.Status) != "active" || strings.ToLower(claims.Status) == "inactive" {
+				return response.Error(ctx, models.ErrorLoggedOut)
 			}
 
 			ctx.Set("accountNumber", claims.AccountNumber)
@@ -106,6 +111,10 @@ func AdminMiddleware(config *config.Configuration) echo.MiddlewareFunc {
 
 			if strings.ToLower(claims.Role) != "admin" {
 				return response.Error(ctx, models.ErrorForbiddenRole)
+			}
+
+			if strings.ToLower(claims.Status) != "active" || strings.ToLower(claims.Status) == "inactive" {
+				return response.Error(ctx, models.ErrorLoggedOut)
 			}
 
 			ctx.Set("accountNumber", claims.AccountNumber)

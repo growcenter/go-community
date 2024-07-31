@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"go-community/internal/models"
+	"time"
 
 	"gorm.io/gorm"
 )
@@ -19,6 +20,7 @@ type EventRegistrationRepository interface {
 	GetSpecificByRegisteredBy(ctx context.Context, registeredBy string) (eventRegistrations []models.GetRegisteredRepository, err error)
 	BulkUpdate(ctx context.Context, eventRegistration models.EventRegistration) (err error)
 	Update(ctx context.Context, eventRegistration models.EventRegistration) (err error)
+	Delete(ctx context.Context, eventRegistration models.EventRegistration) (err error)
 }
 
 type eventRegistrationRepository struct {
@@ -265,5 +267,15 @@ func (rer *eventRegistrationRepository) Update(ctx context.Context, eventRegistr
 
 	return rer.trx.Transaction(func(dtx *gorm.DB) error {
 		return rer.db.Save(eventRegistration).Error
+	})
+}
+
+func (rer *eventRegistrationRepository) Delete(ctx context.Context, eventRegistration models.EventRegistration) (err error) {
+	defer func() {
+		LogRepository(ctx, err)
+	}()
+
+	return rer.trx.Transaction(func(dtx *gorm.DB) error {
+		return rer.db.Model(eventRegistration).Update("deleted_at", time.Now()).Error
 	})
 }

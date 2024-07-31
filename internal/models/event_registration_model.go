@@ -23,8 +23,8 @@ type EventRegistration struct {
 	UpdatedAt     time.Time
 	DeletedAt     sql.NullTime
 
-	EventGeneral EventGeneral `gorm:"foreignKey:EventCode`
-	EventSession EventSession `gorm:"foreignKey:SessionCode`
+	EventGeneral EventGeneral `gorm:"foreignKey:EventCode"`
+	EventSession EventSession `gorm:"foreignKey:SessionCode"`
 }
 
 func (er *CreateEventRegistrationResponse) ToCreate() *CreateEventRegistrationResponse {
@@ -38,7 +38,7 @@ func (er *CreateEventRegistrationResponse) ToCreate() *CreateEventRegistrationRe
 		SessionCode:   er.SessionCode,
 		SessionName:   er.EventSession.Name,
 		IsValid:       true,
-		Seats:         1,
+		Seats:         len(er.Others) + 1,
 		AccountNumber: er.AccountNumber,
 		Code:          er.Code,
 		Status:        er.Status,
@@ -202,8 +202,8 @@ type (
 	}
 )
 
-func (er *EventRegistration) ToUpdate() *UpdateRegistrationResponse {
-	return &UpdateRegistrationResponse{
+func (er *EventRegistration) ToUpdate() *VerifyRegistrationResponse {
+	return &VerifyRegistrationResponse{
 		Type:          TYPE_EVENT_REGISTRATION,
 		Name:          er.Name,
 		Identifier:    er.Identifier,
@@ -216,12 +216,12 @@ func (er *EventRegistration) ToUpdate() *UpdateRegistrationResponse {
 }
 
 type (
-	UpdateRegistrationRequest struct {
+	VerifyRegistrationRequest struct {
 		Code        string `param:"code" validate:"required,uuid"`
 		Status      string `json:"status" validate:"required,oneof=active cancelled verified" example:"female"`
 		SessionCode string `json:"sessionCode" validate:"required,min=1,max=30,noStartEndSpaces" example:"Professionals"`
 	}
-	UpdateRegistrationResponse struct {
+	VerifyRegistrationResponse struct {
 		Type          string `json:"type"`
 		Name          string `json:"name"`
 		Identifier    string `json:"identifier"`
@@ -230,5 +230,36 @@ type (
 		RegisteredBy  string `json:"registeredBy"`
 		UpdatedBy     string `json:"updatedBy"`
 		Status        string `json:"status"`
+	}
+)
+
+func (er *EventRegistration) ToCancel() *CancelRegistrationResponse {
+	return &CancelRegistrationResponse{
+		Type:          TYPE_EVENT_REGISTRATION,
+		Name:          er.Name,
+		Identifier:    er.Identifier,
+		AccountNumber: er.AccountNumber,
+		Code:          er.Code,
+		RegisteredBy:  er.RegisteredBy,
+		UpdatedBy:     er.UpdatedBy,
+		Status:        er.Status,
+		DeletedAt:     er.DeletedAt,
+	}
+}
+
+type (
+	CancelRegistrationRequest struct {
+		Code string `param:"code" validate:"required,uuid"`
+	}
+	CancelRegistrationResponse struct {
+		Type          string       `json:"type"`
+		Name          string       `json:"name"`
+		Identifier    string       `json:"identifier"`
+		AccountNumber string       `json:"accountNumber,omitempty"`
+		Code          string       `json:"code"`
+		RegisteredBy  string       `json:"registeredBy"`
+		UpdatedBy     string       `json:"updatedBy"`
+		Status        string       `json:"status"`
+		DeletedAt     sql.NullTime `json:"deletedAt"`
 	}
 )

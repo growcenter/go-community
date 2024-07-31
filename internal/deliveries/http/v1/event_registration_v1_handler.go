@@ -24,6 +24,8 @@ func NewEventRegistrationHandler(api *echo.Group, u *usecases.Usecases, c *confi
 	eventEndpoint.Use(middleware.UserMiddleware(c))
 	eventEndpoint.POST("", handler.Create)
 	eventEndpoint.GET("", handler.GetRegistered)
+	eventEndpoint.DELETE("/:code", handler.Cancel)
+
 }
 
 func (erh *EventRegistrationHandler) Create(ctx echo.Context) error {
@@ -59,10 +61,33 @@ func (erh *EventRegistrationHandler) GetRegistered(ctx echo.Context) error {
 		return response.Error(ctx, err)
 	}
 
-	var res []models.GetRegisteredResponse
-	for _, v := range registers {
-		res = append(res, *v.ToResponse())
-	}
+	// var res []models.GetRegisteredResponse
+	// for _, v := range registers {
+	// 	res = append(res, *v.ToResponse())
+	// }
 
 	return response.SuccessList(ctx, http.StatusOK, len(registers), registers)
+}
+
+func (erh *EventRegistrationHandler) Cancel(ctx echo.Context) error {
+	var request models.CancelRegistrationRequest
+	request.Code = ctx.Param("code")
+	if err := ctx.Bind(&request); err != nil {
+		return response.Error(ctx, models.ErrorInvalidInput)
+	}
+
+	if err := ctx.Bind(&request); err != nil {
+		return response.Error(ctx, models.ErrorInvalidInput)
+	}
+
+	if err := validator.Validate(request); err != nil {
+		return response.ErrorValidation(ctx, err)
+	}
+
+	cancel, err := erh.usecase.EventRegistration.Cancel(ctx.Request().Context(), request)
+	if err != nil {
+		return response.Error(ctx, err)
+	}
+
+	return response.Success(ctx, http.StatusOK, cancel.ToCancel())
 }

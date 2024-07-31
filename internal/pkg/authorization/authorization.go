@@ -31,14 +31,16 @@ func NewAuthorization(config *config.Configuration) (*Auth, error) {
 type Claims struct {
 	AccountNumber string `json:"accountNumber"`
 	Role          string `json:"role"`
+	Status        string `json:"status"`
 	jwt.RegisteredClaims
 }
 
-func (a *Auth) Generate(accountNumber string, role string) (string, error) {
+func (a *Auth) Generate(accountNumber string, role string, status string) (string, error) {
 	duration := time.Now().Add(time.Duration(a.bearerDuration) * time.Minute)
 	claims := &Claims{
 		AccountNumber: accountNumber,
 		Role:          strings.ToLower(role),
+		Status:        strings.ToLower(status),
 		RegisteredClaims: jwt.RegisteredClaims{
 			ExpiresAt: jwt.NewNumericDate(duration),
 		},

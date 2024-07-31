@@ -150,7 +150,7 @@ func (eu *UpdateAccountRoleResponse) ToUpdateAccountRole() UpdateAccountRoleResp
 
 type (
 	UpdateAccountRoleRequest struct {
-		AccountNumbers []string `json:"accountNumbers" validate:"required,numerical,noStartEndSpaces"`
+		AccountNumbers []string `json:"accountNumbers" validate:"dive,required,numeric,noStartEndSpaces"`
 		Role           string   `json:"role" validate:"required,oneof=user admin" example:"female"`
 	}
 	UpdateAccountRoleResponse struct {
@@ -159,3 +159,19 @@ type (
 		Role           string   `json:"role" validate:"required,oneof=user admin"`
 	}
 )
+
+func (u *LogoutEventUserResponse) ToLogout() *LogoutEventUserResponse {
+	return &LogoutEventUserResponse{
+		Type:          TYPE_EVENT_USER,
+		AccountNumber: u.AccountNumber,
+		IsLoggedOut:   false,
+		Token:         u.Token,
+	}
+}
+
+type LogoutEventUserResponse struct {
+	Type          string `json:"type" example:"coolCategory"`
+	AccountNumber string `json:"accountNumber"`
+	IsLoggedOut   bool   `json:"isLoggedOut"`
+	Token         string `json:"token"`
+}

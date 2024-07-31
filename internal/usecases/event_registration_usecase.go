@@ -2,6 +2,7 @@ package usecases
 
 import (
 	"context"
+	"database/sql"
 	"go-community/internal/common"
 	"go-community/internal/models"
 	"go-community/internal/repositories/pgsql"
@@ -16,7 +17,8 @@ type EventRegistrationUsecase interface {
 
 	// Internal
 	GetAll(ctx context.Context, params models.GetAllPaginationParams) (eventRegistrations []models.GetRegisteredResponse, err error)
-	UpdateStatus(ctx context.Context, request models.UpdateRegistrationRequest, accountNumber string) (eventRegistration *models.EventRegistration, err error)
+	Verify(ctx context.Context, request models.VerifyRegistrationRequest, accountNumber string) (eventRegistration *models.EventRegistration, err error)
+	Cancel(ctx context.Context, code string) (eventRegistration models.EventRegistration, err error)
 }
 
 type eventRegistrationUsecase struct {
@@ -92,11 +94,14 @@ func (eru *eventRegistrationUsecase) Create(ctx context.Context, request models.
 	case session.EventCode != event.Code:
 		err = models.ErrorEventNotValid
 		return
-	case session.Status == "closed":
+	case strings.ToLower(session.Status) == "closed":
 		err = models.ErrorRegistrationTimeDisabled
 		return
-	case session.Status == "full":
+	case strings.ToLower(session.Status) == "full":
 		err = models.ErrorRegisterQuotaNotAvailable
+		return
+	case strings.ToLower(session.Status) == "unregisterable":
+		err = models.ErrorNoRegistrationNeeded
 		return
 	case countTotalRegister > session.MaxSeating:
 		err = models.ErrorExceedMaxSeating
@@ -201,6 +206,7 @@ func (eru *eventRegistrationUsecase) Create(ctx context.Context, request models.
 
 	// Update Session Quota & Session
 	session.AvailableSeats -= countTotalRegister
+	session.RegisteredSeats += countTotalRegister
 	if session.AvailableSeats == 0 {
 		session.Status = "full"
 	}
@@ -301,7 +307,7 @@ func (eru *eventRegistrationUsecase) GetAll(ctx context.Context, params models.G
 	return response, count, nil
 }
 
-func (eru *eventRegistrationUsecase) UpdateStatus(ctx context.Context, request models.UpdateRegistrationRequest, accountNumber string) (eventRegistration *models.EventRegistration, err error) {
+func (eru *eventRegistrationUsecase) Verify(ctx context.Context, request models.VerifyRegistrationRequest, accountNumber string) (eventRegistration *models.EventRegistration, err error) {
 	defer func() {
 		LogService(ctx, err)
 	}()
@@ -356,4 +362,62 @@ func (eru *eventRegistrationUsecase) UpdateStatus(ctx context.Context, request m
 	}
 
 	return &register, nil
+}
+
+func (eru *eventRegistrationUsecase) Cancel(ctx context.Context, request models.CancelRegistrationRequest) (eventRegistration models.EventRegistration, err error) {
+	defer func() {
+		LogService(ctx, err)
+	}()
+
+	register, err := eru.rer.GetByCode(ctx, request.Code)
+	if err != nil {
+		return
+	}
+
+	session, err := eru.esr.GetByCode(ctx, register.SessionCode)
+	if err != nil {
+		return
+	}
+
+	if register.DeletedAt.Valid {
+		err = models.ErrorRegistrationAlreadyCancel
+		return
+	}
+
+	if register.Status == "cancelled" {
+		err = models.ErrorRegistrationAlreadyCancel
+		return
+	}
+
+	switch {
+	case register.DeletedAt.Valid:
+		err = models.ErrorRegistrationAlreadyCancel
+		return
+	case register.Status == "verified":
+		err = models.ErrorRegistrationAlreadyVerified
+		return
+	case register.Status == "cancelled":
+		err = models.ErrorRegistrationAlreadyCancel
+		return
+	}
+
+	register.Status = "cancelled"
+	register.DeletedAt = sql.NullTime{Time: common.Now(), Valid: true}
+
+	if err = eru.rer.Update(ctx, register); err != nil {
+		return
+	}
+
+	// Update Session Quota & Session
+	session.AvailableSeats += 1
+	session.RegisteredSeats -= 1
+	if session.AvailableSeats != 0 {
+		session.Status = "active"
+	}
+
+	if err = eru.esr.Update(ctx, session); err != nil {
+		return
+	}
+
+	return register, nil
 }

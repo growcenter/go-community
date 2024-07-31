@@ -19,6 +19,7 @@ type EventUserUsecase interface {
 	ManualLogin(ctx context.Context, request models.LoginEventUserManualRequest) (eventUser *models.EventUser, token string, err error)
 	GetByAccountNumber(ctx context.Context, accountNumber string) (eventUser *models.EventUser, err error)
 	UpdateRole(ctx context.Context, request models.UpdateAccountRoleRequest) (response *models.UpdateAccountRoleResponse, err error)
+	Logout(ctx context.Context, accountNumber string) (token string, isLoggedIn bool, err error)
 }
 
 type eventUserUsecase struct {
@@ -64,7 +65,8 @@ func (euu *eventUserUsecase) Account(ctx context.Context, state string, code str
 
 	if exist.ID != 0 {
 		exist.Role = "user"
-		bearerToken, err := euu.a.Generate(exist.AccountNumber, exist.Role)
+		tokenStatus := "active"
+		bearerToken, err := euu.a.Generate(exist.AccountNumber, exist.Role, tokenStatus)
 		if err != nil {
 			return nil, "", http.StatusInternalServerError, err
 		}
@@ -90,7 +92,8 @@ func (euu *eventUserUsecase) Account(ctx context.Context, state string, code str
 		return nil, "", http.StatusInternalServerError, err
 	}
 
-	bearerToken, err := euu.a.Generate(accountNumber, input.Role)
+	tokenStatus := "active"
+	bearerToken, err := euu.a.Generate(accountNumber, input.Role, tokenStatus)
 	if err != nil {
 		return nil, "", http.StatusInternalServerError, err
 	}
@@ -145,7 +148,8 @@ func (euu *eventUserUsecase) ManualRegister(ctx context.Context, request models.
 			return nil, "", err
 		}
 
-		bearerToken, err := euu.a.Generate(accountNumber, input.Role)
+		tokenStatus := "active"
+		bearerToken, err := euu.a.Generate(accountNumber, input.Role, tokenStatus)
 		if err != nil {
 			return nil, "", err
 		}
@@ -186,7 +190,8 @@ func (euu *eventUserUsecase) ManualRegister(ctx context.Context, request models.
 			return nil, "", err
 		}
 
-		bearerToken, err := euu.a.Generate(accountNumber, input.Role)
+		tokenStatus := "active"
+		bearerToken, err := euu.a.Generate(accountNumber, input.Role, tokenStatus)
 		if err != nil {
 			return nil, "", err
 		}
@@ -227,7 +232,8 @@ func (euu *eventUserUsecase) ManualRegister(ctx context.Context, request models.
 			return nil, "", err
 		}
 
-		bearerToken, err := euu.a.Generate(accountNumber, input.Role)
+		tokenStatus := "active"
+		bearerToken, err := euu.a.Generate(accountNumber, input.Role, tokenStatus)
 		if err != nil {
 			return nil, "", err
 		}
@@ -257,7 +263,8 @@ func (euu *eventUserUsecase) ManualLogin(ctx context.Context, request models.Log
 		return nil, "", models.ErrorInvalidPassword
 	}
 
-	bearerToken, err := euu.a.Generate(user.AccountNumber, strings.ToLower(user.Role))
+	tokenStatus := "active"
+	bearerToken, err := euu.a.Generate(user.AccountNumber, strings.ToLower(user.Role), tokenStatus)
 	if err != nil {
 		return nil, "", err
 	}
@@ -306,6 +313,37 @@ func (euu *eventUserUsecase) UpdateRole(ctx context.Context, request models.Upda
 		Type:           models.TYPE_EVENT_REGISTRATION,
 		AccountNumbers: request.AccountNumbers,
 		Role:           strings.ToLower(request.Role),
+	}
+
+	return response, nil
+}
+
+func (euu *eventUserUsecase) Logout(ctx context.Context, accountNumber string) (response *models.LogoutEventUserResponse, err error) {
+	defer func() {
+		LogService(ctx, err)
+	}()
+
+	user, err := euu.eur.GetByAccountNumber(ctx, accountNumber)
+	if err != nil {
+		return
+	}
+
+	if user.ID == 0 {
+		err = models.ErrorUserNotFound
+		return
+	}
+
+	tokenStatus := "inactive"
+	token, err := euu.a.Generate(user.AccountNumber, strings.ToLower(user.Role), tokenStatus)
+	if err != nil {
+		return
+	}
+
+	response = &models.LogoutEventUserResponse{
+		Type:          models.TYPE_EVENT_USER,
+		AccountNumber: accountNumber,
+		Token:         token,
+		IsLoggedOut:   true,
 	}
 
 	return response, nil
