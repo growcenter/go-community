@@ -10,7 +10,7 @@ import (
 )
 
 func (m *Middleware) corsMiddleware(config *config.Configuration) echo.MiddlewareFunc {
-	origin := fmt.Sprintf("http://%s:%d", config.Application.Host, config.Application.Port)
+	origin := fmt.Sprintf("http://%s:%d", config.Frontend.Host, config.Frontend.Port)
 
 	return middleware.CORSWithConfig(middleware.CORSConfig{
 		AllowOrigins: []string{origin},

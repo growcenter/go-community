@@ -12,6 +12,7 @@ import (
 type (
 	Configuration struct {
 		Application Application `mapstructure:"app"`
+		Frontend    Frontend    `mapstructure:"frontend"`
 		PostgreSQL  PostgreSQL  `mapstructure:"psql"`
 		Google      Google      `mapstructure:"google"`
 		Auth        Auth        `mapstructure:"auth"`
@@ -25,6 +26,10 @@ type (
 		Timeout     time.Duration `mapstructure:"timeout"`
 		LogOption   string        `mapstructure:"log_option"`
 		LogLevel    string        `mapstructure:"log_level"`
+	}
+	Frontend struct {
+		Host string `mapstructure:"host"`
+		Port int    `mapstructure:"port"`
 	}
 	PostgreSQL struct {
 		User     string `mapstructure:"user"`
