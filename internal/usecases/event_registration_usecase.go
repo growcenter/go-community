@@ -100,7 +100,7 @@ func (eru *eventRegistrationUsecase) Create(ctx context.Context, request models.
 	case strings.ToLower(session.Status) == "full":
 		err = models.ErrorRegisterQuotaNotAvailable
 		return
-	case strings.ToLower(session.Status) == "unregisterable":
+	case strings.ToLower(session.Status) == "walkin":
 		err = models.ErrorNoRegistrationNeeded
 		return
 	case countTotalRegister > session.MaxSeating:
