@@ -250,7 +250,7 @@ func (euu *eventUserUsecase) ManualLogin(ctx context.Context, request models.Log
 		LogService(ctx, err)
 	}()
 
-	user, err := euu.eur.GetByEmailPhone(ctx, request.Identifier)
+	user, err := euu.eur.GetByEmailPhone(ctx, strings.ToLower(request.Identifier))
 	if err != nil {
 		return nil, "", err
 	}

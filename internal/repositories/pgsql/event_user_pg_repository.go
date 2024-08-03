@@ -3,6 +3,7 @@ package pgsql
 import (
 	"context"
 	"go-community/internal/models"
+	"strings"
 
 	"gorm.io/gorm"
 )
@@ -85,7 +86,7 @@ func (eur *eventUserRepository) GetByEmailPhone(ctx context.Context, identifier 
 	}()
 
 	var eu models.EventUser
-	err = eur.db.Where("phone_number = ? OR email = ?", identifier, identifier).Find(&eu).Error
+	err = eur.db.Where("phone_number = ? OR email = ?", identifier, strings.ToLower(identifier)).Find(&eu).Error
 
 	return eu, err
 }
