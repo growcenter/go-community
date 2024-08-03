@@ -30,6 +30,7 @@ func NewEventRegistrationHandler(api *echo.Group, u *usecases.Usecases, c *confi
 
 func (erh *EventRegistrationHandler) Create(ctx echo.Context) error {
 	var request models.CreateEventRegistrationRequest
+	accountNumber := ctx.Get("accountNumber").(string)
 	if err := ctx.Bind(&request); err != nil {
 		return response.Error(ctx, models.ErrorInvalidInput)
 	}
@@ -38,7 +39,7 @@ func (erh *EventRegistrationHandler) Create(ctx echo.Context) error {
 		return response.ErrorValidation(ctx, err)
 	}
 
-	register, err := erh.usecase.EventRegistration.Create(ctx.Request().Context(), request)
+	register, err := erh.usecase.EventRegistration.Create(ctx.Request().Context(), request, accountNumber)
 	if err != nil {
 		return response.Error(ctx, err)
 	}
@@ -48,6 +49,7 @@ func (erh *EventRegistrationHandler) Create(ctx echo.Context) error {
 
 func (erh *EventRegistrationHandler) GetRegistered(ctx echo.Context) error {
 	var request models.GetRegisteredRequest
+	accountNumber := ctx.Get("accountNumber").(string)
 	if err := ctx.Bind(&request); err != nil {
 		return response.Error(ctx, models.ErrorInvalidInput)
 	}
@@ -56,7 +58,7 @@ func (erh *EventRegistrationHandler) GetRegistered(ctx echo.Context) error {
 		return response.ErrorValidation(ctx, err)
 	}
 
-	registers, err := erh.usecase.EventRegistration.GetRegistered(ctx.Request().Context(), request.RegisteredBy)
+	registers, err := erh.usecase.EventRegistration.GetRegistered(ctx.Request().Context(), request.RegisteredBy, accountNumber)
 	if err != nil {
 		return response.Error(ctx, err)
 	}

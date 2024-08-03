@@ -10,6 +10,7 @@ CREATE TABLE "event_registrations" (
     "event_code" varchar(30) NOT NULL,
     "session_code" varchar(30) NOT NULL,
     "registered_by" varchar(100) NOT NULL,
+    "account_number_origin" varchar(15) NULL,
     "updated_by" varchar(100) NULL,
     "status" varchar(20) NOT NULL,
     "created_at" TIMESTAMP NOT NULL DEFAULT now(),

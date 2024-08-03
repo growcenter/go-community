@@ -175,3 +175,31 @@ type LogoutEventUserResponse struct {
 	IsLoggedOut   bool   `json:"isLoggedOut"`
 	Token         string `json:"token"`
 }
+
+func (eu *EventUser) ToUpdatePassword() *UpdatePasswordResponse {
+	return &UpdatePasswordResponse{
+		Type:          TYPE_EVENT_USER,
+		Name:          eu.Name,
+		AccountNumber: eu.AccountNumber,
+		Email:         eu.Email,
+		PhoneNumber:   eu.PhoneNumber,
+		Status:        eu.Status,
+		Role:          eu.Role,
+	}
+}
+
+type (
+	UpdatePasswordRequest struct {
+		Identifier string `json:"identifier" validate:"required,noStartEndSpaces,emailPhoneFormat"`
+		Password   string `json:"password" validate:"required,min=6,max=50,noStartEndSpaces" example:"Professionals"`
+	}
+	UpdatePasswordResponse struct {
+		Type          string `json:"type" example:"coolCategory"`
+		Name          string `json:"name" example:"Profesionals"`
+		Email         string `json:"email,omitempty"`
+		PhoneNumber   string `json:"phoneNumber,omitempty"`
+		AccountNumber string `json:"accountNumber"`
+		Role          string `json:"role"`
+		Status        string `json:"status" example:"active"`
+	}
+)

@@ -37,7 +37,7 @@ func NewEventRegistrationUsecase(rer pgsql.EventRegistrationRepository, egr pgsq
 	}
 }
 
-func (eru *eventRegistrationUsecase) Create(ctx context.Context, request models.CreateEventRegistrationRequest) (eventRegistration models.CreateEventRegistrationResponse, err error) {
+func (eru *eventRegistrationUsecase) Create(ctx context.Context, request models.CreateEventRegistrationRequest, accountNumberOrigin string) (eventRegistration models.CreateEventRegistrationResponse, err error) {
 	defer func() {
 		LogService(ctx, err)
 	}()
@@ -173,28 +173,30 @@ func (eru *eventRegistrationUsecase) Create(ctx context.Context, request models.
 	var register = make([]models.EventRegistration, 0, session.MaxSeating)
 
 	mainInput := models.EventRegistration{
-		Name:          strings.ToUpper(request.Name),
-		Identifier:    strings.ToLower(request.Identifier),
-		Address:       request.Address,
-		AccountNumber: accountNumber,
-		Code:          (uuid.New()).String(),
-		EventCode:     event.Code,
-		SessionCode:   session.Code,
-		RegisteredBy:  strings.ToLower(request.Identifier),
-		Status:        "registered",
+		Name:                strings.ToUpper(request.Name),
+		Identifier:          strings.ToLower(request.Identifier),
+		Address:             request.Address,
+		AccountNumber:       accountNumber,
+		Code:                (uuid.New()).String(),
+		EventCode:           event.Code,
+		SessionCode:         session.Code,
+		RegisteredBy:        strings.ToLower(request.Identifier),
+		AccountNumberOrigin: accountNumberOrigin,
+		Status:              "registered",
 	}
 
 	register = append(register, mainInput)
 
 	for _, other := range request.Others {
 		otherInput := models.EventRegistration{
-			Name:         strings.ToUpper(other.Name),
-			Address:      other.Address,
-			Code:         (uuid.New()).String(),
-			EventCode:    event.Code,
-			SessionCode:  session.Code,
-			RegisteredBy: strings.ToLower(request.Identifier),
-			Status:       "registered",
+			Name:                strings.ToUpper(other.Name),
+			Address:             other.Address,
+			Code:                (uuid.New()).String(),
+			EventCode:           event.Code,
+			SessionCode:         session.Code,
+			RegisteredBy:        strings.ToLower(request.Identifier),
+			AccountNumberOrigin: accountNumberOrigin,
+			Status:              "registered",
 		}
 
 		register = append(register, otherInput)
@@ -245,12 +247,12 @@ func (eru *eventRegistrationUsecase) Create(ctx context.Context, request models.
 	return mainResponse, nil
 }
 
-func (eru *eventRegistrationUsecase) GetRegistered(ctx context.Context, registeredBy string) (eventRegistrations []models.GetRegisteredResponse, err error) {
+func (eru *eventRegistrationUsecase) GetRegistered(ctx context.Context, registeredBy string, accountNumberOrigin string) (eventRegistrations []models.GetRegisteredResponse, err error) {
 	defer func() {
 		LogService(ctx, err)
 	}()
 
-	registers, err := eru.rer.GetSpecificByRegisteredBy(ctx, registeredBy)
+	registers, err := eru.rer.GetSpecificByRegisteredBy(ctx, registeredBy, accountNumberOrigin)
 	if err != nil {
 		return
 	}

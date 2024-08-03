@@ -8,20 +8,21 @@ import (
 var TYPE_EVENT_REGISTRATION = "eventRegistration"
 
 type EventRegistration struct {
-	ID            int
-	Name          string
-	Identifier    string
-	Address       string
-	AccountNumber string
-	Code          string
-	EventCode     string
-	SessionCode   string
-	RegisteredBy  string
-	UpdatedBy     string
-	Status        string
-	CreatedAt     time.Time
-	UpdatedAt     time.Time
-	DeletedAt     sql.NullTime
+	ID                  int
+	Name                string
+	Identifier          string
+	Address             string
+	AccountNumber       string
+	Code                string
+	EventCode           string
+	SessionCode         string
+	RegisteredBy        string
+	UpdatedBy           string
+	AccountNumberOrigin string
+	Status              string
+	CreatedAt           time.Time
+	UpdatedAt           time.Time
+	DeletedAt           sql.NullTime
 
 	EventGeneral EventGeneral `gorm:"foreignKey:EventCode"`
 	EventSession EventSession `gorm:"foreignKey:SessionCode"`
@@ -105,7 +106,7 @@ func (er *GetRegisteredResponse) ToResponse() *GetRegisteredResponse {
 
 type (
 	GetRegisteredRequest struct {
-		RegisteredBy string `json:"registeredBy" query:"registeredBy" validate:"required,emailPhoneFormat" example:"tono@amartha.com"`
+		RegisteredBy string `json:"registeredBy" query:"registeredBy" validate:"required" example:"tono@amartha.com"`
 	}
 	GetRegisteredResponse struct {
 		Type          string `json:"type"`

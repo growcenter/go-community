@@ -17,7 +17,7 @@ type EventRegistrationRepository interface {
 	GetByIdentifier(ctx context.Context, identifier string) (eventRegistrations []models.EventRegistration, err error)
 	GetByCode(ctx context.Context, code string) (eventRegistration models.EventRegistration, err error)
 	GetByRegisteredBy(ctx context.Context, registeredBy string) (eventRegistration []models.EventRegistration, err error)
-	GetSpecificByRegisteredBy(ctx context.Context, registeredBy string) (eventRegistrations []models.GetRegisteredRepository, err error)
+	GetSpecificByRegisteredBy(ctx context.Context, registeredBy string, accountNumberOrigin string) (eventRegistrations []models.GetRegisteredRepository, err error)
 	BulkUpdate(ctx context.Context, eventRegistration models.EventRegistration) (err error)
 	Update(ctx context.Context, eventRegistration models.EventRegistration) (err error)
 	Delete(ctx context.Context, eventRegistration models.EventRegistration) (err error)
@@ -199,7 +199,7 @@ func (rer *eventRegistrationRepository) GetByRegisteredBy(ctx context.Context, r
 	return ers, err
 }
 
-func (rer *eventRegistrationRepository) GetSpecificByRegisteredBy(ctx context.Context, registeredBy string) (eventRegistrations []models.GetRegisteredRepository, err error) {
+func (rer *eventRegistrationRepository) GetSpecificByRegisteredBy(ctx context.Context, registeredBy string, accountNumberOrigin string) (eventRegistrations []models.GetRegisteredRepository, err error) {
 	defer func() {
 		LogRepository(ctx, err)
 	}()
@@ -214,10 +214,10 @@ func (rer *eventRegistrationRepository) GetSpecificByRegisteredBy(ctx context.Co
         FROM event_registrations er
         JOIN event_generals eg ON er.event_code = eg.code
         JOIN event_sessions es ON er.session_code = es.code
-        WHERE er.registered_by = $1;
+        WHERE er.registered_by = ? AND er.account_number_origin = ?;
     `
 
-	err = rer.db.Raw(query, registeredBy).Scan(&rawResults).Error
+	err = rer.db.Raw(query, registeredBy, accountNumberOrigin).Scan(&rawResults).Error
 	if err != nil {
 		return nil, err
 	}

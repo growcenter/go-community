@@ -28,6 +28,7 @@ func NewEventUserHandler(api *echo.Group, u *usecases.Usecases, c *config.Config
 	eventUserEndpoint := api.Group("/event/user")
 	eventUserEndpoint.POST("/login", handler.ManualLogin)
 	eventUserEndpoint.POST("/register", handler.ManualRegister)
+	eventUserEndpoint.PATCH("/forgot", handler.ForgotPassword)
 	authEventUserEndpoint := eventUserEndpoint.Group("")
 	authEventUserEndpoint.Use(middleware.UserMiddleware(c))
 	authEventUserEndpoint.GET("", handler.GetByToken)
@@ -116,4 +117,22 @@ func (euh *EventUserHandler) Logout(ctx echo.Context) error {
 	}
 
 	return response.Success(ctx, http.StatusOK, logout)
+}
+
+func (euh *EventUserHandler) ForgotPassword(ctx echo.Context) error {
+	var request models.UpdatePasswordRequest
+	if err := ctx.Bind(&request); err != nil {
+		return response.Error(ctx, models.ErrorInvalidInput)
+	}
+
+	if err := validator.Validate(request); err != nil {
+		return response.ErrorValidation(ctx, err)
+	}
+
+	user, err := euh.usecase.EventUser.UpdatePassword(ctx.Request().Context(), request)
+	if err != nil {
+		return response.Error(ctx, err)
+	}
+
+	return response.Success(ctx, http.StatusOK, user.ToResponse())
 }

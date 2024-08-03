@@ -20,6 +20,7 @@ type EventUserUsecase interface {
 	GetByAccountNumber(ctx context.Context, accountNumber string) (eventUser *models.EventUser, err error)
 	UpdateRole(ctx context.Context, request models.UpdateAccountRoleRequest) (response *models.UpdateAccountRoleResponse, err error)
 	Logout(ctx context.Context, accountNumber string) (token string, isLoggedIn bool, err error)
+	UpdatePassword(ctx context.Context, request models.UpdatePasswordRequest) (eventUser models.EventUser, err error)
 }
 
 type eventUserUsecase struct {
@@ -347,4 +348,33 @@ func (euu *eventUserUsecase) Logout(ctx context.Context, accountNumber string) (
 	}
 
 	return response, nil
+}
+
+func (euu *eventUserUsecase) UpdatePassword(ctx context.Context, request models.UpdatePasswordRequest) (eventUser models.EventUser, err error) {
+	defer func() {
+		LogService(ctx, err)
+	}()
+
+	user, err := euu.eur.GetByEmailPhone(ctx, strings.ToLower(request.Identifier))
+	if err != nil {
+		return
+	}
+
+	if user.ID == 0 {
+		err = models.ErrorUserNotFound
+		return
+	}
+
+	salted := append([]byte(request.Password), euu.s...)
+	password, err := hash.Generate(salted)
+	if err != nil {
+		return
+	}
+
+	user.Password = password
+	if err = euu.eur.Update(ctx, &user); err != nil {
+		return
+	}
+
+	return user, nil
 }
