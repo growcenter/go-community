@@ -1,6 +1,7 @@
 package middleware
 
 import (
+	"fmt"
 	"go-community/internal/config"
 
 	"github.com/labstack/echo/v4"
@@ -8,11 +9,11 @@ import (
 )
 
 func (m *Middleware) corsMiddleware(config *config.Configuration) echo.MiddlewareFunc {
-	// origin := fmt.Sprintf("http://%s:%d", config.Frontend.Host, config.Frontend.Port)
-	// origin := fmt.Sprintf("http://%s", config.Frontend.Host)
+	// origin := fmt.Sprintf("http://%s:%d", config.Application.Host, config.Application.Port)
+	origin := fmt.Sprintf("https://%s", config.Application.Host)
 
 	return middleware.CORSWithConfig(middleware.CORSConfig{
-		AllowOrigins: []string{"*"},
+		AllowOrigins: []string{origin},
 		AllowMethods: []string{"*"},
 		AllowHeaders: []string{"*"},
 	})
