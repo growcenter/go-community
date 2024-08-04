@@ -131,7 +131,7 @@ func registerPhoneFormat() {
 func registerEmailPhoneFormat() {
 	valid.RegisterValidation("emailPhoneFormat", func(fl v10.FieldLevel) bool {
 		input := fl.Field().String()
-		pattern := `^\+62\d{10,}$|^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$`
+		pattern := `^\+62\d{10,}$|^0\d{10,}$|^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$`
 		return regexp.MustCompile(pattern).MatchString(input)
 	})
 }

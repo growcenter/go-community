@@ -49,7 +49,7 @@ func (er *CreateEventRegistrationResponse) ToCreate() *CreateEventRegistrationRe
 
 type (
 	CreateEventRegistrationRequest struct {
-		Name        string                                `json:"name" validate:"required,min=1,max=50,nospecial,noStartEndSpaces" example:"Professionals"`
+		Name        string                                `json:"name" validate:"required,min=1,max=50" example:"Professionals"`
 		Identifier  string                                `json:"identifier" validate:"required,noStartEndSpaces,emailPhoneFormat"`
 		Address     string                                `json:"address" validate:"required,min=15,noStartEndSpaces"`
 		EventCode   string                                `json:"eventCode" validate:"required,min=1,max=30,noStartEndSpaces" example:"Professionals"`
@@ -57,7 +57,7 @@ type (
 		Others      []CreateOtherEventRegistrationRequest `json:"otherRegister" validate:"dive,required"`
 	}
 	CreateOtherEventRegistrationRequest struct {
-		Name    string `json:"name" validate:"required,noStartEndSpaces"`
+		Name    string `json:"name" validate:"required"`
 		Address string `json:"address" validate:"required,min=15,noStartEndSpaces"`
 	}
 	CreateEventRegistrationResponse struct {

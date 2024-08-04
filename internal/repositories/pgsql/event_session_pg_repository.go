@@ -29,7 +29,7 @@ func (esr *eventSessionRepository) GetAllByEventCode(ctx context.Context, eventC
 	}()
 
 	var es []models.EventSession
-	err = esr.db.Where("event_code = ?", eventCode).Find(&es).Error
+	err = esr.db.Where("event_code = ?", eventCode).Order("code ASC").Find(&es).Error
 
 	return es, err
 }

@@ -8,6 +8,7 @@ import (
 	"go-community/internal/pkg/validator"
 	"go-community/internal/usecases"
 	"net/http"
+	"strings"
 
 	"github.com/labstack/echo/v4"
 )
@@ -58,7 +59,7 @@ func (erh *EventRegistrationHandler) GetRegistered(ctx echo.Context) error {
 		return response.ErrorValidation(ctx, err)
 	}
 
-	registers, err := erh.usecase.EventRegistration.GetRegistered(ctx.Request().Context(), request.RegisteredBy, accountNumber)
+	registers, err := erh.usecase.EventRegistration.GetRegistered(ctx.Request().Context(), strings.ToLower(request.RegisteredBy), accountNumber)
 	if err != nil {
 		return response.Error(ctx, err)
 	}
