@@ -264,3 +264,23 @@ type (
 		DeletedAt     sql.NullTime `json:"deletedAt"`
 	}
 )
+
+func (er *RegistrationSummaryResponse) ToResponse() *RegistrationSummaryResponse {
+	return &RegistrationSummaryResponse{
+		Type:            TYPE_EVENT_REGISTRATION,
+		SessionCode:     er.SessionCode,
+		Status:          er.Status,
+		RegisteredSeats: er.RegisteredSeats,
+		ScannedSeats:    er.ScannedSeats,
+		UnscannedSeats:  int(er.RegisteredSeats - int64(er.ScannedSeats)),
+	}
+}
+
+type RegistrationSummaryResponse struct {
+	Type            string `json:"type"`
+	SessionCode     string `json:"sessionCode"`
+	Status          string `json:"status"`
+	RegisteredSeats int64  `json:"registeredSeats"`
+	ScannedSeats    int    `json:"scannedSeats"`
+	UnscannedSeats  int    `json:"unscannedSeats"`
+}

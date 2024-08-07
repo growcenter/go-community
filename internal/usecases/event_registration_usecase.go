@@ -19,6 +19,7 @@ type EventRegistrationUsecase interface {
 	GetAll(ctx context.Context, params models.GetAllPaginationParams) (eventRegistrations []models.GetRegisteredResponse, err error)
 	Verify(ctx context.Context, request models.VerifyRegistrationRequest, accountNumber string) (eventRegistration *models.EventRegistration, err error)
 	Cancel(ctx context.Context, code string) (eventRegistration models.EventRegistration, err error)
+	Summary(ctx context.Context, sessionCode string) (summary models.RegistrationSummaryResponse, err error)
 }
 
 type eventRegistrationUsecase struct {
@@ -144,7 +145,7 @@ func (eru *eventRegistrationUsecase) Create(ctx context.Context, request models.
 	// 	return
 	// }
 
-	alreadyRegister, err := eru.rer.GetByRegisteredBy(ctx, strings.ToLower(request.Identifier))
+	alreadyRegister, err := eru.rer.GetByRegisteredByStatus(ctx, strings.ToLower(request.Identifier), "registered")
 	if err != nil {
 		return
 	}
@@ -422,4 +423,36 @@ func (eru *eventRegistrationUsecase) Cancel(ctx context.Context, request models.
 	}
 
 	return register, nil
+}
+
+func (eru *eventRegistrationUsecase) Summary(ctx context.Context, sessionCode string) (summary models.RegistrationSummaryResponse, err error) {
+	defer func() {
+		LogService(ctx, err)
+	}()
+
+	session, err := eru.esr.GetByCode(ctx, sessionCode)
+	if err != nil {
+		return
+	}
+
+	if session.ID == 0 {
+		err = models.ErrorDataNotFound
+		return
+	}
+
+	count, err := eru.rer.CountSessionRegistered(ctx, sessionCode, "registered")
+	if err != nil {
+		return
+	}
+
+	response := models.RegistrationSummaryResponse{
+		Type:            models.TYPE_EVENT_REGISTRATION,
+		SessionCode:     sessionCode,
+		Status:          "registered",
+		RegisteredSeats: count,
+		ScannedSeats:    session.ScannedSeats,
+		UnscannedSeats:  int(count - int64(session.ScannedSeats)),
+	}
+
+	return response, nil
 }

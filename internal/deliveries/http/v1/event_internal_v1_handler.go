@@ -29,8 +29,10 @@ func NewEventInternalHandler(api *echo.Group, u *usecases.Usecases, c *config.Co
 	eventRegistrationEndpoint.GET("/:eventCode/summary", handler.GetSummary)
 
 	// No need for bearer or role
-	noBearerEventEndpoint := api.Group("/users")
-	noBearerEventEndpoint.PATCH("", handler.UpdateAccountRole)
+	noBearerEventUserEndpoint := api.Group("/users")
+	noBearerEventUserEndpoint.PATCH("", handler.UpdateAccountRole)
+	noBearerEventEndpoint := api.Group("/events")
+	noBearerEventEndpoint.GET("/summary/:sessionCode", handler.GetSummaryPerSession)
 }
 
 func (eih *EventInternalHandler) GetRegistered(ctx echo.Context) error {
@@ -134,4 +136,13 @@ func (eih *EventInternalHandler) GetSummary(ctx echo.Context) error {
 	}
 
 	return response.SuccessListWithDetail(ctx, http.StatusOK, len(res), detail, res)
+}
+
+func (eih *EventInternalHandler) GetSummaryPerSession(ctx echo.Context) error {
+	count, err := eih.usecase.EventRegistration.Summary(ctx.Request().Context(), ctx.Param("sessionCode"))
+	if err != nil {
+		return response.Error(ctx, err)
+	}
+
+	return response.Success(ctx, http.StatusOK, count)
 }

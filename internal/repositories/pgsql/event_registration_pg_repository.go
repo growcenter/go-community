@@ -17,10 +17,12 @@ type EventRegistrationRepository interface {
 	GetByIdentifier(ctx context.Context, identifier string) (eventRegistrations []models.EventRegistration, err error)
 	GetByCode(ctx context.Context, code string) (eventRegistration models.EventRegistration, err error)
 	GetByRegisteredBy(ctx context.Context, registeredBy string) (eventRegistration []models.EventRegistration, err error)
+	GetByRegisteredByStatus(ctx context.Context, registeredBy string, status string) (eventRegistration []models.EventRegistration, err error)
 	GetSpecificByRegisteredBy(ctx context.Context, registeredBy string, accountNumberOrigin string) (eventRegistrations []models.GetRegisteredRepository, err error)
 	BulkUpdate(ctx context.Context, eventRegistration models.EventRegistration) (err error)
 	Update(ctx context.Context, eventRegistration models.EventRegistration) (err error)
 	Delete(ctx context.Context, eventRegistration models.EventRegistration) (err error)
+	CountSessionRegistered(ctx context.Context, sessionId string, status string) (count int64, err error)
 }
 
 type eventRegistrationRepository struct {
@@ -199,6 +201,17 @@ func (rer *eventRegistrationRepository) GetByRegisteredBy(ctx context.Context, r
 	return ers, err
 }
 
+func (rer *eventRegistrationRepository) GetByRegisteredByStatus(ctx context.Context, registeredBy string, status string) (eventRegistration []models.EventRegistration, err error) {
+	defer func() {
+		LogRepository(ctx, err)
+	}()
+
+	var ers []models.EventRegistration
+	err = rer.db.Where("registered_by = ? AND status = ?", registeredBy, status).Find(&ers).Error
+
+	return ers, err
+}
+
 func (rer *eventRegistrationRepository) GetSpecificByRegisteredBy(ctx context.Context, registeredBy string, accountNumberOrigin string) (eventRegistrations []models.GetRegisteredRepository, err error) {
 	defer func() {
 		LogRepository(ctx, err)
@@ -278,4 +291,15 @@ func (rer *eventRegistrationRepository) Delete(ctx context.Context, eventRegistr
 	return rer.trx.Transaction(func(dtx *gorm.DB) error {
 		return rer.db.Model(eventRegistration).Update("deleted_at", time.Now()).Error
 	})
+}
+
+func (rer *eventRegistrationRepository) CountSessionRegistered(ctx context.Context, sessionId string, status string) (count int64, err error) {
+	defer func() {
+		LogRepository(ctx, err)
+	}()
+
+	var er models.EventRegistration
+	err = rer.db.Model(er).Where("session_code = ? AND status = ?", sessionId, status).Count(&count).Error
+
+	return count, err
 }

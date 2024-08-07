@@ -79,10 +79,6 @@ func (erh *EventRegistrationHandler) Cancel(ctx echo.Context) error {
 		return response.Error(ctx, models.ErrorInvalidInput)
 	}
 
-	if err := ctx.Bind(&request); err != nil {
-		return response.Error(ctx, models.ErrorInvalidInput)
-	}
-
 	if err := validator.Validate(request); err != nil {
 		return response.ErrorValidation(ctx, err)
 	}
