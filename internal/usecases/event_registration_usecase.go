@@ -7,6 +7,7 @@ import (
 	"go-community/internal/models"
 	"go-community/internal/repositories/pgsql"
 	"strings"
+	"time"
 
 	"github.com/google/uuid"
 )
@@ -440,13 +441,34 @@ func (eru *eventRegistrationUsecase) Summary(ctx context.Context, sessionCode st
 		return
 	}
 
-	response := models.RegistrationSummaryResponse{
-		Type:            models.TYPE_EVENT_REGISTRATION,
-		SessionCode:     sessionCode,
-		Status:          "registered",
-		RegisteredSeats: count,
-		ScannedSeats:    session.ScannedSeats,
-		UnscannedSeats:  int(count - int64(session.ScannedSeats)),
+	var response models.RegistrationSummaryResponse
+	now := common.Now()
+	oneHourBefore := session.Time.Add(-time.Hour)
+	oneHourAfter := session.Time.Add(time.Hour)
+
+	switch {
+	case now.After(oneHourBefore) && now.Before(oneHourAfter):
+		response = models.RegistrationSummaryResponse{
+			Type:            models.TYPE_EVENT_REGISTRATION,
+			SessionCode:     sessionCode,
+			Status:          "registered",
+			RegisteredSeats: count,
+			ScannedSeats:    session.ScannedSeats,
+			UnscannedSeats:  int(count - int64(session.ScannedSeats)),
+			IsScannerValid:  true,
+			Time:            session.Time,
+		}
+	default:
+		response = models.RegistrationSummaryResponse{
+			Type:            models.TYPE_EVENT_REGISTRATION,
+			SessionCode:     sessionCode,
+			Status:          "registered",
+			RegisteredSeats: count,
+			ScannedSeats:    session.ScannedSeats,
+			UnscannedSeats:  int(count - int64(session.ScannedSeats)),
+			IsScannerValid:  false,
+			Time:            session.Time,
+		}
 	}
 
 	return response, nil
