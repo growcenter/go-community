@@ -273,14 +273,18 @@ func (er *RegistrationSummaryResponse) ToResponse() *RegistrationSummaryResponse
 		RegisteredSeats: er.RegisteredSeats,
 		ScannedSeats:    er.ScannedSeats,
 		UnscannedSeats:  int(er.RegisteredSeats - int64(er.ScannedSeats)),
+		IsScannerValid:  er.IsScannerValid,
+		Time:            er.Time,
 	}
 }
 
 type RegistrationSummaryResponse struct {
-	Type            string `json:"type"`
-	SessionCode     string `json:"sessionCode"`
-	Status          string `json:"status"`
-	RegisteredSeats int64  `json:"registeredSeats"`
-	ScannedSeats    int    `json:"scannedSeats"`
-	UnscannedSeats  int    `json:"unscannedSeats"`
+	Type            string    `json:"type"`
+	SessionCode     string    `json:"sessionCode"`
+	Status          string    `json:"status"`
+	RegisteredSeats int64     `json:"registeredSeats"`
+	ScannedSeats    int       `json:"scannedSeats"`
+	UnscannedSeats  int       `json:"unscannedSeats"`
+	IsScannerValid  bool      `json:"isScannerValid"`
+	Time            time.Time `json:"sessionTime"`
 }

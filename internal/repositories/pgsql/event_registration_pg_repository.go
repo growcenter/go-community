@@ -314,14 +314,19 @@ func (rer *eventRegistrationRepository) GetSpecificByRegisteredBy(ctx context.Co
 	// `
 
 	query := `
-        SELECT er.*, 
-               eg."name" AS general_name, 
-               es."name" AS session_name
-        FROM event_registrations er
-        JOIN event_generals eg ON er.event_code = eg.code
-        JOIN event_sessions es ON er.session_code = es.code
-        WHERE  er.account_number_origin = ?;
-    `
+	SELECT er.*,
+	       eg."name" AS general_name,
+	           es."name" AS session_name
+	    FROM event_registrations er
+	    JOIN event_generals eg ON er.event_code = eg.code
+	    JOIN event_sessions es ON er.session_code = es.code
+	WHERE er.account_number_origin = ? AND er.status IN ('registered', 'verified')
+	ORDER BY 
+		CASE 
+			WHEN er.status = 'registered' THEN 1
+			WHEN er.status = 'verified' THEN 2
+		END;
+	`
 
 	err = rer.db.Raw(query, accountNumberOrigin).Scan(&rawResults).Error
 	if err != nil {
