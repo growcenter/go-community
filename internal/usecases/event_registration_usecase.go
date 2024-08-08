@@ -333,11 +333,6 @@ func (eru *eventRegistrationUsecase) Verify(ctx context.Context, request models.
 		return nil, models.ErrorRegistrationWrongTime
 	}
 
-	// _, err := eru.egr.GetByCode(ctx, register.EventCode)
-	// if err != nil {
-	// 	return nil, err
-	// }
-
 	session, err := eru.esr.GetByCode(ctx, register.SessionCode)
 	if err != nil {
 		return nil, err
