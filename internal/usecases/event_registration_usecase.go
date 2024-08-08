@@ -248,12 +248,12 @@ func (eru *eventRegistrationUsecase) Create(ctx context.Context, request models.
 	return mainResponse, nil
 }
 
-func (eru *eventRegistrationUsecase) GetRegistered(ctx context.Context, registeredBy string, accountNumberOrigin string) (eventRegistrations []models.GetRegisteredResponse, err error) {
+func (eru *eventRegistrationUsecase) GetRegistered(ctx context.Context, accountNumberOrigin string) (eventRegistrations []models.GetRegisteredResponse, err error) {
 	defer func() {
 		LogService(ctx, err)
 	}()
 
-	registers, err := eru.rer.GetSpecificByRegisteredBy(ctx, registeredBy, accountNumberOrigin)
+	registers, err := eru.rer.GetSpecificByRegisteredBy(ctx, accountNumberOrigin)
 	if err != nil {
 		return
 	}
@@ -332,11 +332,6 @@ func (eru *eventRegistrationUsecase) Verify(ctx context.Context, request models.
 	case register.SessionCode != request.SessionCode:
 		return nil, models.ErrorRegistrationWrongTime
 	}
-
-	// _, err := eru.egr.GetByCode(ctx, register.EventCode)
-	// if err != nil {
-	// 	return nil, err
-	// }
 
 	session, err := eru.esr.GetByCode(ctx, register.SessionCode)
 	if err != nil {

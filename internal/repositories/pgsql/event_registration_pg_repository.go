@@ -18,7 +18,7 @@ type EventRegistrationRepository interface {
 	GetByCode(ctx context.Context, code string) (eventRegistration models.EventRegistration, err error)
 	GetByRegisteredBy(ctx context.Context, registeredBy string) (eventRegistration []models.EventRegistration, err error)
 	GetByRegisteredByStatus(ctx context.Context, registeredBy string, status string) (eventRegistration []models.EventRegistration, err error)
-	GetSpecificByRegisteredBy(ctx context.Context, registeredBy string, accountNumberOrigin string) (eventRegistrations []models.GetRegisteredRepository, err error)
+	GetSpecificByRegisteredBy(ctx context.Context, accountNumberOrigin string) (eventRegistrations []models.GetRegisteredRepository, err error)
 	BulkUpdate(ctx context.Context, eventRegistration models.EventRegistration) (err error)
 	Update(ctx context.Context, eventRegistration models.EventRegistration) (err error)
 	Delete(ctx context.Context, eventRegistration models.EventRegistration) (err error)
@@ -64,6 +64,89 @@ func (rer *eventRegistrationRepository) GetAll(ctx context.Context) (eventRegist
 
 	return er, err
 }
+
+// func (rer *eventRegistrationRepository) GetAllWithParams(ctx context.Context, params models.GetAllPaginationParams) (eventRegistrations []models.GetRegisteredRepository, nextCursor string, prevCursor string, err error) {
+//     var results []models.GetRegisteredRepository
+//     var rawResults []models.GetRegisteredRaw
+
+//     // Build the base query
+//     baseQuery := `
+//         SELECT er.*,
+//                eg."name" AS general_name,
+//                es."name" AS session_name
+//         FROM event_registrations er
+//         JOIN event_generals eg ON er.event_code = eg.code
+//         JOIN event_sessions es ON er.session_code = es.code
+//         WHERE 1=1
+//     `
+
+//     // Add filters to the query
+//     query := addFiltersToQuery(baseQuery, params)
+
+//     // Add sorting
+//     if params.Sort != "" {
+//         query += fmt.Sprintf(" ORDER BY %s", params.Sort)
+//     } else {
+//         query += " ORDER BY er.id DESC" // default sort
+//     }
+
+//     // Add cursor-based pagination
+//     if params.Cursor != "" {
+//         if params.Direction == "next" {
+//             query += fmt.Sprintf(" AND er.id < %s", params.Cursor)
+//         } else if params.Direction == "prev" {
+//             query += fmt.Sprintf(" AND er.id > %s", params.Cursor)
+//         }
+//     }
+
+//     // Limit the number of results
+//     query += fmt.Sprintf(" LIMIT %d", params.Limit)
+
+//     // Execute main query
+//     err = rer.db.Raw(query).Scan(&rawResults).Error
+//     if err != nil {
+//         return nil, "", "", err
+//     }
+
+//     // Map raw results to composite struct
+//     for _, raw := range rawResults {
+//         result := models.GetRegisteredRepository{
+//             EventRegistration: models.EventRegistration{
+//                 ID:            raw.ID,
+//                 Name:          raw.Name,
+//                 Identifier:    raw.Identifier,
+//                 Address:       raw.Address,
+//                 AccountNumber: raw.AccountNumber,
+//                 Code:          raw.Code,
+//                 EventCode:     raw.EventCode,
+//                 SessionCode:   raw.SessionCode,
+//                 RegisteredBy:  raw.RegisteredBy,
+//                 UpdatedBy:     raw.UpdatedBy,
+//                 Status:        raw.Status,
+//             },
+//             EventGeneral: models.EventGeneral{
+//                 Name: raw.GeneralName,
+//             },
+//             EventSession: models.EventSession{
+//                 Name: raw.SessionName,
+//             },
+//         }
+//         results = append(results, result)
+//     }
+
+//     // Set the next and previous cursor values
+//     if len(rawResults) > 0 {
+//         if params.Direction == "next" {
+//             nextCursor = strconv.FormatInt(rawResults[len(rawResults)-1].ID, 10)
+//             prevCursor = strconv.FormatInt(rawResults[0].ID, 10)
+//         } else if params.Direction == "prev" {
+//             nextCursor = strconv.FormatInt(rawResults[0].ID, 10)
+//             prevCursor = strconv.FormatInt(rawResults[len(rawResults)-1].ID, 10)
+//         }
+//     }
+
+//     return results, nextCursor, prevCursor, nil
+// }
 
 func (rer *eventRegistrationRepository) GetAllWithParams(ctx context.Context, params models.GetAllPaginationParams) (eventRegistrations []models.GetRegisteredRepository, count int64, err error) {
 	var results []models.GetRegisteredRepository
@@ -212,13 +295,23 @@ func (rer *eventRegistrationRepository) GetByRegisteredByStatus(ctx context.Cont
 	return ers, err
 }
 
-func (rer *eventRegistrationRepository) GetSpecificByRegisteredBy(ctx context.Context, registeredBy string, accountNumberOrigin string) (eventRegistrations []models.GetRegisteredRepository, err error) {
+func (rer *eventRegistrationRepository) GetSpecificByRegisteredBy(ctx context.Context, accountNumberOrigin string) (eventRegistrations []models.GetRegisteredRepository, err error) {
 	defer func() {
 		LogRepository(ctx, err)
 	}()
 
 	var results []models.GetRegisteredRepository
 	var rawResults []models.GetRegisteredRaw
+
+	// query := `
+	//     SELECT er.*,
+	//            eg."name" AS general_name,
+	//            es."name" AS session_name
+	//     FROM event_registrations er
+	//     JOIN event_generals eg ON er.event_code = eg.code
+	//     JOIN event_sessions es ON er.session_code = es.code
+	//     WHERE er.registered_by = ? AND er.account_number_origin = ?;
+	// `
 
 	query := `
         SELECT er.*, 
@@ -227,10 +320,10 @@ func (rer *eventRegistrationRepository) GetSpecificByRegisteredBy(ctx context.Co
         FROM event_registrations er
         JOIN event_generals eg ON er.event_code = eg.code
         JOIN event_sessions es ON er.session_code = es.code
-        WHERE er.registered_by = ? AND er.account_number_origin = ?;
+        WHERE  er.account_number_origin = ?;
     `
 
-	err = rer.db.Raw(query, registeredBy, accountNumberOrigin).Scan(&rawResults).Error
+	err = rer.db.Raw(query, accountNumberOrigin).Scan(&rawResults).Error
 	if err != nil {
 		return nil, err
 	}
