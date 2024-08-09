@@ -123,7 +123,10 @@ func registerEmailFormat() {
 func registerPhoneFormat() {
 	valid.RegisterValidation("phoneFormat", func(fl v10.FieldLevel) bool {
 		input := fl.Field().String()
-		pattern := `^\+?(\d{1,3})?[-.\s]?\(?\d{3}\)?[-.\s]?\d{3}[-.\s]?\d{4}$`
+		// Minimum of 10 digits
+		// pattern := `^\+?(\d{1,3})?[-.\s]?\(?\d{3}\)?[-.\s]?\d{3}[-.\s]?\d{4}$`
+		// Minimum of 8 digits
+		pattern := `^\+?(\d{1,3})?[-.\s]?\(?\d{1,3}\)?[-.\s]?\d{1,4}[-.\s]?\d{1,4}$`
 		return regexp.MustCompile(pattern).MatchString(input)
 	})
 }
@@ -131,7 +134,10 @@ func registerPhoneFormat() {
 func registerEmailPhoneFormat() {
 	valid.RegisterValidation("emailPhoneFormat", func(fl v10.FieldLevel) bool {
 		input := fl.Field().String()
-		pattern := `^\+62\d{10,}$|^0\d{10,}$|^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$`
+		// Minimum of 10 digits
+		// pattern := `^\+62\d{10,}$|^0\d{10,}$|^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$`
+		// Minimum of 8 digits
+		pattern := `^\+62\d{8,}$|^0\d{8,}$|^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$`
 		return regexp.MustCompile(pattern).MatchString(input)
 	})
 }
