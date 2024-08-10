@@ -50,10 +50,14 @@ func (esr *eventSessionRepository) BulkUpdate(ctx context.Context, eventSession 
 		LogRepository(ctx, err)
 	}()
 
-	return esr.trx.Transaction(func(dtx *gorm.DB) error {
-		session := models.EventSession{}
-		return esr.db.Model(&session).Where("id = ?", eventSession.ID).Updates(eventSession).Error
-	})
+	// return esr.trx.Transaction(func(dtx *gorm.DB) error {
+	// 	session := models.EventSession{}
+	// 	return esr.db.Model(&session).Where("id = ?", eventSession.ID).Updates(eventSession).Error
+	// })
+
+	session := models.EventSession{}
+	return esr.db.Model(&session).Where("id = ?", eventSession.ID).Updates(eventSession).Error
+
 }
 
 func (esr *eventSessionRepository) Update(ctx context.Context, eventSession models.EventSession) (err error) {

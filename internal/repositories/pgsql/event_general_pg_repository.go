@@ -50,10 +50,14 @@ func (egr *eventGeneralRepository) BulkUpdate(ctx context.Context, eventGeneral 
 		LogRepository(ctx, err)
 	}()
 
-	return egr.trx.Transaction(func(dtx *gorm.DB) error {
-		event := models.EventGeneral{}
-		return egr.db.Model(&event).Where("id = ?", eventGeneral.ID).Updates(eventGeneral).Error
-	})
+	// return egr.trx.Transaction(func(dtx *gorm.DB) error {
+	// 	event := models.EventGeneral{}
+	// 	return egr.db.Model(&event).Where("id = ?", eventGeneral.ID).Updates(eventGeneral).Error
+	// })
+
+	event := models.EventGeneral{}
+	return egr.db.Model(&event).Where("id = ?", eventGeneral.ID).Updates(eventGeneral).Error
+
 }
 
 func (egr *eventGeneralRepository) Update(ctx context.Context, eventGeneral models.EventGeneral) (err error) {
