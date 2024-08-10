@@ -109,7 +109,7 @@ func AdminMiddleware(config *config.Configuration) echo.MiddlewareFunc {
 				return response.Error(ctx, models.ErrorExpiredToken)
 			}
 
-			if strings.ToLower(claims.Role) != "admin" {
+			if strings.ToLower(claims.Role) != "admin" && strings.ToLower(claims.Role) != "usher" {
 				return response.Error(ctx, models.ErrorForbiddenRole)
 			}
 
