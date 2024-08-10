@@ -151,12 +151,12 @@ func (eu *UpdateAccountRoleResponse) ToUpdateAccountRole() UpdateAccountRoleResp
 type (
 	UpdateAccountRoleRequest struct {
 		AccountNumbers []string `json:"accountNumbers" validate:"dive,required,numeric,noStartEndSpaces"`
-		Role           string   `json:"role" validate:"required,oneof=user admin" example:"female"`
+		Role           string   `json:"role" validate:"required,oneof=user admin usher" example:"female"`
 	}
 	UpdateAccountRoleResponse struct {
 		Type           string   `json:"type" example:"coolCategory"`
 		AccountNumbers []string `json:"accountNumbers"`
-		Role           string   `json:"role" validate:"required,oneof=user admin"`
+		Role           string   `json:"role"`
 	}
 )
 
