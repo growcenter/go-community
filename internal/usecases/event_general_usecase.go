@@ -35,14 +35,16 @@ func (egu *eventGeneralUsecase) GetAll(ctx context.Context) (details models.GetG
 		switch {
 		case common.Now().Before(event.OpenRegistration.In(common.GetLocation())):
 			event.Status = "closed"
+			if err = egu.egr.BulkUpdate(ctx, event); err != nil {
+				return
+			}
 		case common.Now().After(event.ClosedRegistration.In(common.GetLocation())):
 			event.Status = "closed"
+			if err = egu.egr.BulkUpdate(ctx, event); err != nil {
+				return
+			}
 		default:
 			event.Status = "active"
-		}
-
-		if err = egu.egr.BulkUpdate(ctx, event); err != nil {
-			return
 		}
 	}
 

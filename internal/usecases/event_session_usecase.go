@@ -61,10 +61,9 @@ func (esu *eventSessionUsecase) GetAllByEventCode(ctx context.Context, eventCode
 	for _, session := range data {
 		if session.AvailableSeats == 0 {
 			session.Status = "full"
-		}
-
-		if err = esu.esr.BulkUpdate(ctx, session); err != nil {
-			return
+			if err = esu.esr.BulkUpdate(ctx, session); err != nil {
+				return
+			}
 		}
 	}
 
