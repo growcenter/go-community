@@ -22,6 +22,7 @@ func init() {
 	registerEmailFormat()
 	registerPhoneFormat()
 	registerEmailPhoneFormat()
+	yyyymmddFormat()
 }
 
 func Validate(request interface{}) error {
@@ -138,6 +139,14 @@ func registerEmailPhoneFormat() {
 		// pattern := `^\+62\d{10,}$|^0\d{10,}$|^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$`
 		// Minimum of 8 digits
 		pattern := `^\+62\d{8,}$|^0\d{8,}$|^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$`
+		return regexp.MustCompile(pattern).MatchString(input)
+	})
+}
+
+func yyyymmddFormat() {
+	valid.RegisterValidation("yyyymmdd", func(fl v10.FieldLevel) bool {
+		input := fl.Field().String()
+		pattern := `\d{4}-\d{2}-\d{2}`
 		return regexp.MustCompile(pattern).MatchString(input)
 	})
 }

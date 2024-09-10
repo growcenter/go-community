@@ -8,12 +8,13 @@ import (
 
 var (
 	// Errors
-	ErrorUserNotFound    = errors.New("user is not registered yet")
-	ErrorInvalidPassword = errors.New("invalid password")
-	ErrorDataNotFound    = errors.New("a specified resource is not found")
-	ErrorAlreadyExist    = errors.New("the resource that a client tried to create already exists")
-	ErrorUnauthorized    = errors.New("request not authenticated due to missing, invalid, or expired token")
-	ErrorNoRows          = sql.ErrNoRows
+	ErrorUserNotFound       = errors.New("user is not registered yet")
+	ErrorInvalidPassword    = errors.New("invalid password")
+	ErrorDataNotFound       = errors.New("a specified resource is not found")
+	ErrorAlreadyExist       = errors.New("the resource that a client tried to create already exists")
+	ErrorUnauthorized       = errors.New("request not authenticated due to missing, invalid, or expired token")
+	ErrorNoRows             = sql.ErrNoRows
+	ErrorRateLimiterExceeds = errors.New("you enter too much request. please try again in 1 minute")
 
 	// Specific for COOL Category
 	ErrorAgeRange = errors.New("ageStart should be less than ageEnd")
@@ -45,6 +46,10 @@ var (
 	// API Auth Error
 	ErrorInvalidAPIKey = errors.New("api key is invalid")
 	ErrorEmptyAPIKey   = errors.New("no api key is found")
+
+	// Idempotency Error
+	ErrorProcessedRequestID = errors.New("request id is already processed")
+	ErrorEmptyRequestID     = errors.New("no request id is found")
 
 	// Special for Validation Error
 	ErrorInvalidInput = errors.New("invalid request input")
@@ -243,6 +248,24 @@ func ErrorMapping(err error) ErrorResponse {
 		return ErrorResponse{
 			Code:    http.StatusUnauthorized,
 			Status:  "LOGGED_OUT",
+			Message: err.Error(),
+		}
+	case ErrorRateLimiterExceeds:
+		return ErrorResponse{
+			Code:    http.StatusTooManyRequests,
+			Status:  "TOO_MANY_REQUESTS",
+			Message: err.Error(),
+		}
+	case ErrorProcessedRequestID:
+		return ErrorResponse{
+			Code:    http.StatusBadRequest,
+			Status:  "INVALID_REQUEST_ID",
+			Message: err.Error(),
+		}
+	case ErrorEmptyRequestID:
+		return ErrorResponse{
+			Code:    http.StatusBadRequest,
+			Status:  "MISSING_REQUEST_ID",
 			Message: err.Error(),
 		}
 	default:

@@ -9,11 +9,15 @@ docker-stop:
 run_api: tidy
 	export ENV="DEV" && go run ./cmd/api/main.go
 
+run: tidy
+	swag init -g cmd/main.go -o docs
+	export ENV="DEV" && go run ./cmd/api/main.go
+
 tidy:
 	go mod tidy
 	go mod download
 
-migration:
+migrate_create:
 	# Create database migration
 	migrate create -ext sql -dir tests/integration/db/migrations/ -seq ${name}
 

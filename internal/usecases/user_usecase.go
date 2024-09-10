@@ -102,84 +102,84 @@ func (uu *userUsecase) CreateUser(ctx context.Context, request *models.CreateUse
 		LogService(ctx, err)
 	}()
 
-	exist, err := uu.ur.GetByEmail(ctx, strings.ToLower(request.Email))
-	if err != nil {
-		return nil, err
-	}
+	// exist, err := uu.ur.GetByEmail(ctx, strings.ToLower(request.Email))
+	// if err != nil {
+	// 	return nil, err
+	// }
 
-	campus, err := uu.cr.GetByCode(ctx, strings.ToUpper(request.CampusCode))
-	if err != nil {
-		return nil, err
-	}
+	// campus, err := uu.cr.GetByCode(ctx, strings.ToUpper(request.CampusCode))
+	// if err != nil {
+	// 	return nil, err
+	// }
 
-	if campus.ID == 0 {
-		return nil, models.ErrorDataNotFound
-	}
+	// if campus.ID == 0 {
+	// 	return nil, models.ErrorDataNotFound
+	// }
 
-	switch {
-	case exist.ID != 0 && exist.UserType == "REQUEST_COOL":
-		token := "Trial"
-		password := request.Password
+	// switch {
+	// case exist.ID != 0 && exist.UserType == "REQUEST_COOL":
+	// 	token := "Trial"
+	// 	password := request.Password
 
-		var input models.User
+	// 	var input models.User
 
-		if request.CoolCategoryCode != "" {
-			input = models.User{
-				UserType: "NON_KKJ_MEMBER",
-				Status:   "NOT_REGISTERED",
-				Roles:    "STANDARD_MEMBER",
-				Password: password,
-				Token:    token,
-			}
-		}
+	// 	if request.CoolCategoryCode != "" {
+	// 		input = models.User{
+	// 			UserType: "NON_KKJ_MEMBER",
+	// 			Status:   "NOT_REGISTERED",
+	// 			Roles:    "STANDARD_MEMBER",
+	// 			Password: password,
+	// 			Token:    token,
+	// 		}
+	// 	}
 
-		coolCategory, err := uu.ccr.GetByCode(ctx, strings.ToUpper(request.CoolCategoryCode))
-		if err != nil {
-			return nil, err
-		}
+	// 	coolCategory, err := uu.ccr.GetByCode(ctx, strings.ToUpper(request.CoolCategoryCode))
+	// 	if err != nil {
+	// 		return nil, err
+	// 	}
 
-		if coolCategory.ID == 0 {
-			return nil, models.ErrorDataNotFound
-		}
+	// 	if coolCategory.ID == 0 {
+	// 		return nil, models.ErrorDataNotFound
+	// 	}
 
-		input = models.User{
-			UserType:         "NON_KKJ_MEMBER",
-			Status:           "NOT_REGISTERED",
-			Roles:            "COOL_MEMBER",
-			CoolCategoryCode: request.CoolCategoryCode,
-			Password:         password,
-			Token:            token,
-		}
+	// 	input = models.User{
+	// 		UserType:         "NON_KKJ_MEMBER",
+	// 		Status:           "NOT_REGISTERED",
+	// 		Roles:            "COOL_MEMBER",
+	// 		CoolCategoryCode: request.CoolCategoryCode,
+	// 		Password:         password,
+	// 		Token:            token,
+	// 	}
 
-		if err := uu.ur.Update(ctx, &input); err != nil {
-			return nil, err
-		}
+	// 	if err := uu.ur.Update(ctx, &input); err != nil {
+	// 		return nil, err
+	// 	}
 
-	case exist.ID != 0 && exist.UserType != "NON_KKJ_MEMBER":
-		return nil, models.ErrorAlreadyExist
-	default:
-		accountNumber, err := generator.AccountNumber()
-		if err != nil {
-			return nil, err
-		}
+	// case exist.ID != 0 && exist.UserType != "NON_KKJ_MEMBER":
+	// 	return nil, models.ErrorAlreadyExist
+	// default:
+	// 	accountNumber, err := generator.AccountNumber()
+	// 	if err != nil {
+	// 		return nil, err
+	// 	}
 
-		input := models.User{
-			AccountNumber:    accountNumber,
-			Name:             request.Name,
-			PhoneNumber:      fmt.Sprintf("+62%s", request.PhoneNumber),
-			Email:            strings.ToLower(request.Email),
-			UserType:         "REQUEST_COOL",
-			Status:           "NOT_REGISTERED",
-			Gender:           request.Gender,
-			CampusCode:       request.CampusCode,
-			CoolCategoryCode: request.CoolCategoryCode,
-			MaritalStatus:    request.MaritalStatus,
-		}
+	// 	input := models.User{
+	// 		AccountNumber:    accountNumber,
+	// 		Name:             request.Name,
+	// 		PhoneNumber:      fmt.Sprintf("+62%s", request.PhoneNumber),
+	// 		Email:            strings.ToLower(request.Email),
+	// 		UserType:         "REQUEST_COOL",
+	// 		Status:           "NOT_REGISTERED",
+	// 		Gender:           request.Gender,
+	// 		CampusCode:       request.CampusCode,
+	// 		CoolCategoryCode: request.CoolCategoryCode,
+	// 		MaritalStatus:    request.MaritalStatus,
+	// 	}
 
-		if err := uu.ur.Create(ctx, &input); err != nil {
-			return nil, err
-		}
-	}
+	// 	if err := uu.ur.Create(ctx, &input); err != nil {
+	// 		return nil, err
+	// 	}
+	// }
 
 	return
 }

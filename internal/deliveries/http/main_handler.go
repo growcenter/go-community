@@ -8,6 +8,8 @@ import (
 	"go-community/internal/usecases"
 	"net/http"
 
+	eswagger "github.com/swaggo/echo-swagger"
+
 	"github.com/labstack/echo/v4"
 )
 
@@ -32,6 +34,7 @@ func New(e *echo.Echo, u *usecases.Usecases, c *config.Configuration) {
 	middleware.Default(c)
 
 	// Input swagger initalization here
+	e.GET("/docs/*", eswagger.WrapHandler)
 
 	e.GET("/", func(ctx echo.Context) error {
 		message := "Welcome to GROW Center API Service"

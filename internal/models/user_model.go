@@ -99,15 +99,16 @@ func (u *User) ToCreateUser() *CreateUserResponse {
 
 type (
 	CreateUserRequest struct {
-		Email            string `json:"email" validate:"required,noStartEndSpaces,emailFormat" example:"32"`
-		Password         string `json:"password" validate:"required,min=8,noStartEndSpaces"`
-		Name             string `json:"name" validate:"omitempty,min=1,max=50,nospecial,noStartEndSpaces" example:"Professionals"`
-		Gender           string `json:"gender" validate:"omitempty,oneof=male female" example:"female"`
-		Age              int    `json:"age" validate:"omitempty,noStartEndSpaces" example:"21"`
-		PhoneNumber      string `json:"phoneNumber" validate:"omitempty,noStartEndSpaces,phoneFormat"`
-		CampusCode       string `json:"campusCode" validate:"omitempty,min=3,max=3" example:"001"`
-		CoolCategoryCode string `json:"coolCategoryCode" validate:"omitempty,min=3,max=3" example:"001"`
-		MaritalStatus    string `json:"maritalStatus" validate:"omitempty,oneof=single married others" example:"active"`
+		Name         string    `json:"name" validate:"omitempty,min=1,max=50,nospecial,noStartEndSpaces" example:"Professionals"`
+		PhoneNumber  string    `json:"phoneNumber" validate:"omitempty,noStartEndSpaces,phoneFormat" example:"081234567890"`
+		Email        string    `json:"email" validate:"omitempty,noStartEndSpaces,emailFormat" example:"jeremy@gmail.com"`
+		Password     string    `json:"password" validate:"required,min=8,noStartEndSpaces"`
+		PlaceOfBirth string    `json:"placeOfBirth" validate:"required,min=1,max=50,noStartEndSpaces" example:"Bekasi"`
+		DateOfBirth  time.Time `json:"dateOfBirth" validate:"required,noStartEndSpaces,yyyymmdd" example:"2006-09-31"`
+		CampusCode   string    `json:"campusCode" validate:"required,min=3,max=3" example:"001"`
+		Gender       string    `json:"gender" validate:"required,oneof=male female" example:"female"`
+		// CoolCategoryCode string `json:"coolCategoryCode" validate:"omitempty,min=3,max=3" example:"001"`
+		MaritalStatus string `json:"maritalStatus" validate:"required,oneof=single married others" example:"active"`
 	}
 	CreateUserResponse struct {
 		Type             string `json:"type" example:"coolCategory"`

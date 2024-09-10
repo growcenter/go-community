@@ -10,5 +10,7 @@ import (
 func (m *Middleware) Default(config *config.Configuration) {
 	m.e.Use(middleware.Recover())
 	m.e.Use(m.LoggingMiddleware(logger.Logger))
-	m.e.Use(m.corsMiddleware(config))
+	m.e.Use(m.corsMiddleware())
+	m.e.Use(m.RateLimiterMiddleware())
+	m.e.Use(m.IdempotencyMiddleware)
 }
