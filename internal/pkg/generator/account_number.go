@@ -35,3 +35,41 @@ func AccountNumber() (accountNumber string, err error) {
 
 	return fmt.Sprintf("%02d%010d%02d", prefix, number, check), nil
 }
+
+func generateBaseAccountNumber() string {
+	randomNumber := rand.NewSource(time.Now().UnixNano())
+	baseAccountNumber := fmt.Sprintf("%010d", randomNumber)
+	return baseAccountNumber
+}
+
+// Function to calculate Luhn checksum
+func CalculateLuhnChecksum(baseAccountNumber string) int {
+	sum := 0
+	double := false
+
+	// Iterate through the digits from right to left
+	for i := len(baseAccountNumber) - 1; i >= 0; i-- {
+		digit := int(baseAccountNumber[i] - '0')
+
+		if double {
+			digit *= 2
+			if digit > 9 {
+				digit -= 9
+			}
+		}
+
+		sum += digit
+		double = !double
+	}
+
+	// Calculate the checksum that makes the total sum a multiple of 10
+	checksum := (10 - (sum % 10)) % 10
+	return checksum
+}
+
+// Function to generate a full account number with Luhn checksum
+func LuhnAccountNumber() string {
+	baseAccountNumber := generateBaseAccountNumber()
+	checksum := CalculateLuhnChecksum(baseAccountNumber)
+	return fmt.Sprintf("%s%d", baseAccountNumber, checksum)
+}

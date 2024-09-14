@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"go-community/internal/models"
 	"go-community/internal/pkg/generator"
+	"go-community/internal/pkg/validator"
 	"go-community/internal/repositories/pgsql"
 	"strings"
 )
@@ -102,84 +103,29 @@ func (uu *userUsecase) CreateUser(ctx context.Context, request *models.CreateUse
 		LogService(ctx, err)
 	}()
 
-	// exist, err := uu.ur.GetByEmail(ctx, strings.ToLower(request.Email))
-	// if err != nil {
-	// 	return nil, err
-	// }
+	exist, err := uu.ur.GetOneByEmailPhone(ctx, request.PhoneNumber, request.Email)
+	if err != nil {
+		return nil, err
+	}
 
-	// campus, err := uu.cr.GetByCode(ctx, strings.ToUpper(request.CampusCode))
-	// if err != nil {
-	// 	return nil, err
-	// }
+	if exist.ID != 0 {
+		return nil, models.ErrorAlreadyExist
+	}
 
-	// if campus.ID == 0 {
-	// 	return nil, models.ErrorDataNotFound
-	// }
+	campus, err := uu.cr.GetByCode(ctx, strings.ToUpper(request.CampusCode))
+	if err != nil {
+		return nil, err
+	}
 
-	// switch {
-	// case exist.ID != 0 && exist.UserType == "REQUEST_COOL":
-	// 	token := "Trial"
-	// 	password := request.Password
+	if campus.ID == 0 {
+		return nil, models.ErrorDataNotFound
+	}
 
-	// 	var input models.User
-
-	// 	if request.CoolCategoryCode != "" {
-	// 		input = models.User{
-	// 			UserType: "NON_KKJ_MEMBER",
-	// 			Status:   "NOT_REGISTERED",
-	// 			Roles:    "STANDARD_MEMBER",
-	// 			Password: password,
-	// 			Token:    token,
-	// 		}
-	// 	}
-
-	// 	coolCategory, err := uu.ccr.GetByCode(ctx, strings.ToUpper(request.CoolCategoryCode))
-	// 	if err != nil {
-	// 		return nil, err
-	// 	}
-
-	// 	if coolCategory.ID == 0 {
-	// 		return nil, models.ErrorDataNotFound
-	// 	}
-
-	// 	input = models.User{
-	// 		UserType:         "NON_KKJ_MEMBER",
-	// 		Status:           "NOT_REGISTERED",
-	// 		Roles:            "COOL_MEMBER",
-	// 		CoolCategoryCode: request.CoolCategoryCode,
-	// 		Password:         password,
-	// 		Token:            token,
-	// 	}
-
-	// 	if err := uu.ur.Update(ctx, &input); err != nil {
-	// 		return nil, err
-	// 	}
-
-	// case exist.ID != 0 && exist.UserType != "NON_KKJ_MEMBER":
-	// 	return nil, models.ErrorAlreadyExist
-	// default:
-	// 	accountNumber, err := generator.AccountNumber()
-	// 	if err != nil {
-	// 		return nil, err
-	// 	}
-
-	// 	input := models.User{
-	// 		AccountNumber:    accountNumber,
-	// 		Name:             request.Name,
-	// 		PhoneNumber:      fmt.Sprintf("+62%s", request.PhoneNumber),
-	// 		Email:            strings.ToLower(request.Email),
-	// 		UserType:         "REQUEST_COOL",
-	// 		Status:           "NOT_REGISTERED",
-	// 		Gender:           request.Gender,
-	// 		CampusCode:       request.CampusCode,
-	// 		CoolCategoryCode: request.CoolCategoryCode,
-	// 		MaritalStatus:    request.MaritalStatus,
-	// 	}
-
-	// 	if err := uu.ur.Create(ctx, &input); err != nil {
-	// 		return nil, err
-	// 	}
-	// }
+	accountNumber := generator.LuhnAccountNumber()
+	isAccountNumberValid := validator.LuhnAccountNumber(accountNumber)
+	if !isAccountNumberValid {
+		return nil, models.ErrorInvalidAccountNumber
+	}
 
 	return
 }

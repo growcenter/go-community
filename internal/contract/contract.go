@@ -14,6 +14,7 @@ import (
 	"strconv"
 
 	"github.com/labstack/echo/v4"
+	"github.com/osohq/go-oso"
 	"go.uber.org/zap"
 )
 
@@ -27,6 +28,11 @@ func New(config *config.Configuration) *Contract {
 
 	// Initialize logger
 	logger.Init(config)
+
+	_, err := oso.NewOso()
+	if err != nil {
+		logger.Logger.Fatal(fmt.Sprintf("[RBAC_ERROR] Failed to setup roles - %v", err), zap.Error(err))
+	}
 
 	// Connect to PostgreSQL Database
 	psql, err := postgre.ConnectWithGORM(config)

@@ -3,6 +3,7 @@ package pgsql
 import (
 	"context"
 	"go-community/internal/models"
+	"strings"
 
 	"gorm.io/gorm"
 )
@@ -14,6 +15,7 @@ type UserRepository interface {
 	GetOneByAccountNumber(ctx context.Context, accountNumber string) (user models.User, err error)
 	GetByEmail(ctx context.Context, email string) (user models.User, err error)
 	GetByPhoneNumber(ctx context.Context, phoneNumber string) (user models.User, err error)
+	GetOneByEmailPhone(ctx context.Context, phoneNumber string, email string) (user models.User, err error)
 }
 
 type userRepository struct {
@@ -85,6 +87,17 @@ func (ur *userRepository) GetByPhoneNumber(ctx context.Context, phoneNumber stri
 
 	var u models.User
 	err = ur.db.Where("phone_number = ?", phoneNumber).Find(&u).Error
+
+	return u, err
+}
+
+func (ur *userRepository) GetOneByEmailPhone(ctx context.Context, phoneNumber string, email string) (user models.User, err error) {
+	defer func() {
+		LogRepository(ctx, err)
+	}()
+
+	var u models.User
+	err = ur.db.Where("phone_number = ? OR email = ?", phoneNumber, strings.ToLower(email)).Find(&u).Error
 
 	return u, err
 }

@@ -85,41 +85,39 @@ type (
 
 func (u *User) ToCreateUser() *CreateUserResponse {
 	return &CreateUserResponse{
-		Type:             TYPE_USER,
-		Name:             u.Name,
-		Email:            u.Email,
-		Gender:           u.Gender,
-		Age:              u.Age,
-		PhoneNumber:      u.PhoneNumber,
-		CampusCode:       u.CampusCode,
-		CoolCategoryCode: u.CoolCategoryCode,
-		MaritalStatus:    u.MaritalStatus,
+		Type:          TYPE_USER,
+		AccountNumber: u.AccountNumber,
+		Name:          u.Name,
+		Email:         u.Email,
+		Gender:        u.Gender,
+		PhoneNumber:   u.PhoneNumber,
+		CampusCode:    u.CampusCode,
+		PlaceOfBirth:  u.PlaceOfBirth,
+		DateOfBirth:   *u.DateOfBirth,
 	}
 }
 
 type (
 	CreateUserRequest struct {
-		Name         string    `json:"name" validate:"omitempty,min=1,max=50,nospecial,noStartEndSpaces" example:"Professionals"`
+		Name         string    `json:"name" validate:"omitempty,min=1,max=50,nospecial,noStartEndSpaces" example:"Jeremy"`
 		PhoneNumber  string    `json:"phoneNumber" validate:"omitempty,noStartEndSpaces,phoneFormat" example:"081234567890"`
 		Email        string    `json:"email" validate:"omitempty,noStartEndSpaces,emailFormat" example:"jeremy@gmail.com"`
 		Password     string    `json:"password" validate:"required,min=8,noStartEndSpaces"`
-		PlaceOfBirth string    `json:"placeOfBirth" validate:"required,min=1,max=50,noStartEndSpaces" example:"Bekasi"`
-		DateOfBirth  time.Time `json:"dateOfBirth" validate:"required,noStartEndSpaces,yyyymmdd" example:"2006-09-31"`
-		CampusCode   string    `json:"campusCode" validate:"required,min=3,max=3" example:"001"`
-		Gender       string    `json:"gender" validate:"required,oneof=male female" example:"female"`
-		// CoolCategoryCode string `json:"coolCategoryCode" validate:"omitempty,min=3,max=3" example:"001"`
-		MaritalStatus string `json:"maritalStatus" validate:"required,oneof=single married others" example:"active"`
+		CampusCode   string    `json:"campusCode" validate:"required,min=3,max=3" example:"BKS"`
+		Gender       string    `json:"gender" validate:"required,oneof=male female" example:"male"`
+		PlaceOfBirth string    `json:"placeOfBirth" validate:"required,min=1,max=50,nospecial,noStartEndSpaces" example:"Bekasi"`
+		DateOfBirth  time.Time `json:"dateOfBirth" validate:"required,dob" example:"2006-01-02"`
 	}
 	CreateUserResponse struct {
-		Type             string `json:"type" example:"coolCategory"`
-		Name             string `json:"name"`
-		Email            string `json:"email"`
-		Gender           string `json:"gender"`
-		Age              int    `json:"age"`
-		PhoneNumber      string `json:"phoneNumber"`
-		CampusCode       string `json:"campusCode"`
-		CoolCategoryCode string `json:"coolCategoryCode"`
-		MaritalStatus    string `json:"maritalStatus"`
+		Type          string    `json:"type" example:"user"`
+		AccountNumber string    `json:"accountNumber"`
+		Name          string    `json:"name"`
+		Email         string    `json:"email"`
+		PhoneNumber   string    `json:"phoneNumber"`
+		Gender        string    `json:"gender"`
+		PlaceOfBirth  string    `json:"placeOfBirth"`
+		DateOfBirth   time.Time `json:"dateOfBirth"`
+		CampusCode    string    `json:"campusCode"`
 	}
 )
 
