@@ -10,6 +10,7 @@ import (
 	"net/http"
 	"strconv"
 
+	"github.com/casbin/casbin/v2"
 	"github.com/labstack/echo/v4"
 )
 
@@ -17,7 +18,7 @@ type EventInternalHandler struct {
 	usecase *usecases.Usecases
 }
 
-func NewEventInternalHandler(api *echo.Group, u *usecases.Usecases, c *config.Configuration) {
+func NewEventInternalHandler(api *echo.Group, u *usecases.Usecases, c *config.Configuration, r *casbin.Enforcer) {
 	handler := &EventInternalHandler{usecase: u}
 
 	// Define campus routes

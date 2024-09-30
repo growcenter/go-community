@@ -9,12 +9,12 @@ import (
 	"go-community/internal/pkg/database/postgre"
 	"go-community/internal/pkg/google"
 	"go-community/internal/pkg/logger"
+	"go-community/internal/pkg/roles"
 	"go-community/internal/repositories/pgsql"
 	"go-community/internal/usecases"
 	"strconv"
 
 	"github.com/labstack/echo/v4"
-	"github.com/osohq/go-oso"
 	"go.uber.org/zap"
 )
 
@@ -28,11 +28,6 @@ func New(config *config.Configuration) *Contract {
 
 	// Initialize logger
 	logger.Init(config)
-
-	_, err := oso.NewOso()
-	if err != nil {
-		logger.Logger.Fatal(fmt.Sprintf("[RBAC_ERROR] Failed to setup roles - %v", err), zap.Error(err))
-	}
 
 	// Connect to PostgreSQL Database
 	psql, err := postgre.ConnectWithGORM(config)
@@ -48,6 +43,11 @@ func New(config *config.Configuration) *Contract {
 
 	if err = sql.Ping(); err != nil {
 		logger.Logger.Fatal(fmt.Sprintf("[DATABASE_ERROR] Failed to connect the database - %v", err), zap.Error(err))
+	}
+
+	role, err := roles.InitCasbin(psql)
+	if err != nil {
+		logger.Logger.Fatal(fmt.Sprintf("[RBAC_ERROR] Failed to setup casbin - %v", err), zap.Error(err))
 	}
 
 	// Google
@@ -73,7 +73,7 @@ func New(config *config.Configuration) *Contract {
 	})
 
 	// Register Handler
-	handler.New(e, usecase, config)
+	handler.New(e, usecase, config, role)
 
 	return &Contract{
 		echo: e,

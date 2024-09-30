@@ -5,10 +5,11 @@ import (
 	"go-community/internal/deliveries/http/middleware"
 	"go-community/internal/usecases"
 
+	"github.com/casbin/casbin/v2"
 	"github.com/labstack/echo/v4"
 )
 
-func NewV1Handler(g *echo.Group, u *usecases.Usecases, c *config.Configuration) {
+func NewV1Handler(g *echo.Group, u *usecases.Usecases, c *config.Configuration, r *casbin.Enforcer) {
 	v1 := g.Group("/v1")
 	v1.Use(middleware.InternalMiddleware(c))
 
@@ -21,7 +22,7 @@ func NewV1Handler(g *echo.Group, u *usecases.Usecases, c *config.Configuration) 
 	NewEventGeneralHandler(v1, u, c)
 	NewEventSessionHandler(v1, u, c)
 	NewEventRegistrationHandler(v1, u, c)
-	NewEventInternalHandler(v1, u, c)
+	NewEventInternalHandler(v1, u, c, r)
 
 	v1noGuard := g.Group("/v1")
 	NewEventGoogleHandler(v1noGuard, u)

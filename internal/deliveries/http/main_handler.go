@@ -8,6 +8,7 @@ import (
 	"go-community/internal/usecases"
 	"net/http"
 
+	"github.com/casbin/casbin/v2"
 	eswagger "github.com/swaggo/echo-swagger"
 
 	"github.com/labstack/echo/v4"
@@ -28,7 +29,7 @@ import (
 // @host localhost:8080
 // @BasePath /api
 // @schemes https
-func New(e *echo.Echo, u *usecases.Usecases, c *config.Configuration) {
+func New(e *echo.Echo, u *usecases.Usecases, c *config.Configuration, r *casbin.Enforcer) {
 	// Middleware for Recover and Logging
 	middleware := middleware.New(e)
 	middleware.Default(c)
@@ -46,5 +47,5 @@ func New(e *echo.Echo, u *usecases.Usecases, c *config.Configuration) {
 
 	// Initialize Health & V1 Handlers
 	health.NewHealhHandler(api, *u)
-	v1.NewV1Handler(api, u, c)
+	v1.NewV1Handler(api, u, c, r)
 }
