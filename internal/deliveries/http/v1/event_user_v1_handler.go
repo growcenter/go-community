@@ -28,6 +28,7 @@ func NewEventUserHandler(api *echo.Group, u *usecases.Usecases, c *config.Config
 	eventUserEndpoint := api.Group("/event/user")
 	eventUserEndpoint.POST("/login", handler.ManualLogin)
 	eventUserEndpoint.POST("/register", handler.ManualRegister)
+	eventUserEndpoint.POST("/register-worker", handler.ManualRegisterWorker)
 	eventUserEndpoint.PATCH("/forgot", handler.ForgotPassword)
 	authEventUserEndpoint := eventUserEndpoint.Group("")
 	authEventUserEndpoint.Use(middleware.UserMiddleware(c))
@@ -74,7 +75,7 @@ func (euh *EventUserHandler) ManualLogin(ctx echo.Context) error {
 
 	fmt.Println("bearer2: " + token)
 
-	res := models.LoginEventUserManualResponse{Type: models.TYPE_EVENT_USER, PhoneNumber: user.PhoneNumber, Name: user.Name, AccountNumber: user.AccountNumber, Email: user.Email, Role: user.Role, Status: user.Status, Token: token}
+	res := models.LoginEventUserManualResponse{Type: models.TYPE_EVENT_USER, PhoneNumber: user.PhoneNumber, Name: user.Name, AccountNumber: user.AccountNumber, Email: user.Email, Role: user.Role, Status: user.Status, Token: token,  KKJ: user.KKJ}
 	return response.Success(ctx, http.StatusOK, res.ToLoginEventUserManual())
 }
 
@@ -94,6 +95,25 @@ func (euh *EventUserHandler) ManualRegister(ctx echo.Context) error {
 	}
 
 	res := models.CreateEventUserManualResponse{Type: models.TYPE_EVENT_USER, Name: user.Name, Email: user.Email, PhoneNumber: user.PhoneNumber, AccountNumber: user.AccountNumber, Role: user.Role, Token: token, Status: user.Status}
+	return response.Success(ctx, http.StatusCreated, res.ToCreateEventUserManual())
+}
+
+func (euh *EventUserHandler) ManualRegisterWorker(ctx echo.Context) error {
+	var request models.CreateEventUserManualRequest
+	if err := ctx.Bind(&request); err != nil {
+		return response.Error(ctx, models.ErrorInvalidInput)
+	}
+
+	if err := validator.Validate(request); err != nil {
+		return response.ErrorValidation(ctx, err)
+	}
+
+	user, token, err := euh.usecase.EventUser.ManualRegisterWorker(ctx.Request().Context(), request)
+	if err != nil {
+		return response.Error(ctx, err)
+	}
+
+	res := models.CreateEventUserManualResponse{Type: models.TYPE_EVENT_USER, Name: user.Name, Email: user.Email, PhoneNumber: user.PhoneNumber, AccountNumber: user.AccountNumber, Role: user.Role, Token: token, Status: user.Status, KKJ: user.KKJ}
 	return response.Success(ctx, http.StatusCreated, res.ToCreateEventUserManual())
 }
 

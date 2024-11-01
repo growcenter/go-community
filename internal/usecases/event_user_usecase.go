@@ -143,6 +143,7 @@ func (euu *eventUserUsecase) ManualRegister(ctx context.Context, request models.
 			Status:        "active",
 			AccountNumber: accountNumber,
 			Password:      password,
+
 		}
 
 		if err := euu.eur.Create(ctx, &input); err != nil {
@@ -185,6 +186,7 @@ func (euu *eventUserUsecase) ManualRegister(ctx context.Context, request models.
 			Status:        "active",
 			AccountNumber: accountNumber,
 			Password:      password,
+
 		}
 
 		if err := euu.eur.Create(ctx, &input); err != nil {
@@ -227,6 +229,7 @@ func (euu *eventUserUsecase) ManualRegister(ctx context.Context, request models.
 			Status:        "active",
 			AccountNumber: accountNumber,
 			Password:      password,
+
 		}
 
 		if err := euu.eur.Create(ctx, &input); err != nil {
@@ -240,6 +243,298 @@ func (euu *eventUserUsecase) ManualRegister(ctx context.Context, request models.
 		}
 
 		return &input, bearerToken, nil
+	default:
+		return nil, "", models.ErrorEmailPhoneNumberEmpty
+	}
+}
+
+func (euu *eventUserUsecase) ManualRegisterWorker(ctx context.Context, request models.CreateEventUserManualRequest) (eventUser *models.EventUser, token string, err error) {
+	defer func() {
+		LogService(ctx, err)
+	}()
+
+	switch {
+	case request.Email != "" && request.PhoneNumber != "":
+    // Check if a user with the provided email already exists
+    existEmail, err := euu.eur.GetByEmail(ctx, strings.ToLower(request.Email))
+    if err != nil {
+        return nil, "", err
+    }
+
+    // Check if a user with the provided phone number already exists
+    existPhone, err := euu.eur.GetByPhoneNumber(ctx, strings.ToLower(request.PhoneNumber))
+    if err != nil {
+        return nil, "", err
+    }
+
+    // If the user exists, update their details
+    if existEmail.ID != 0 || existPhone.ID != 0 {
+        // Use the existing user if found by email or phone
+        var existingUser *models.EventUser
+        if existEmail.ID != 0 {
+            existingUser = &existEmail
+        } else {
+            existingUser = &existPhone
+        }
+
+        // Update existing user's fields with new data
+        existingUser.Name = request.Name
+        existingUser.Email = strings.ToLower(request.Email) // Ensure email is the latest
+        existingUser.PhoneNumber = request.PhoneNumber // Ensure phone number is the latest
+        existingUser.Gender = request.Gender
+		existingUser.Role = "worker"
+        existingUser.MarriageStatus = request.MarriageStatus
+        existingUser.Department = request.Department
+        existingUser.KKJ = request.KKJ
+		existingUser.COOL = request.COOL
+        existingUser.KOM100 = request.KOM100
+        existingUser.Baptis = request.Baptis
+
+        // If a new password is provided, hash it and update the user's password
+        if request.Password != "" {
+            salted := append([]byte(request.Password), euu.s...)
+            password, err := hash.Generate(salted)
+            if err != nil {
+                return nil, "", err
+            }
+            existingUser.Password = password
+        }
+
+        // Update the user in the repository
+        if err := euu.eur.Update(ctx, existingUser); err != nil {
+            return nil, "", err
+        }
+
+        // Generate a new token for the existing user
+        tokenStatus := "active"
+        bearerToken, err := euu.a.Generate(existingUser.AccountNumber, existingUser.Role, tokenStatus)
+        if err != nil {
+            return nil, "", err
+        }
+
+        return existingUser, bearerToken, nil
+    }
+
+    // If no existing user found, create a new one
+    accountNumber, err := generator.AccountNumber()
+    if err != nil {
+        return nil, "", err
+    }
+
+    salted := append([]byte(request.Password), euu.s...)
+    password, err := hash.Generate(salted)
+    if err != nil {
+        return nil, "", err
+    }
+
+    input := models.EventUser{
+        Name:          request.Name,
+        Email:         strings.ToLower(request.Email),
+        PhoneNumber:   request.PhoneNumber,
+        Role:          "worker",
+        State:         "1",
+        Status:        "active",
+        AccountNumber: accountNumber,
+        Password:      password,
+        Gender: request.Gender,
+        MarriageStatus: request.MarriageStatus,
+        Department: request.Department,
+		COOL: request.COOL,
+        KKJ: request.KKJ,
+        KOM100: request.KOM100,
+        Baptis: request.Baptis,
+    }
+
+    // Create the new user in the repository
+    if err := euu.eur.Create(ctx, &input); err != nil {
+        return nil, "", err
+    }
+
+    // Generate a token for the newly created user
+    tokenStatus := "active"
+    bearerToken, err := euu.a.Generate(accountNumber, input.Role, tokenStatus)
+    if err != nil {
+        return nil, "", err
+    }
+
+    return &input, bearerToken, nil
+	case request.Email != "" && request.PhoneNumber == "":
+    // Check if a user with the provided email already exists
+    exist, err := euu.eur.GetByEmail(ctx, strings.ToLower(request.Email))
+    if err != nil {
+        return nil, "", err
+    }
+
+    // If the user exists, update their details
+    if exist.ID != 0 {
+        // Update existing user's fields with new data
+        exist.Name = request.Name
+        exist.Email = strings.ToLower(request.Email) // Ensure email is the latest
+        exist.Gender = request.Gender
+        exist.MarriageStatus = request.MarriageStatus
+		exist.Role = "worker"
+        exist.Department = request.Department
+        exist.KKJ = request.KKJ
+		exist.COOL = request.COOL
+        exist.KOM100 = request.KOM100
+        exist.Baptis = request.Baptis
+
+        // If a new password is provided, hash it and update the user's password
+        if request.Password != "" {
+            salted := append([]byte(request.Password), euu.s...)
+            password, err := hash.Generate(salted)
+            if err != nil {
+                return nil, "", err
+            }
+            exist.Password = password
+        }
+
+        // Update the user in the repository
+        if err := euu.eur.Update(ctx, &exist); err != nil {
+            return nil, "", err
+        }
+
+        // Generate a new token for the existing user
+        tokenStatus := "active"
+        bearerToken, err := euu.a.Generate(exist.AccountNumber, exist.Role, tokenStatus)
+        if err != nil {
+            return nil, "", err
+        }
+
+        return &exist, bearerToken, nil
+    }
+
+    // If no existing user found, create a new one
+    accountNumber, err := generator.AccountNumber()
+    if err != nil {
+        return nil, "", err
+    }
+
+    salted := append([]byte(request.Password), euu.s...)
+    password, err := hash.Generate(salted)
+    if err != nil {
+        return nil, "", err
+    }
+
+    input := models.EventUser{
+        Name:          request.Name,
+        Email:         strings.ToLower(request.Email),
+        Role:          "worker",
+        State:         "1",
+        Status:        "active",
+        AccountNumber: accountNumber,
+        Password:      password,
+        Gender: request.Gender,
+        MarriageStatus: request.MarriageStatus,
+        Department: request.Department,
+		COOL: request.COOL,
+        KKJ: request.KKJ,
+        KOM100: request.KOM100,
+        Baptis: request.Baptis,
+    }
+
+    // Create the new user in the repository
+    if err := euu.eur.Create(ctx, &input); err != nil {
+        return nil, "", err
+    }
+
+    // Generate a token for the newly created user
+    tokenStatus := "active"
+    bearerToken, err := euu.a.Generate(accountNumber, input.Role, tokenStatus)
+    if err != nil {
+        return nil, "", err
+    }
+
+    return &input, bearerToken, nil
+	case request.Email == "" && request.PhoneNumber != "":
+    // Check if a user with the provided phone number already exists
+    exist, err := euu.eur.GetByPhoneNumber(ctx, strings.ToLower(request.PhoneNumber))
+    if err != nil {
+        return nil, "", err
+    }
+
+    // If the user exists, update their details
+    if exist.ID != 0 {
+        // Update existing user's fields with new data
+        exist.Name = request.Name
+        exist.PhoneNumber = request.PhoneNumber // This line can be kept to ensure it's the latest
+        exist.Gender = request.Gender
+        exist.MarriageStatus = request.MarriageStatus
+		exist.Role = "worker"
+        exist.Department = request.Department
+		exist.COOL = request.COOL
+        exist.KKJ = request.KKJ
+        exist.KOM100 = request.KOM100
+        exist.Baptis = request.Baptis
+
+        // If a new password is provided, hash it and update the user's password
+        if request.Password != "" {
+            salted := append([]byte(request.Password), euu.s...)
+            password, err := hash.Generate(salted)
+            if err != nil {
+                return nil, "", err
+            }
+            exist.Password = password
+        }
+
+        // Update the user in the repository
+        if err := euu.eur.Update(ctx, &exist); err != nil {
+            return nil, "", err
+        }
+
+        // Generate a new token for the existing user
+        tokenStatus := "active"
+        bearerToken, err := euu.a.Generate(exist.AccountNumber, exist.Role, tokenStatus)
+        if err != nil {
+            return nil, "", err
+        }
+
+        return &exist, bearerToken, nil
+    }
+
+    // If no existing user found, create a new one
+    accountNumber, err := generator.AccountNumber()
+    if err != nil {
+        return nil, "", err
+    }
+
+    salted := append([]byte(request.Password), euu.s...)
+    password, err := hash.Generate(salted)
+    if err != nil {
+        return nil, "", err
+    }
+
+    input := models.EventUser{
+        Name:          request.Name,
+        PhoneNumber:   request.PhoneNumber,
+        Role:          "worker",
+        State:         "1",
+        Status:        "active",
+        AccountNumber: accountNumber,
+        Password:      password,
+        Gender: request.Gender,
+        MarriageStatus: request.MarriageStatus,
+        Department: request.Department,
+		COOL: request.COOL,
+        KKJ: request.KKJ,
+        KOM100: request.KOM100,
+        Baptis: request.Baptis,
+    }
+
+    // Create the new user in the repository
+    if err := euu.eur.Create(ctx, &input); err != nil {
+        return nil, "", err
+    }
+
+    // Generate a token for the newly created user
+    tokenStatus := "active"
+    bearerToken, err := euu.a.Generate(accountNumber, input.Role, tokenStatus)
+    if err != nil {
+        return nil, "", err
+    }
+
+    return &input, bearerToken, nil
+
 	default:
 		return nil, "", models.ErrorEmailPhoneNumberEmpty
 	}
