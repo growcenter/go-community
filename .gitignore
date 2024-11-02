@@ -12,3 +12,4 @@ docker-compose.yaml
 # Makefile
 Makefile
 config.*
+*.env
