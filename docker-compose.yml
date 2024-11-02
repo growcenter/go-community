@@ -1,12 +1,32 @@
-version: "3"
-
 services:
+  app:
+    container_name: grow-community-backend
+    hostname: backend
+    image: grow-community-backend:latest
+    build:
+      context: .
+      dockerfile: Dockerfile
+      tags:
+      - grow-community-backend:latest
+    environment:
+      - ENV=prod
+    volumes:
+      - ./config.prod.yaml:/config/config.prod.yaml
+    ports:
+      - 8080:8080
   postgres:
     container_name: community
+    hostname: pgdb
     image: postgres:latest
     environment:
       - POSTGRES_USER=postgres
-      - POSTGRES_PASSWORD=<<password>>
+      - POSTGRES_PASSWORD=ipsggz5b27954k0n
       - POSTGRES_DB=community_db
     ports:
-      - "5432:5432"
+      - "5888:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+
+volumes:
+  pgdata:
+    driver: local
