@@ -20,7 +20,7 @@ services:
     image: postgres:latest
     environment:
       - POSTGRES_USER=postgres
-      - POSTGRES_PASSWORD=ipsggz5b27954k0n
+      - POSTGRES_PASSWORD=password
       - POSTGRES_DB=community_db
     ports:
       - "5888:5432"

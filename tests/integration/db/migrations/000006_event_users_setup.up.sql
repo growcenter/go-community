@@ -12,6 +12,13 @@ CREATE TABLE "event_users" (
     "status" varchar(20) NOT NULL,
     "role" varchar(20) NOT NULL,
     "token" varchar(255),
+    "gender" varchar(20) NULL,           -- Added gender field
+    "marriage_status" varchar(20) NULL,  -- Added marriage status field
+    "department" varchar(100) NULL,      -- Added department field
+    "kkj" varchar(50) NULL,              -- Added KKJ field (boolean)
+    "cool" varchar(100) NULL,            -- Added Cool field (boolean)
+    "kom100" BOOLEAN DEFAULT FALSE,      -- Added KOM100 field (boolean)
+    "baptis" BOOLEAN DEFAULT FALSE,      -- Added Baptis field (boolean)
     "created_at" TIMESTAMP NOT NULL DEFAULT now(),
     "updated_at" TIMESTAMP NOT NULL DEFAULT now(),
     "deleted_at" TIMESTAMP
