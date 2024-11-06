@@ -32,3 +32,7 @@ migration_up:
 migration_down:
 	# Create table for community_db
 	migrate -path tests/integration/db/migrations/ -database "postgres://postgres:<<password>>@<<host>>:<<port>>/postgres?sslmode=disable" down
+
+build:
+	docker compose build 
+	docker compose up app --force-recreate -d
