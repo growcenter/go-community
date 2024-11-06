@@ -34,7 +34,7 @@ func New(e *echo.Echo, u *usecases.Usecases, c *config.Configuration) {
 	// Input swagger initalization here
 
 	e.GET("/", func(ctx echo.Context) error {
-		message := "Welcome to GROW Center API Service"
+		message := "Welcome to GROW Community API Service!"
 		return ctx.String(http.StatusOK, message)
 	})
 

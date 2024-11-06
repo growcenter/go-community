@@ -77,7 +77,7 @@ func (uu *userUsecase) CreateCool(ctx context.Context, request *models.CreateUse
 	}
 
 	input := models.User{
-		AccountNumber:    accountNumber,
+		CommunityID:    accountNumber,
 		Name:             request.Name,
 		PhoneNumber:      fmt.Sprintf("+62%s", request.PhoneNumber),
 		Email:            strings.ToLower(request.Email),
@@ -164,7 +164,7 @@ func (uu *userUsecase) CreateUser(ctx context.Context, request *models.CreateUse
 		}
 
 		input := models.User{
-			AccountNumber:    accountNumber,
+			CommunityID:    accountNumber,
 			Name:             request.Name,
 			PhoneNumber:      fmt.Sprintf("+62%s", request.PhoneNumber),
 			Email:            strings.ToLower(request.Email),
