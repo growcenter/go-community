@@ -1,6 +1,7 @@
 package usecases
 
 import (
+	"go-community/internal/config"
 	"go-community/internal/pkg/authorization"
 	"go-community/internal/pkg/google"
 	"go-community/internal/repositories/pgsql"
@@ -11,6 +12,7 @@ type Dependencies struct {
 	Google        *google.GoogleAuth
 	Authorization *authorization.Auth
 	Salt          []byte
+	Config        *config.Configuration
 }
 
 type Usecases struct {
@@ -31,7 +33,7 @@ func New(d Dependencies) *Usecases {
 		Campus:            *NewCampusUsecase(d.Repository.Campus),
 		CoolCategory:      *NewCoolCategoryUsecase(d.Repository.CoolCategory),
 		Location:          *NewLocationUsecase(d.Repository.Location, d.Repository.Campus),
-		User:              *NewUserUsecase(d.Repository.User, d.Repository.Campus, d.Repository.CoolCategory),
+		User:              *NewUserUsecase(d.Repository.User, d.Repository.Campus, d.Repository.CoolCategory, d.Repository.Cool, *d.Config, d.Salt),
 		EventUser:         *NewEventUserUsecase(d.Repository.EventUser, *d.Google, *d.Authorization, d.Salt),
 		EventGeneral:      *NewEventGeneralUsecase(d.Repository.EventGeneral),
 		EventSession:      *NewEventSessionUsecase(d.Repository.EventSession, d.Repository.EventGeneral),

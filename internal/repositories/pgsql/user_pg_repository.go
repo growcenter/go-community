@@ -14,7 +14,7 @@ type UserRepository interface {
 	GetOneByAccountNumber(ctx context.Context, accountNumber string) (user models.User, err error)
 	GetByEmail(ctx context.Context, email string) (user models.User, err error)
 	GetByPhoneNumber(ctx context.Context, phoneNumber string) (user models.User, err error)
-	//GetOneByEmailPhoneNumber(ctx context.Context, identifier string) (user models.User, err error)
+	CheckByEmailPhoneNumber(ctx context.Context, phoneNumber string, email string) (dataExist bool, err error)
 }
 
 type userRepository struct {
@@ -88,4 +88,17 @@ func (ur *userRepository) GetByPhoneNumber(ctx context.Context, phoneNumber stri
 	err = ur.db.Where("phone_number = ?", phoneNumber).Find(&u).Error
 
 	return u, err
+}
+
+func (uu *userRepository) CheckByEmailPhoneNumber(ctx context.Context, phoneNumber string, email string) (dataExist bool, err error) {
+	defer func() {
+		LogRepository(ctx, err)
+	}()
+
+	err = uu.db.Raw(queryCheckUserByEmailPhoneNumber, email, phoneNumber).Scan(&dataExist).Error
+	if err != nil {
+		return false, err
+	}
+
+	return dataExist, nil
 }

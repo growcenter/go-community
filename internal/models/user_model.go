@@ -22,7 +22,7 @@ type User struct {
 	Address          string
 	CampusCode       string
 	CoolCategoryCode string
-	CoolID           string
+	CoolID           int
 	Department       string
 	DateOfBirth      *time.Time
 	PlaceOfBirth     string
@@ -127,21 +127,52 @@ type (
 	}
 )
 
+func (u *User) ToCreateVolunteer() *CreateVolunteerResponse {
+	return &CreateVolunteerResponse{
+		Type:        TYPE_USER,
+		CommunityId: u.CommunityID,
+		Name:        u.Name,
+		Email:       u.Email,
+		Gender:      u.Gender,
+		PhoneNumber: u.PhoneNumber,
+		CampusCode:  u.CampusCode,
+	}
+}
+
 type (
 	CreateVolunteerRequest struct {
-		Name        string `json:"name" validate:"required,min=1,max=50,nospecial,noStartEndSpaces" example:"Professionals"`
-		PhoneNumber string `json:"phoneNumber" validate:"omitempty,noStartEndSpaces,phoneFormat"`
-		Email       string `json:"email" validate:"omitempty,noStartEndSpaces,emailFormat" example:"jeremy@gmail.com"`
-		Password    string `json:"password" validate:"required,min=6,max=50,noStartEndSpaces" example:"Professionals"`
-		Gender      string `json:"gender,omitempty,oneof=male female"` // Optional Gender field
-		Department  string `json:"department,omitempty"`               // Optional Department field
-		CoolID      string `json:"coolId,omitempty"`                   // Optional COOL field
-		KKJNumber   string `json:"kkjNumber,omitempty"`                // Optional KKJ field
-		KOM100      bool   `json:"isKom100,omitempty"`                 // Optional KOM100 field
-		Baptis      bool   `json:"isBaptized,omitempty"`               // Optional Baptis field
-		CampusCode  string `json:"campusCode" validate:"omitempty,min=3,max=3" example:"001"`
-		//CoolCategoryCode string `json:"coolCategoryCode" validate:"omitempty,min=3,max=3" example:"001"`
-		MaritalStatus string `json:"maritalStatus" validate:"omitempty,oneof=single married others" example:"active"`
+		Name           string    `json:"name" validate:"required,min=1,max=50,nospecial,noStartEndSpaces" example:"Professionals"`
+		PhoneNumber    string    `json:"phoneNumber" validate:"omitempty,noStartEndSpaces,phoneFormat"`
+		Email          string    `json:"email" validate:"omitempty,noStartEndSpaces,emailFormat" example:"jeremy@gmail.com"`
+		Password       string    `json:"password" validate:"required,min=6,max=50,noStartEndSpaces" example:"Professionals"`
+		PlaceOfBirth   string    `json:"placeOfBirth" validate:"required"`
+		DateOfBirth    time.Time `json:"dateOfBirth" validate:"required,yyyymmddFormat"`
+		Address        string    `json:"address"`
+		Gender         string    `json:"gender,omitempty,oneof=male female"`
+		DepartmentCode string    `json:"department_code" validate:"required,noStartEndSpaces" example:"MUSIC"`
+		CoolID         int       `json:"coolId" validate:"required" example:"1"`
+		KKJNumber      string    `json:"kkjNumber,omitempty"`
+		JemaatId       string    `json:"jemaatId,omitempty"`
+		KOM100         bool      `json:"isKom100" validate:"required"`
+		Baptis         bool      `json:"isBaptized,omitempty" validate:"required"`
+		CampusCode     string    `json:"campusCode" validate:"omitempty,min=3,max=3" example:"001"`
+		MaritalStatus  string    `json:"maritalStatus" validate:"omitempty,oneof=single married others" example:"active"`
+	}
+	CreateVolunteerResponse struct {
+		Type             string     `json:"type" example:"coolCategory"`
+		ID               int        `json:"-" example:"1"`
+		CommunityId      string     `json:"communityId"`
+		Name             string     `json:"name" example:"Profesionals"`
+		Gender           string     `json:"gender"`
+		Age              int        `json:"age"`
+		PhoneNumber      string     `json:"phoneNumber"`
+		Email            string     `json:"email"`
+		CampusCode       string     `json:"campusCode"`
+		CoolCategoryCode string     `json:"coolCategoryCode"`
+		MaritalStatus    string     `json:"maritalStatus"`
+		Status           string     `json:"status" example:"active"`
+		CreatedAt        *time.Time `json:"-" example:"2006-01-02 15:04:05"`
+		UpdatedAt        *time.Time `json:"-" example:"2006-01-02 15:04:05"`
 	}
 )
 

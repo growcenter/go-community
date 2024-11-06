@@ -7,6 +7,7 @@ import (
 	"reflect"
 	"regexp"
 	"strings"
+	"time"
 
 	v10 "github.com/go-playground/validator/v10"
 	"github.com/hashicorp/go-multierror"
@@ -22,6 +23,7 @@ func init() {
 	registerEmailFormat()
 	registerPhoneFormat()
 	registerEmailPhoneFormat()
+	registeryyyymmddFormat()
 }
 
 func Validate(request interface{}) error {
@@ -139,5 +141,15 @@ func registerEmailPhoneFormat() {
 		// Minimum of 8 digits
 		pattern := `^\+62\d{8,}$|^0\d{8,}$|^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$`
 		return regexp.MustCompile(pattern).MatchString(input)
+	})
+}
+
+func registeryyyymmddFormat() {
+	valid.RegisterValidation("yyymmddFormat", func(fl v10.FieldLevel) bool {
+		date := fl.Field().String()
+		layout := "2006-01-02" // This layout corresponds to yyyy-mm-dd
+
+		_, err := time.Parse(layout, date)
+		return err == nil // Returns true if date is valid
 	})
 }

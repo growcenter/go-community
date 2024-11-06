@@ -18,13 +18,13 @@ func NewUserHandler(api *echo.Group, u *usecases.Usecases) {
 	handler := &UserHandler{usecase: u}
 
 	endpoint := api.Group("/user")
-	endpoint.POST("/cool", handler.CreateCool)
+	endpoint.POST("/volunteer", handler.CreateVolunteer)
 	endpoint.GET("/check", handler.Check)
 	endpoint.GET("/:accountNumber", handler.GetByAccountNumber)
 }
 
-func (uh *UserHandler) CreateCool(ctx echo.Context) error {
-	var request models.CreateUserCoolRequest
+func (uh *UserHandler) CreateVolunteer(ctx echo.Context) error {
+	var request models.CreateVolunteerRequest
 	if err := ctx.Bind(&request); err != nil {
 		return response.Error(ctx, models.ErrorInvalidInput)
 	}
@@ -33,12 +33,13 @@ func (uh *UserHandler) CreateCool(ctx echo.Context) error {
 		return response.ErrorValidation(ctx, err)
 	}
 
-	new, err := uh.usecase.User.CreateCool(ctx.Request().Context(), &request)
+	new, err := uh.usecase.User.CreateVolunteer(ctx.Request().Context(), &request)
 	if err != nil {
 		return response.Error(ctx, err)
 	}
 
-	return response.Success(ctx, http.StatusCreated, new.ToCreateUserCool())
+	// TODO: Rapihin response
+	return response.Success(ctx, http.StatusCreated, new.ToCreateVolunteer())
 }
 
 func (uh *UserHandler) CreateUser(ctx echo.Context) error {

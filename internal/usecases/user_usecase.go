@@ -3,14 +3,16 @@ package usecases
 import (
 	"context"
 	"fmt"
+	"go-community/internal/common"
+	"go-community/internal/config"
 	"go-community/internal/models"
 	"go-community/internal/pkg/generator"
+	"go-community/internal/pkg/hash"
 	"go-community/internal/repositories/pgsql"
 	"strings"
 )
 
 type UserUsecase interface {
-	CreateCool(ctx context.Context, request *models.CreateUserCoolRequest) (user *models.User, err error)
 	CreateUser(ctx context.Context, request *models.CreateUserRequest) (user *models.User, err error)
 	Login(ctx context.Context) (user *models.User, err error)
 	GetByAccountNumber(ctx context.Context, accountNumber string) (user *models.User, err error)
@@ -20,81 +22,112 @@ type userUsecase struct {
 	ur  pgsql.UserRepository
 	cr  pgsql.CampusRepository
 	ccr pgsql.CoolCategoryRepository
+	clr pgsql.CoolRepository
+	cfg *config.Configuration
+	s   []byte
 }
 
-func NewUserUsecase(ur pgsql.UserRepository, cr pgsql.CampusRepository, ccr pgsql.CoolCategoryRepository) *userUsecase {
+func NewUserUsecase(ur pgsql.UserRepository, cr pgsql.CampusRepository, ccr pgsql.CoolCategoryRepository, clr pgsql.CoolRepository, cfg config.Configuration, s []byte) *userUsecase {
 	return &userUsecase{
 		ur:  ur,
 		cr:  cr,
 		ccr: ccr,
+		clr: clr,
+		cfg: &cfg,
+		s:   s,
 	}
 }
 
-func (uu *userUsecase) CreateCool(ctx context.Context, request *models.CreateUserCoolRequest) (user *models.User, err error) {
+func (uu *userUsecase) CreateVolunteer(ctx context.Context, request *models.CreateVolunteerRequest) (user *models.User, err error) {
 	defer func() {
 		LogService(ctx, err)
 	}()
 
-	existEmail, err := uu.ur.GetByEmail(ctx, request.Email)
+	dataExist, err := uu.ur.CheckByEmailPhoneNumber(ctx, strings.ToLower(request.PhoneNumber), strings.ToLower(request.Email))
 	if err != nil {
 		return nil, err
 	}
 
-	if existEmail.ID != 0 {
+	if dataExist {
 		return nil, models.ErrorAlreadyExist
 	}
 
-	existPhone, err := uu.ur.GetByPhoneNumber(ctx, request.PhoneNumber)
-	if err != nil {
-		return nil, err
-	}
-
-	if existPhone.ID != 0 {
-		return nil, models.ErrorAlreadyExist
-	}
-
-	campus, err := uu.cr.GetByCode(ctx, request.CampusCode)
-	if err != nil {
-		return nil, err
-	}
-
-	if campus.ID == 0 {
+	_, departmentExist := uu.cfg.Department[strings.ToUpper(request.DepartmentCode)]
+	if !departmentExist {
 		return nil, models.ErrorDataNotFound
 	}
 
-	coolCategory, err := uu.ccr.GetByCode(ctx, request.CoolCategoryCode)
+	coolExist, err := uu.clr.CheckById(ctx, request.CoolID)
 	if err != nil {
 		return nil, err
 	}
 
-	if coolCategory.ID == 0 {
+	if !coolExist {
 		return nil, models.ErrorDataNotFound
 	}
 
-	accountNumber, err := generator.AccountNumber()
+	_, campusExist := uu.cfg.Campus[strings.ToUpper(request.CampusCode)]
+	if !campusExist {
+		return nil, models.ErrorDataNotFound
+	}
+
+	var accountNumber string
+	//if request.JemaatId != "" && request.KKJNumber != "" {
+	//	accountNumber = request.JemaatId
+	//} else {
+	//	accountNumber = generator.LuhnAccountNumber()
+	//}
+
+	switch {
+	case request.JemaatId != "" && request.KKJNumber != "":
+		accountNumber = request.JemaatId
+	case request.JemaatId != "" && request.KKJNumber == "":
+		return nil, models.ErrorDidNotFillKKJNumber
+	default:
+		accountNumber = generator.LuhnAccountNumber()
+	}
+
+	salted := append([]byte(request.Password), uu.s...)
+	password, err := hash.Generate(salted)
 	if err != nil {
 		return nil, err
 	}
 
 	input := models.User{
-		CommunityID:    accountNumber,
-		Name:             request.Name,
-		PhoneNumber:      fmt.Sprintf("+62%s", request.PhoneNumber),
-		Email:            strings.ToLower(request.Email),
-		UserType:         "REQUEST_COOL",
-		Status:           "NOT_REGISTERED",
-		Gender:           request.Gender,
-		CampusCode:       request.CampusCode,
-		CoolCategoryCode: request.CoolCategoryCode,
-		MaritalStatus:    request.MaritalStatus,
-		Age:              request.Age,
+		CommunityID:   accountNumber,
+		Name:          common.CapitalizeFirstWord(request.Name),
+		PhoneNumber:   request.PhoneNumber,
+		Email:         strings.ToLower(request.Email),
+		Password:      password,
+		UserType:      "VOLUNTEER",
+		Status:        "active",
+		Roles:         "TODOYAGERALD",
+		Gender:        strings.ToLower(request.Gender),
+		Address:       request.Address,
+		CampusCode:    request.CampusCode,
+		CoolID:        request.CoolID,
+		Department:    request.DepartmentCode,
+		PlaceOfBirth:  request.PlaceOfBirth,
+		DateOfBirth:   &request.DateOfBirth,
+		MaritalStatus: request.MaritalStatus,
+		KKJNumber:     request.KKJNumber,
+		JemaatID:      request.JemaatId,
+		IsBaptized:    request.Baptis,
+		IsKom100:      request.KOM100,
 	}
 
 	if err := uu.ur.Create(ctx, &input); err != nil {
 		return nil, err
 	}
 
+	// TODO: TOKEN
+	//tokenStatus := "active"
+	//bearerToken, err := euu.a.Generate(accountNumber, input.Role, tokenStatus)
+	//if err != nil {
+	//	return nil, "", err
+	//}
 	return &input, nil
+
 }
 
 func (uu *userUsecase) CreateUser(ctx context.Context, request *models.CreateUserRequest) (user *models.User, err error) {
@@ -164,7 +197,7 @@ func (uu *userUsecase) CreateUser(ctx context.Context, request *models.CreateUse
 		}
 
 		input := models.User{
-			CommunityID:    accountNumber,
+			CommunityID:      accountNumber,
 			Name:             request.Name,
 			PhoneNumber:      fmt.Sprintf("+62%s", request.PhoneNumber),
 			Email:            strings.ToLower(request.Email),

@@ -56,6 +56,9 @@ var (
 
 	// Rate Limiter Error
 	ErrorRateLimiterExceeds = errors.New("too much input, please try again later")
+
+	// User Error
+	ErrorDidNotFillKKJNumber = errors.New("please input the kkj number if you input jemaat id")
 )
 
 type (
@@ -252,6 +255,13 @@ func ErrorMapping(err error) ErrorResponse {
 			Status:  "LOGGED_OUT",
 			Message: err.Error(),
 		}
+	case ErrorDidNotFillKKJNumber:
+		return ErrorResponse{
+			Code:    http.StatusBadRequest,
+			Status:  "MISSING_FIELD",
+			Message: err.Error(),
+		}
+
 	default:
 		return ErrorResponse{
 			Code:    http.StatusInternalServerError,
