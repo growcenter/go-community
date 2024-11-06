@@ -14,6 +14,7 @@ type UserRepository interface {
 	GetOneByAccountNumber(ctx context.Context, accountNumber string) (user models.User, err error)
 	GetByEmail(ctx context.Context, email string) (user models.User, err error)
 	GetByPhoneNumber(ctx context.Context, phoneNumber string) (user models.User, err error)
+	//GetOneByEmailPhoneNumber(ctx context.Context, identifier string) (user models.User, err error)
 }
 
 type userRepository struct {

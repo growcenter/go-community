@@ -9,7 +9,7 @@ var TYPE_USER = "user"
 
 type User struct {
 	ID               int
-	AccountNumber    string
+	CommunityID      string
 	Name             string
 	PhoneNumber      string
 	Email            string
@@ -22,6 +22,8 @@ type User struct {
 	Address          string
 	CampusCode       string
 	CoolCategoryCode string
+	CoolID           string
+	Department       string
 	DateOfBirth      *time.Time
 	PlaceOfBirth     string
 	MaritalStatus    string
@@ -29,6 +31,9 @@ type User struct {
 	EmploymentStatus string
 	EducationLevel   string
 	KKJNumber        string
+	JemaatID         string
+	IsBaptized       bool
+	IsKom100         bool
 	Age              int
 	CreatedAt        *time.Time
 	UpdatedAt        *time.Time
@@ -41,7 +46,7 @@ type User struct {
 func (u *User) ToCreateUserCool() *CreateUserCoolResponse {
 	return &CreateUserCoolResponse{
 		Type:             TYPE_USER,
-		AccountNumber:    u.AccountNumber,
+		CommunityId:      u.CommunityID,
 		Name:             u.Name,
 		Gender:           u.Gender,
 		Age:              u.Age,
@@ -68,7 +73,7 @@ type (
 	CreateUserCoolResponse struct {
 		Type             string     `json:"type" example:"coolCategory"`
 		ID               int        `json:"-" example:"1"`
-		AccountNumber    string     `json:"accountNumber"`
+		CommunityId      string     `json:"communityId"`
 		Name             string     `json:"name" example:"Profesionals"`
 		Gender           string     `json:"gender"`
 		Age              int        `json:"age"`
@@ -122,6 +127,24 @@ type (
 	}
 )
 
+type (
+	CreateVolunteerRequest struct {
+		Name        string `json:"name" validate:"required,min=1,max=50,nospecial,noStartEndSpaces" example:"Professionals"`
+		PhoneNumber string `json:"phoneNumber" validate:"omitempty,noStartEndSpaces,phoneFormat"`
+		Email       string `json:"email" validate:"omitempty,noStartEndSpaces,emailFormat" example:"jeremy@gmail.com"`
+		Password    string `json:"password" validate:"required,min=6,max=50,noStartEndSpaces" example:"Professionals"`
+		Gender      string `json:"gender,omitempty,oneof=male female"` // Optional Gender field
+		Department  string `json:"department,omitempty"`               // Optional Department field
+		CoolID      string `json:"coolId,omitempty"`                   // Optional COOL field
+		KKJNumber   string `json:"kkjNumber,omitempty"`                // Optional KKJ field
+		KOM100      bool   `json:"isKom100,omitempty"`                 // Optional KOM100 field
+		Baptis      bool   `json:"isBaptized,omitempty"`               // Optional Baptis field
+		CampusCode  string `json:"campusCode" validate:"omitempty,min=3,max=3" example:"001"`
+		//CoolCategoryCode string `json:"coolCategoryCode" validate:"omitempty,min=3,max=3" example:"001"`
+		MaritalStatus string `json:"maritalStatus" validate:"omitempty,oneof=single married others" example:"active"`
+	}
+)
+
 func (u *CheckUserEmailResponse) ToCheck() *CheckUserEmailResponse {
 	return &CheckUserEmailResponse{
 		Type:     TYPE_USER,
@@ -141,7 +164,7 @@ type CheckUserEmailResponse struct {
 func (u *User) ToGetUserByAccountNumber() *GetUserByAccountNumber {
 	return &GetUserByAccountNumber{
 		Type:             TYPE_USER,
-		AccountNumber:    u.AccountNumber,
+		CommunityId:      u.CommunityID,
 		Name:             u.Name,
 		Gender:           u.Gender,
 		Age:              u.Age,
@@ -159,7 +182,7 @@ func (u *User) ToGetUserByAccountNumber() *GetUserByAccountNumber {
 type GetUserByAccountNumber struct {
 	Type             string `json:"type" example:"coolCategory"`
 	ID               int    `json:"-" example:"1"`
-	AccountNumber    string `json:"accountNumber"`
+	CommunityId      string `json:"CommunityId"`
 	Name             string `json:"name" example:"Profesionals"`
 	Gender           string `json:"gender"`
 	Age              int    `json:"age"`

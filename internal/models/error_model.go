@@ -49,6 +49,13 @@ var (
 	// Special for Validation Error
 	ErrorInvalidInput = errors.New("invalid request input")
 	ErrorEmailInput   = errors.New("email format is invalid, should be: xxxx@xxxx.com")
+
+	// Idempotency Error
+	ErrorEmptyRequestID     = errors.New("request id is empty")
+	ErrorProcessedRequestID = errors.New("request id has already been processed")
+
+	// Rate Limiter Error
+	ErrorRateLimiterExceeds = errors.New("too much input, please try again later")
 )
 
 type (
