@@ -13,3 +13,6 @@ docker-compose.yaml
 Makefile
 config.*
 *.env
+
+# Idea
+.idea

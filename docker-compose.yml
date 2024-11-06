@@ -13,7 +13,7 @@ services:
     volumes:
       - ./config.prod.yaml:/config/config.prod.yaml
     ports:
-      - 8080:8080
+      - 8090:8080
   postgres:
     container_name: community
     hostname: pgdb
