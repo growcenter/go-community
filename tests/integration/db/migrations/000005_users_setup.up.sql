@@ -36,5 +36,5 @@ CREATE TABLE "users" (
     FOREIGN KEY ("cool_category_code") REFERENCES "cool_categories"("code")
 );
 
-CREATE INDEX idx_users_account_number ON "users" ("account_number");
+CREATE INDEX idx_users_community_id ON "users" ("community_id");
 CREATE INDEX idx_users_email ON "users" ("email");

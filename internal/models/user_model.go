@@ -148,7 +148,7 @@ type (
 		PlaceOfBirth   string    `json:"placeOfBirth" validate:"required"`
 		DateOfBirth    time.Time `json:"dateOfBirth" validate:"required,yyyymmddFormat"`
 		Address        string    `json:"address"`
-		Gender         string    `json:"gender,omitempty,oneof=male female"`
+		Gender         string    `json:"gender" validate:"omitempty,oneof=male female"`
 		DepartmentCode string    `json:"department_code" validate:"required,noStartEndSpaces" example:"MUSIC"`
 		CoolID         int       `json:"coolId" validate:"required" example:"1"`
 		KKJNumber      string    `json:"kkjNumber,omitempty"`
