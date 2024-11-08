@@ -168,7 +168,7 @@ type (
 		PhoneNumber      string     `json:"phoneNumber"`
 		Email            string     `json:"email"`
 		CampusCode       string     `json:"campusCode"`
-		CoolCategoryCode string     `json:"coolCategoryCode"`
+		//CoolCategoryCode string     `json:"coolCategoryCode"`
 		MaritalStatus    string     `json:"maritalStatus"`
 		Status           string     `json:"status" example:"active"`
 		CreatedAt        *time.Time `json:"-" example:"2006-01-02 15:04:05"`

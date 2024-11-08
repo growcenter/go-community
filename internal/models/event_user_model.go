@@ -19,11 +19,12 @@ type EventUser struct {
 	State         string
 	Role          string
 	Gender        string    // Optional Gender field
-	MarriageStatus string   // Optional Marriage Status field
+	MaritalStatus string   // Optional Marriage Status field
 	Department    string    // Optional Department field
 	KKJ           string      // Optional KKJ field (true or false)
 	COOL		  string
-	KOM100        bool      // Optional KOM100 field (true or false)
+	Campus	  string
+	KOM           bool      // Optional KOM field (true or false)
 	Baptis        bool      // Optional Baptis field (true or false)
 	CreatedAt     *time.Time
 	UpdatedAt     *time.Time
@@ -41,11 +42,12 @@ func (eu *EventUser) ToResponse() *GetEventUserResponse {
 		Status:        eu.Status,
 		Role:          eu.Role,
 		Gender:         eu.Gender,           // Include optional Gender in response
-		MarriageStatus: eu.MarriageStatus,   // Include optional MarriageStatus in response
+		MaritalStatus: eu.MaritalStatus,   // Include optional MaritalStatus in response
 		Department:     eu.Department,
 		COOL: 			eu.COOL,       // Include optional Cool in response
+		Campus:		eu.Campus,
 		KKJ:            eu.KKJ,              // Include optional KKJ in response
-		KOM100:         eu.KOM100,           // Include optional KOM100 in response
+		KOM:         eu.KOM,           // Include optional KOM in response
 		Baptis:         eu.Baptis,           // Include optional Baptis in response
 		
 	}
@@ -61,12 +63,13 @@ type GetEventUserResponse struct {
 	Role          string `json:"role"`
 	Status        string `json:"status" example:"active"`
 	Gender         string `json:"gender,omitempty"`           // Optional Gender field
-	MarriageStatus string `json:"marriageStatus,omitempty"`   // Optional MarriageStatus field
+	MaritalStatus string `json:"maritalStatus,omitempty"`   // Optional MaritalStatus field
 	Department     string `json:"department,omitempty"`       // Optional Department field
-	COOL     	  string `json:"cool,omitempty"`       			  // Optional COOL field
-	KKJ            string   `json:"kkj,omitempty"`            // Optional KKJ field
-	KOM100         bool   `json:"kom100,omitempty"`           // Optional KOM100 field
-	Baptis         bool   `json:"baptis,omitempty"`           // Optional Baptis field
+	COOL     	  string `json:"cool,omitempty"`
+	Campus      string `json:"campus,omitempty"`      			  // Optional Campus field
+	KKJ           string   `json:"kkj,omitempty"`            // Optional KKJ field
+	KOM           bool   `json:"kom,omitempty"`           // Optional KOM field
+	Baptis        bool   `json:"baptis,omitempty"`           // Optional Baptis field
 }
 
 func (eu *CreateEventUserResponse) ToCreateEventUser() *CreateEventUserResponse {
@@ -79,11 +82,12 @@ func (eu *CreateEventUserResponse) ToCreateEventUser() *CreateEventUserResponse 
 		Token:         "token",
 		Status:        eu.Status,
 		Gender:         eu.Gender,           // Optional Gender
-		MarriageStatus: eu.MarriageStatus,   // Optional MarriageStatus
+		MaritalStatus: eu.MaritalStatus,   // Optional MaritalStatus
 		Department:     eu.Department,       // Optional Department
 		COOL: 			eu.COOL,       // Include optional Cool in response
+		Campus:		eu.Campus,
 		KKJ:            eu.KKJ,              // Optional KKJ
-		KOM100:         eu.KOM100,           // Optional KOM100
+		KOM:         eu.KOM,           // Optional KOM
 		Baptis:         eu.Baptis,           // Optional Baptis
 	}
 }
@@ -103,11 +107,12 @@ type (
 		Token         string `json:"token"`
 		Status        string `json:"status" example:"active"`
 		Gender         string `json:"gender,omitempty"`            // Optional Gender field
-		MarriageStatus string `json:"marriageStatus,omitempty"`    // Optional MarriageStatus field
+		MaritalStatus string `json:"maritalStatus,omitempty"`    // Optional MaritalStatus field
 		Department     string `json:"department,omitempty"`        // Optional Department field
 		COOL     	  string `json:"cool,omitempty"`       			  // Optional COOL field
+		Campus	  string `json:"campus,omitempty"` 
 		KKJ            string   `json:"kkj,omitempty"`               // Optional KKJ field
-		KOM100         bool   `json:"kom100,omitempty"`            // Optional KOM100 field
+		KOM         bool   `json:"kom,omitempty"`            // Optional KOM field
 		Baptis         bool   `json:"baptis,omitempty"`            // Optional Baptis field
 	}
 )
@@ -123,11 +128,12 @@ func (eu *CreateEventUserManualResponse) ToCreateEventUserManual() CreateEventUs
 		Token:         eu.Token,
 		Status:        eu.Status,
 		Gender:         eu.Gender,           // Optional Gender
-		MarriageStatus: eu.MarriageStatus,   // Optional MarriageStatus
+		MaritalStatus: eu.MaritalStatus,   // Optional MaritalStatus
 		COOL: 			eu.COOL,       // Include optional Cool in response
+		Campus:		eu.Campus,
 		Department:     eu.Department,       // Optional Department
 		KKJ:            eu.KKJ,              // Optional KKJ
-		KOM100:         eu.KOM100,           // Optional KOM100
+		KOM:         eu.KOM,           // Optional KOM
 		Baptis:         eu.Baptis,           // Optional Baptis
 	}
 }
@@ -139,11 +145,12 @@ type (
 		Email       string `json:"email" validate:"omitempty,noStartEndSpaces,emailFormat" example:"jeremy@gmail.com"`
 		Password    string `json:"password" validate:"required,min=6,max=50,noStartEndSpaces" example:"Professionals"`
 		Gender         string `json:"gender,omitempty"`            // Optional Gender field
-		MarriageStatus string `json:"marriageStatus,omitempty"`    // Optional MarriageStatus field
+		MaritalStatus string `json:"maritalStatus,omitempty"`    // Optional MaritalStatus field
 		Department     string `json:"department,omitempty"`        // Optional Department field
 		COOL     	  string `json:"cool,omitempty"`       			  // Optional COOL field
+		Campus	string `json:"campus,omitempty"` 
 		KKJ            string   `json:"kkj,omitempty"`               // Optional KKJ field
-		KOM100         bool   `json:"kom100,omitempty"`            // Optional KOM100 field
+		KOM         bool   `json:"kom,omitempty"`            // Optional KOM field
 		Baptis         bool   `json:"baptis,omitempty"`            // Optional Baptis field
 		
 	}
@@ -157,11 +164,12 @@ type (
 		Token         string `json:"token"`
 		Status        string `json:"status" example:"active"`
 		Gender         string `json:"gender,omitempty"`            // Optional Gender field
-		MarriageStatus string `json:"marriageStatus,omitempty"`    // Optional MarriageStatus field
+		MaritalStatus string `json:"maritalStatus,omitempty"`    // Optional MaritalStatus field
 		Department     string `json:"department,omitempty"`        // Optional Department field
 		COOL     	  string `json:"cool,omitempty"`       			  // Optional COOL field
+		Campus	  string `json:"campus,omitempty"` 
 		KKJ            string   `json:"kkj,omitempty"`               // Optional KKJ field
-		KOM100         bool   `json:"kom100,omitempty"`            // Optional KOM100 field
+		KOM         bool   `json:"kom,omitempty"`            // Optional KOM field
 		Baptis         bool   `json:"baptis,omitempty"`            // Optional Baptis field
 	}
 )
