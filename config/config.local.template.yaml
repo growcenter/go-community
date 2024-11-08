@@ -29,3 +29,7 @@ auth:
   api_key:
 hash:
   salt: ""
+department:
+  "EXD": "Example Department"
+campus:
+  "EXC": "Example Campus"

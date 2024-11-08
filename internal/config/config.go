@@ -11,11 +11,13 @@ import (
 
 type (
 	Configuration struct {
-		Application Application `mapstructure:"app"`
-		Frontend    Frontend    `mapstructure:"frontend"`
-		PostgreSQL  PostgreSQL  `mapstructure:"psql"`
-		Google      Google      `mapstructure:"google"`
-		Auth        Auth        `mapstructure:"auth"`
+		Application Application       `mapstructure:"app"`
+		Frontend    Frontend          `mapstructure:"frontend"`
+		PostgreSQL  PostgreSQL        `mapstructure:"psql"`
+		Google      Google            `mapstructure:"google"`
+		Auth        Auth              `mapstructure:"auth"`
+		Department  map[string]string `mapstructure:"department"`
+		Campus      map[string]string `mapstructure:"campus"`
 	}
 	Application struct {
 		Name        string        `mapstructure:"name"`
