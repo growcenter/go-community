@@ -289,7 +289,7 @@ func (euu *eventUserUsecase) ManualRegisterWorker(ctx context.Context, request m
 				existingUser.COOL = request.COOL
 				existingUser.KOM = request.KOM
 				existingUser.Baptis = request.Baptis
-				existingUser.Homebase = request.Homebase
+				existingUser.Campus = request.Campus
 
 				// If a new password is provided, hash it and update the user's password
 				if request.Password != "" {
@@ -344,7 +344,7 @@ func (euu *eventUserUsecase) ManualRegisterWorker(ctx context.Context, request m
 				KKJ: request.KKJ,
 				KOM: request.KOM,
 				Baptis: request.Baptis,
-				Homebase: request.Homebase,
+				Campus: request.Campus,
 			}
 
 			// Create the new user in the repository
@@ -380,7 +380,7 @@ func (euu *eventUserUsecase) ManualRegisterWorker(ctx context.Context, request m
 				exist.COOL = request.COOL
 				exist.KOM = request.KOM
 				exist.Baptis = request.Baptis
-				exist.Homebase = request.Homebase
+				exist.Campus = request.Campus
 
 				// If a new password is provided, hash it and update the user's password
 				if request.Password != "" {
@@ -434,7 +434,7 @@ func (euu *eventUserUsecase) ManualRegisterWorker(ctx context.Context, request m
 				KKJ: request.KKJ,
 				KOM: request.KOM,
 				Baptis: request.Baptis,
-				Homebase : request.Homebase,
+				Campus : request.Campus,
 			}
 
 			// Create the new user in the repository
@@ -470,7 +470,7 @@ func (euu *eventUserUsecase) ManualRegisterWorker(ctx context.Context, request m
 				exist.KKJ = request.KKJ
 				exist.KOM = request.KOM
 				exist.Baptis = request.Baptis
-				exist.Homebase = request.Homebase
+				exist.Campus = request.Campus
 
 				// If a new password is provided, hash it and update the user's password
 				if request.Password != "" {
@@ -524,7 +524,7 @@ func (euu *eventUserUsecase) ManualRegisterWorker(ctx context.Context, request m
 				KKJ: request.KKJ,
 				KOM: request.KOM,
 				Baptis: request.Baptis,
-				Homebase: request.Homebase,
+				Campus: request.Campus,
 			}
 
 			// Create the new user in the repository
