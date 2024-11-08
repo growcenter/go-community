@@ -17,6 +17,7 @@ CREATE TABLE "event_users" (
     "department" varchar(200) NULL,      -- Added department field
     "kkj" varchar(50) NULL,              -- Added KKJ field (string)
     "cool" varchar(300) NULL,            -- Added Cool field (string)
+    "homebase" varchar(100) NULL,
     "kom" BOOLEAN DEFAULT FALSE,      -- Added KOM100 field (boolean)
     "baptis" BOOLEAN DEFAULT FALSE,      -- Added Baptis field (boolean)
     "created_at" TIMESTAMP NOT NULL DEFAULT now(),

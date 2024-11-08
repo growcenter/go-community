@@ -14,16 +14,16 @@ import (
 )
 
 type EventCommunityRequestHandler struct {
-	usecase usecases.EventCommunityRequestUsecase
+	usecase *usecases.Usecases
 }
 
-func NewEventCommunityRequestHandler(api *echo.Group, u usecases.EventCommunityRequestUsecase, c *config.Configuration) {
+func NewEventCommunityRequestHandler(api *echo.Group, u *usecases.Usecases, c *config.Configuration) {
 	handler := &EventCommunityRequestHandler{usecase: u}
 
 	// Define event community request routes
 	endpoint := api.Group("/community-request")
 	endpoint.Use(middleware.UserMiddleware(c))
-	endpoint.POST("/", handler.CreateRequest)
+	endpoint.POST("", handler.CreateRequest)
 	endpoint.GET("/:id", handler.GetRequestByID)
 	endpoint.GET("/account/:account_number", handler.GetRequestsByAccountNumber)
 }
@@ -41,7 +41,7 @@ func (h *EventCommunityRequestHandler) CreateRequest(ctx echo.Context) error {
 	}
 
 	// Use case to create the request
-	newRequest, err := h.usecase.Create(ctx.Request().Context(), &request)
+	newRequest, err := h.usecase.EventCommunityRequest.Create(ctx.Request().Context(), &request)
 	if err != nil {
 		return response.Error(ctx, err)
 	}
@@ -59,7 +59,7 @@ func (h *EventCommunityRequestHandler) GetRequestByID(ctx echo.Context) error {
 	}
 
 	// Use case to get the request by ID
-	request, err := h.usecase.GetByID(ctx.Request().Context(), id)
+	request, err := h.usecase.EventCommunityRequest.GetByID(ctx.Request().Context(), id)
 	if err != nil {
 		return response.Error(ctx, err)
 	}
@@ -73,7 +73,7 @@ func (h *EventCommunityRequestHandler) GetRequestsByAccountNumber(ctx echo.Conte
 	accountNumber := ctx.Param("account_number")
 
 	// Use case to get all requests by account number
-	requests, err := h.usecase.GetAllByAccountNumber(ctx.Request().Context(), accountNumber)
+	requests, err := h.usecase.EventCommunityRequest.GetAllByAccountNumber(ctx.Request().Context(), accountNumber)
 	if err != nil {
 		return response.Error(ctx, err)
 	}
