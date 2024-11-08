@@ -22,6 +22,7 @@ func NewV1Handler(g *echo.Group, u *usecases.Usecases, c *config.Configuration) 
 	NewEventSessionHandler(v1, u, c)
 	NewEventRegistrationHandler(v1, u, c)
 	NewEventInternalHandler(v1, u, c)
+	NewEventCommunityRequestHandler(v1, u, c)
 
 	v1noGuard := g.Group("/v1")
 	NewEventGoogleHandler(v1noGuard, u)

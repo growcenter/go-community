@@ -133,7 +133,7 @@ type (
 		PhoneNumber string `json:"phoneNumber" validate:"omitempty,noStartEndSpaces,phoneFormat"`
 		Email       string `json:"email" validate:"omitempty,noStartEndSpaces,emailFormat" example:"jeremy@gmail.com"`
 		Password    string `json:"password" validate:"required,min=6,max=50,noStartEndSpaces" example:"Professionals"`
-		Gender      string `json:"gender,omitempty,oneof=male female"` // Optional Gender field
+		Gender      string `json:"gender" validate:"omitempty,oneof=male female"` // Optional Gender field
 		Department  string `json:"department,omitempty"`               // Optional Department field
 		CoolID      string `json:"coolId,omitempty"`                   // Optional COOL field
 		KKJNumber   string `json:"kkjNumber,omitempty"`                // Optional KKJ field

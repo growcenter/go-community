@@ -13,6 +13,7 @@ type PostgreRepositories struct {
 	EventGeneral      EventGeneralRepository
 	EventSession      EventSessionRepository
 	EventRegistration EventRegistrationRepository
+	EventCommunityRequest EventCommunityRequestRepository
 }
 
 func New(db *gorm.DB) *PostgreRepositories {
@@ -27,5 +28,6 @@ func New(db *gorm.DB) *PostgreRepositories {
 		EventGeneral:      NewEventGeneralRepository(db, NewTransactionRepository(db)),
 		EventSession:      NewEventSessionRepository(db, NewTransactionRepository(db)),
 		EventRegistration: NewEventRegistrationRepository(db, NewTransactionRepository(db)),
+		EventCommunityRequest: NewEventCommunityRequestRepository(db, NewTransactionRepository(db)),
 	}
 }

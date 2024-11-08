@@ -283,12 +283,13 @@ func (euu *eventUserUsecase) ManualRegisterWorker(ctx context.Context, request m
 				existingUser.PhoneNumber = request.PhoneNumber // Ensure phone number is the latest
 				existingUser.Gender = request.Gender
 				existingUser.Role = "worker"
-				existingUser.MarriageStatus = request.MarriageStatus
+				existingUser.MaritalStatus = request.MaritalStatus
 				existingUser.Department = request.Department
 				existingUser.KKJ = request.KKJ
 				existingUser.COOL = request.COOL
-				existingUser.KOM100 = request.KOM100
+				existingUser.KOM = request.KOM
 				existingUser.Baptis = request.Baptis
+				existingUser.Campus = request.Campus
 
 				// If a new password is provided, hash it and update the user's password
 				if request.Password != "" {
@@ -337,12 +338,13 @@ func (euu *eventUserUsecase) ManualRegisterWorker(ctx context.Context, request m
 				AccountNumber: accountNumber,
 				Password:      password,
 				Gender: request.Gender,
-				MarriageStatus: request.MarriageStatus,
+				MaritalStatus: request.MaritalStatus,
 				Department: request.Department,
 				COOL: request.COOL,
 				KKJ: request.KKJ,
-				KOM100: request.KOM100,
+				KOM: request.KOM,
 				Baptis: request.Baptis,
+				Campus: request.Campus,
 			}
 
 			// Create the new user in the repository
@@ -371,13 +373,14 @@ func (euu *eventUserUsecase) ManualRegisterWorker(ctx context.Context, request m
 				exist.Name = request.Name
 				exist.Email = strings.ToLower(request.Email) // Ensure email is the latest
 				exist.Gender = request.Gender
-				exist.MarriageStatus = request.MarriageStatus
+				exist.MaritalStatus = request.MaritalStatus
 				exist.Role = "worker"
 				exist.Department = request.Department
 				exist.KKJ = request.KKJ
 				exist.COOL = request.COOL
-				exist.KOM100 = request.KOM100
+				exist.KOM = request.KOM
 				exist.Baptis = request.Baptis
+				exist.Campus = request.Campus
 
 				// If a new password is provided, hash it and update the user's password
 				if request.Password != "" {
@@ -425,12 +428,13 @@ func (euu *eventUserUsecase) ManualRegisterWorker(ctx context.Context, request m
 				AccountNumber: accountNumber,
 				Password:      password,
 				Gender: request.Gender,
-				MarriageStatus: request.MarriageStatus,
+				MaritalStatus: request.MaritalStatus,
 				Department: request.Department,
 				COOL: request.COOL,
 				KKJ: request.KKJ,
-				KOM100: request.KOM100,
+				KOM: request.KOM,
 				Baptis: request.Baptis,
+				Campus : request.Campus,
 			}
 
 			// Create the new user in the repository
@@ -459,13 +463,14 @@ func (euu *eventUserUsecase) ManualRegisterWorker(ctx context.Context, request m
 				exist.Name = request.Name
 				exist.PhoneNumber = request.PhoneNumber // This line can be kept to ensure it's the latest
 				exist.Gender = request.Gender
-				exist.MarriageStatus = request.MarriageStatus
+				exist.MaritalStatus = request.MaritalStatus
 				exist.Role = "worker"
 				exist.Department = request.Department
 				exist.COOL = request.COOL
 				exist.KKJ = request.KKJ
-				exist.KOM100 = request.KOM100
+				exist.KOM = request.KOM
 				exist.Baptis = request.Baptis
+				exist.Campus = request.Campus
 
 				// If a new password is provided, hash it and update the user's password
 				if request.Password != "" {
@@ -513,12 +518,13 @@ func (euu *eventUserUsecase) ManualRegisterWorker(ctx context.Context, request m
 				AccountNumber: accountNumber,
 				Password:      password,
 				Gender: request.Gender,
-				MarriageStatus: request.MarriageStatus,
+				MaritalStatus: request.MaritalStatus,
 				Department: request.Department,
 				COOL: request.COOL,
 				KKJ: request.KKJ,
-				KOM100: request.KOM100,
+				KOM: request.KOM,
 				Baptis: request.Baptis,
+				Campus: request.Campus,
 			}
 
 			// Create the new user in the repository
