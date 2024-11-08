@@ -39,8 +39,10 @@ func (r *eventCommunityRequestRepository) GetByID(ctx context.Context, id int) (
 	}()
 
 	// Find the request by ID
-	err = r.db.Where("id = ?", id).First(&request).Error
-	return request, err
+	var c models.EventCommunityRequest
+	err = r.db.Where("id = ?", id).Find(&c).Error
+	return c, err
+
 }
 
 // GetAllByCommunityNumber - Retrieve all community requests for a specific community number
@@ -49,7 +51,7 @@ func (r *eventCommunityRequestRepository) GetAllByAccountNumber(ctx context.Cont
 		LogRepository(ctx, err)
 	}()
 
-	// Find all community requests for the given community number
-	err = r.db.Where("account_number = ?", accountNumber).Find(&requests).Error
-	return requests, err
+	var c []models.EventCommunityRequest
+	err = r.db.Find(&c).Error
+	return c, err	
 }
