@@ -27,6 +27,8 @@ auth:
   bearer_duration: ""
   token_expiry:
   api_key:
+  access_token_expiry:
+  refresh_token_expiry:
 hash:
   salt: ""
 department:

@@ -14,6 +14,7 @@ type UserRepository interface {
 	GetOneByAccountNumber(ctx context.Context, accountNumber string) (user models.User, err error)
 	GetByEmail(ctx context.Context, email string) (user models.User, err error)
 	GetByPhoneNumber(ctx context.Context, phoneNumber string) (user models.User, err error)
+	GetOneByEmailPhone(ctx context.Context, identifier string) (user models.User, err error)
 	CheckByEmailPhoneNumber(ctx context.Context, phoneNumber string, email string) (dataExist bool, err error)
 }
 
@@ -90,12 +91,23 @@ func (ur *userRepository) GetByPhoneNumber(ctx context.Context, phoneNumber stri
 	return u, err
 }
 
-func (uu *userRepository) CheckByEmailPhoneNumber(ctx context.Context, phoneNumber string, email string) (dataExist bool, err error) {
+func (ur *userRepository) GetOneByEmailPhone(ctx context.Context, identifier string) (user models.User, err error) {
 	defer func() {
 		LogRepository(ctx, err)
 	}()
 
-	err = uu.db.Raw(queryCheckUserByEmailPhoneNumber, email, phoneNumber).Scan(&dataExist).Error
+	var u models.User
+	err = ur.db.Raw(queryGetOneUserByEmailPhoneNumber, identifier, identifier).Scan(&u).Error
+
+	return u, err
+}
+
+func (ur *userRepository) CheckByEmailPhoneNumber(ctx context.Context, phoneNumber string, email string) (dataExist bool, err error) {
+	defer func() {
+		LogRepository(ctx, err)
+	}()
+
+	err = ur.db.Raw(queryCheckUserByEmailPhoneNumber, email, phoneNumber).Scan(&dataExist).Error
 	if err != nil {
 		return false, err
 	}

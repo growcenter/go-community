@@ -128,7 +128,9 @@ func registerPhoneFormat() {
 		// Minimum of 10 digits
 		// pattern := `^\+?(\d{1,3})?[-.\s]?\(?\d{3}\)?[-.\s]?\d{3}[-.\s]?\d{4}$`
 		// Minimum of 8 digits
-		pattern := `^\+?(\d{1,3})?[-.\s]?\(?\d{1,3}\)?[-.\s]?\d{1,4}[-.\s]?\d{1,4}$`
+		//pattern := `^\+?(\d{1,3})?[-.\s]?\(?\d{1,3}\)?[-.\s]?\d{1,4}[-.\s]?\d{1,4}$`
+		// Minimum of 7 digits, Maximum 14 digits, with pattern of 081,082,083,085,087,088,089
+		pattern := `^(081|082|083|085|087|088|089)\d+$`
 		return regexp.MustCompile(pattern).MatchString(input)
 	})
 }
@@ -139,8 +141,12 @@ func registerEmailPhoneFormat() {
 		// Minimum of 10 digits
 		// pattern := `^\+62\d{10,}$|^0\d{10,}$|^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$`
 		// Minimum of 8 digits
-		pattern := `^\+62\d{8,}$|^0\d{8,}$|^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$`
-		return regexp.MustCompile(pattern).MatchString(input)
+		//pattern := `^\+62\d{8,}$|^0\d{8,}$|^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$`
+		// New Way
+		pattern := `^(081|082|083|085|087|088|089)\d{4,11}$`
+		isEmail := v10.New().Var(input, "email") == nil
+
+		return regexp.MustCompile(pattern).MatchString(input) || isEmail
 	})
 }
 

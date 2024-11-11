@@ -51,6 +51,8 @@ type (
 		BearerSecret   string `mapstructure:"bearer_secret"`
 		BearerDuration int    `mapstructure:"bearer_duration"`
 		APIKey         string `mapstructure:"api_key"`
+		//AccessTokenExpiry  int    `mapstructure:"access_token_expiry"`
+		//RefreshTokenExpiry int    `mapstructure:"refresh_token_expiry"`
 	}
 )
 
