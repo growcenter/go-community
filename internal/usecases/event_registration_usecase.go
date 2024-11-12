@@ -3,6 +3,7 @@ package usecases
 import (
 	"context"
 	"database/sql"
+	"fmt"
 	"go-community/internal/common"
 	"go-community/internal/models"
 	"go-community/internal/repositories/pgsql"
@@ -253,18 +254,13 @@ func (eru *eventRegistrationUsecase) CreateHomebase(ctx context.Context, request
 		LogService(ctx, err)
 	}()
 
-	// userCheck, err := eru.eur.GetByAccountNumber(ctx, request.AccountNumber)
-	// if err != nil {
-	// 	return
-	// }
-	// fmt.Println(userCheck)
+	userCheck, err := eru.eur.GetByAccountNumber(ctx, request.AccountNumber)
+	if err != nil {
+		return
+	}
+	fmt.Println(userCheck)
 	
-	// if userCheck.ID > 0{
-	// 	err = models.ErrorDataNotFound
-	// 	return
-	// }
-
-	if accountNumberOrigin != request.AccountNumber {
+	if userCheck.ID == 0{
 		err = models.ErrorDataNotFound
 		return
 	}
