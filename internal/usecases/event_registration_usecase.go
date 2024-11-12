@@ -248,6 +248,235 @@ func (eru *eventRegistrationUsecase) Create(ctx context.Context, request models.
 
 	return mainResponse, nil
 }
+func (eru *eventRegistrationUsecase) CreateHomebase(ctx context.Context, request models.CreateHomebaseRegistrationRequest, accountNumberOrigin string) (eventRegistration models.CreateEventRegistrationResponse, err error) {
+	defer func() {
+		LogService(ctx, err)
+	}()
+
+	userCheck, err := eru.eur.GetByAccountNumber(ctx, request.AccountNumber)
+	if err != nil {
+		return
+	}
+	
+	if userCheck.ID == 0{
+		err = models.ErrorDataNotFound
+		return
+	}
+
+	event, err := eru.egr.GetByCode(ctx, request.EventCode)
+	if err != nil {
+		return
+	}
+
+	switch {
+	case event.ID == 0:
+		err = models.ErrorDataNotFound
+		return
+	case event.Status == "closed":
+		err = models.ErrorRegistrationTimeDisabled
+		return
+	case common.Now().Before(event.OpenRegistration.In(common.GetLocation())):
+		err = models.ErrorCannotRegisterYet
+	case common.Now().After(event.ClosedRegistration.In(common.GetLocation())):
+		err = models.ErrorRegistrationTimeDisabled
+	}
+
+	// if event.ID == 0 {
+	// 	err = models.ErrorDataNotFound
+	// 	return
+	// }
+
+	// if event.Status == "closed" {
+	// 	err = models.ErrorRegistrationTimeDisabled
+	// 	return
+	// }
+
+	// if common.Now().Before(event.OpenRegistration.In(common.GetLocation())) {
+	// 	err = models.ErrorCannotRegisterYet
+	// 	return
+	// }
+
+	// if common.Now().After(event.ClosedRegistration.In(common.GetLocation())) {
+	// 	err = models.ErrorRegistrationTimeDisabled
+	// 	return
+	// }
+
+
+	
+
+	// Check if the user has already registered
+	existingRegistration, err := eru.rer.GetByIdentifier(ctx, request.Identifier)
+	if err != nil {
+		return
+	}
+	
+	if len(existingRegistration)>0{ 
+		err = models.ErrorRegistrationAlreadyVerified
+		return
+	}
+
+	session, err := eru.esr.GetByCode(ctx, request.SessionCode)
+	if err != nil {
+		return
+	}
+
+	countTotalRegister := 1 + len(request.Others)
+
+	switch {
+	case session.ID == 0:
+		err = models.ErrorDataNotFound
+		return
+	case session.EventCode != event.Code:
+		err = models.ErrorEventNotValid
+		return
+	case strings.ToLower(session.Status) == "closed":
+		err = models.ErrorRegistrationTimeDisabled
+		return
+	case strings.ToLower(session.Status) == "full":
+		err = models.ErrorRegisterQuotaNotAvailable
+		return
+	case countTotalRegister > session.MaxSeating:
+		err = models.ErrorExceedMaxSeating
+		return
+	case session.AvailableSeats == 0:
+		err = models.ErrorRegisterQuotaNotAvailable
+		return
+	case (session.AvailableSeats - countTotalRegister) < 0:
+		err = models.ErrorRegisterQuotaNotAvailable
+		return
+	}
+
+	// if session.ID == 0 {
+	// 	err = models.ErrorDataNotFound
+	// 	return
+	// }
+
+	// if session.EventCode != event.Code {
+	// 	err = models.ErrorEventNotValid
+	// 	return
+	// }
+
+	// if session.Status == "closed" {
+	// 	err = models.ErrorRegistrationTimeDisabled
+	// 	return
+	// }
+
+	// if countTotalRegister > session.MaxSeating {
+	// 	err = models.ErrorExceedMaxSeating
+	// 	return
+	// }
+
+	// if session.AvailableSeats == 0 {
+	// 	err = models.ErrorRegisterQuotaNotAvailable
+	// 	return
+	// }
+
+	// if (session.AvailableSeats - countTotalRegister) < 0 {
+	// 	err = models.ErrorRegisterQuotaNotAvailable
+	// 	return
+	// }
+
+	alreadyRegister, err := eru.rer.GetByRegisteredByStatus(ctx, strings.ToLower(request.Identifier), "registered")
+	if err != nil {
+		return
+	}
+
+	countTotalAlreadyRegister := len(alreadyRegister)
+	if (countTotalRegister + countTotalAlreadyRegister) > session.MaxSeating {
+		err = models.ErrorExceedMaxSeating
+		return
+	}
+
+	user, err := eru.eur.GetByEmailPhone(ctx, request.Identifier)
+	if err != nil {
+		return
+	}
+
+	accountNumber := ""
+	if user.ID > 0 {
+		accountNumber = user.AccountNumber
+		user.Address = request.Address
+
+		if err = eru.eur.Update(ctx, &user); err != nil {
+			return
+		}
+	}
+
+	var register = make([]models.EventRegistration, 0, session.MaxSeating)
+
+	mainInput := models.EventRegistration{
+		Name:                strings.ToUpper(request.Name),
+		Identifier:          strings.ToLower(request.Identifier),
+		Address:             request.Address,
+		AccountNumber:       accountNumber,
+		Code:                (uuid.New()).String(),
+		EventCode:           event.Code,
+		SessionCode:         session.Code,
+		RegisteredBy:        strings.ToLower(request.Identifier),
+		AccountNumberOrigin: accountNumberOrigin,
+		Status:              "verified",
+	}
+
+	register = append(register, mainInput)
+
+	for _, other := range request.Others {
+		otherInput := models.EventRegistration{
+			Name:                strings.ToUpper(other.Name),
+			Address:             other.Address,
+			Code:                (uuid.New()).String(),
+			EventCode:           event.Code,
+			SessionCode:         session.Code,
+			RegisteredBy:        strings.ToLower(request.Identifier),
+			AccountNumberOrigin: accountNumberOrigin,
+			Status:              "verified",
+		}
+
+		register = append(register, otherInput)
+	}
+
+	if err = eru.rer.BulkCreate(ctx, &register); err != nil {
+		return
+	}
+
+	// Update Session Quota & Session
+	session.AvailableSeats -= countTotalRegister
+	session.RegisteredSeats += countTotalRegister
+	if session.AvailableSeats == 0 {
+		session.Status = "full"
+	}
+
+	if err = eru.esr.Update(ctx, session); err != nil {
+		return
+	}
+
+	otherResponse := make([]models.CreateOtherEventRegistrationResponse, len(register))
+	for i, p := range register {
+		otherResponse[i] = models.CreateOtherEventRegistrationResponse{
+			Type:    models.TYPE_EVENT_REGISTRATION,
+			Name:    p.Name,
+			Address: p.Address,
+			Code:    p.Code,
+		}
+	}
+
+	mainResponse := models.CreateEventRegistrationResponse{
+		Type:          models.TYPE_EVENT_REGISTRATION,
+		Name:          mainInput.Name,
+		Identifier:    mainInput.Identifier,
+		Address:       mainInput.Address,
+		AccountNumber: mainInput.AccountNumber,
+		Code:          mainInput.Code,
+		EventCode:     event.Code,
+		EventName:     event.Name,
+		SessionCode:   session.Code,
+		SessionName:   session.Name,
+		IsValid:       true,
+		Seats:         countTotalRegister,
+		Status:        "verified",
+	}
+
+	return mainResponse, nil
+}
 
 func (eru *eventRegistrationUsecase) GetRegistered(ctx context.Context, accountNumberOrigin string) (eventRegistrations []models.GetRegisteredResponse, err error) {
 	defer func() {
@@ -473,3 +702,53 @@ func (eru *eventRegistrationUsecase) Summary(ctx context.Context, sessionCode st
 
 	return response, nil
 }
+
+// func (eru *eventRegistrationUsecase) SummaryHomebase(ctx context.Context, sessionCode string) (summary models.RegistrationSummaryResponse, err error) {
+// 	defer func() {
+// 		LogService(ctx, err)
+// 	}()
+
+// 	session, err := eru.esr.GetByCode(ctx, sessionCode)
+// 	if err != nil {
+// 		return
+// 	}
+
+// 	if session.ID == 0 {
+// 		err = models.ErrorDataNotFound
+// 		return
+// 	}
+
+// 	count, err := eru.rer.CountSessionRegistered(ctx, sessionCode, "verified")
+// 	if err != nil {
+// 		return
+// 	}
+
+// 	var response models.RegistrationSummaryResponse
+// 	now := common.Now()
+// 	oneHourBefore := session.Time.Add(-time.Hour)
+// 	oneHourAfter := session.Time.Add(time.Hour)
+
+// 	switch {
+// 	case now.After(oneHourBefore) && now.Before(oneHourAfter):
+// 		response = models.RegistrationSummaryResponse{
+// 			Type:            models.TYPE_EVENT_REGISTRATION,
+// 			SessionCode:     sessionCode,
+// 			Status:          "verified",
+// 			ScannedSeats:    int(count),
+// 			IsScannerValid:  true,
+// 			Time:            session.Time,
+// 		}
+// 	default:
+// 		response = models.RegistrationSummaryResponse{
+// 			Type:            models.TYPE_EVENT_REGISTRATION,
+// 			SessionCode:     sessionCode,
+// 			Status:          "verified",
+// 			ScannedSeats:    int(count),
+// 			IsScannerValid:  false,
+// 			Time:            session.Time,
+// 		}
+// 	}
+
+// 	return response, nil
+// }
+
