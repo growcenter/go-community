@@ -3,7 +3,6 @@ package usecases
 import (
 	"context"
 	"database/sql"
-	"fmt"
 	"go-community/internal/common"
 	"go-community/internal/models"
 	"go-community/internal/repositories/pgsql"
@@ -258,7 +257,6 @@ func (eru *eventRegistrationUsecase) CreateHomebase(ctx context.Context, request
 	if err != nil {
 		return
 	}
-	fmt.Println(userCheck)
 	
 	if userCheck.ID == 0{
 		err = models.ErrorDataNotFound
