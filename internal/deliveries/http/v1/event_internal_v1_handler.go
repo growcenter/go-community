@@ -146,11 +146,11 @@ func (eih *EventInternalHandler) GetSummaryPerSession(ctx echo.Context) error {
 
 	return response.Success(ctx, http.StatusOK, count)
 }
-func (eih *EventInternalHandler) GetSummaryPerHomebaseSession(ctx echo.Context) error {
-	count, err := eih.usecase.EventRegistration.SummaryHomebase(ctx.Request().Context(), ctx.Param("sessionCode"))
-	if err != nil {
-		return response.Error(ctx, err)
-	}
+// func (eih *EventInternalHandler) GetSummaryPerHomebaseSession(ctx echo.Context) error {
+// 	count, err := eih.usecase.EventRegistration.SummaryHomebase(ctx.Request().Context(), ctx.Param("sessionCode"))
+// 	if err != nil {
+// 		return response.Error(ctx, err)
+// 	}
 
-	return response.Success(ctx, http.StatusOK, count)
-}
+// 	return response.Success(ctx, http.StatusOK, count)
+// }

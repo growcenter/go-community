@@ -709,52 +709,52 @@ func (eru *eventRegistrationUsecase) Summary(ctx context.Context, sessionCode st
 	return response, nil
 }
 
-func (eru *eventRegistrationUsecase) SummaryHomebase(ctx context.Context, sessionCode string) (summary models.RegistrationSummaryResponse, err error) {
-	defer func() {
-		LogService(ctx, err)
-	}()
+// func (eru *eventRegistrationUsecase) SummaryHomebase(ctx context.Context, sessionCode string) (summary models.RegistrationSummaryResponse, err error) {
+// 	defer func() {
+// 		LogService(ctx, err)
+// 	}()
 
-	session, err := eru.esr.GetByCode(ctx, sessionCode)
-	if err != nil {
-		return
-	}
+// 	session, err := eru.esr.GetByCode(ctx, sessionCode)
+// 	if err != nil {
+// 		return
+// 	}
 
-	if session.ID == 0 {
-		err = models.ErrorDataNotFound
-		return
-	}
+// 	if session.ID == 0 {
+// 		err = models.ErrorDataNotFound
+// 		return
+// 	}
 
-	count, err := eru.rer.CountSessionRegistered(ctx, sessionCode, "verified")
-	if err != nil {
-		return
-	}
+// 	count, err := eru.rer.CountSessionRegistered(ctx, sessionCode, "verified")
+// 	if err != nil {
+// 		return
+// 	}
 
-	var response models.RegistrationSummaryResponse
-	now := common.Now()
-	oneHourBefore := session.Time.Add(-time.Hour)
-	oneHourAfter := session.Time.Add(time.Hour)
+// 	var response models.RegistrationSummaryResponse
+// 	now := common.Now()
+// 	oneHourBefore := session.Time.Add(-time.Hour)
+// 	oneHourAfter := session.Time.Add(time.Hour)
 
-	switch {
-	case now.After(oneHourBefore) && now.Before(oneHourAfter):
-		response = models.RegistrationSummaryResponse{
-			Type:            models.TYPE_EVENT_REGISTRATION,
-			SessionCode:     sessionCode,
-			Status:          "verified",
-			ScannedSeats:    int(count),
-			IsScannerValid:  true,
-			Time:            session.Time,
-		}
-	default:
-		response = models.RegistrationSummaryResponse{
-			Type:            models.TYPE_EVENT_REGISTRATION,
-			SessionCode:     sessionCode,
-			Status:          "verified",
-			ScannedSeats:    int(count),
-			IsScannerValid:  false,
-			Time:            session.Time,
-		}
-	}
+// 	switch {
+// 	case now.After(oneHourBefore) && now.Before(oneHourAfter):
+// 		response = models.RegistrationSummaryResponse{
+// 			Type:            models.TYPE_EVENT_REGISTRATION,
+// 			SessionCode:     sessionCode,
+// 			Status:          "verified",
+// 			ScannedSeats:    int(count),
+// 			IsScannerValid:  true,
+// 			Time:            session.Time,
+// 		}
+// 	default:
+// 		response = models.RegistrationSummaryResponse{
+// 			Type:            models.TYPE_EVENT_REGISTRATION,
+// 			SessionCode:     sessionCode,
+// 			Status:          "verified",
+// 			ScannedSeats:    int(count),
+// 			IsScannerValid:  false,
+// 			Time:            session.Time,
+// 		}
+// 	}
 
-	return response, nil
-}
+// 	return response, nil
+// }
 
