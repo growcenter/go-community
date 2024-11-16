@@ -4,7 +4,7 @@ CREATE TABLE "event_registrations" (
     "id" BIGSERIAL NOT NULL PRIMARY KEY,
     "name" varchar(100) NOT NULL,
     "identifier" varchar(100) NULL,
-    "address" varchar(255) NOT NULL,
+    "address" varchar(255) NULL,
     "account_number" varchar(15) NULL,
     "code" varchar(255) UNIQUE NOT NULL,
     "event_code" varchar(30) NOT NULL,

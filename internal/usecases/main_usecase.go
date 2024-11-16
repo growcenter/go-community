@@ -28,19 +28,17 @@ type Usecases struct {
 	EventCommunityRequest eventCommunityRequestUsecase
 }
 
-
-
 func New(d Dependencies) *Usecases {
 	return &Usecases{
-		Health:                *NewHealthUsecase(d.Repository.Health),
-		Campus:                *NewCampusUsecase(d.Repository.Campus),
-		CoolCategory:          *NewCoolCategoryUsecase(d.Repository.CoolCategory),
-		Location:              *NewLocationUsecase(d.Repository.Location, d.Repository.Campus),
-		User:              *NewUserUsecase(d.Repository.User, d.Repository.Campus, d.Repository.CoolCategory, d.Repository.Cool, *d.Config, d.Salt),
+		Health:       *NewHealthUsecase(d.Repository.Health),
+		Campus:       *NewCampusUsecase(d.Repository.Campus),
+		CoolCategory: *NewCoolCategoryUsecase(d.Repository.CoolCategory),
+		Location:     *NewLocationUsecase(d.Repository.Location, d.Repository.Campus),
+		//User:              *NewUserUsecase(d.Repository.User, d.Repository.Campus, d.Repository.CoolCategory, d.Repository.Cool, *d.Config, d.Salt),
 		EventUser:             *NewEventUserUsecase(d.Repository.EventUser, *d.Google, *d.Authorization, d.Salt),
 		EventGeneral:          *NewEventGeneralUsecase(d.Repository.EventGeneral),
 		EventSession:          *NewEventSessionUsecase(d.Repository.EventSession, d.Repository.EventGeneral),
 		EventRegistration:     *NewEventRegistrationUsecase(d.Repository.EventRegistration, d.Repository.EventGeneral, d.Repository.EventSession, d.Repository.EventUser),
-		EventCommunityRequest: *NewEventCommunityRequestUsecase(d.Repository.EventCommunityRequest,d.Repository.EventUser),
+		EventCommunityRequest: *NewEventCommunityRequestUsecase(d.Repository.EventCommunityRequest, d.Repository.EventUser),
 	}
 }
