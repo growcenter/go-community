@@ -2,6 +2,7 @@ package usecases
 
 import (
 	"context"
+	"fmt"
 	"go-community/internal/common"
 	"go-community/internal/config"
 	"go-community/internal/models"
@@ -10,6 +11,7 @@ import (
 	"go-community/internal/pkg/hash"
 	"go-community/internal/repositories/pgsql"
 	"strings"
+	"time"
 )
 
 type UserUsecase interface {
@@ -25,17 +27,19 @@ type userUsecase struct {
 	cr  pgsql.CampusRepository
 	ccr pgsql.CoolCategoryRepository
 	clr pgsql.CoolRepository
+	utr pgsql.UserTypeRepository
 	cfg *config.Configuration
 	a   authorization.Auth
 	s   []byte
 }
 
-func NewUserUsecase(ur pgsql.UserRepository, cr pgsql.CampusRepository, ccr pgsql.CoolCategoryRepository, clr pgsql.CoolRepository, cfg config.Configuration, s []byte) *userUsecase {
+func NewUserUsecase(ur pgsql.UserRepository, cr pgsql.CampusRepository, ccr pgsql.CoolCategoryRepository, clr pgsql.CoolRepository, utr pgsql.UserTypeRepository, cfg config.Configuration, s []byte) *userUsecase {
 	return &userUsecase{
 		ur:  ur,
 		cr:  cr,
 		ccr: ccr,
 		clr: clr,
+		utr: utr,
 		cfg: &cfg,
 		s:   s,
 	}
@@ -46,11 +50,11 @@ func (uu *userUsecase) CreateVolunteer(ctx context.Context, request *models.Crea
 		LogService(ctx, err)
 	}()
 
-	if request.Email == "" || request.PhoneNumber == "" {
-		return nil, models.ErrorDataNotFound
+	if request.Email == "" && request.PhoneNumber == "" {
+		return nil, models.ErrorEmailPhoneNumberEmpty
 	}
 
-	_, departmentExist := uu.cfg.Department[strings.ToUpper(request.DepartmentCode)]
+	_, departmentExist := uu.cfg.Department[strings.ToLower(request.DepartmentCode)]
 	if !departmentExist {
 		return nil, models.ErrorDataNotFound
 	}
@@ -64,49 +68,44 @@ func (uu *userUsecase) CreateVolunteer(ctx context.Context, request *models.Crea
 		return nil, models.ErrorDataNotFound
 	}
 
-	_, campusExist := uu.cfg.Campus[strings.ToUpper(request.CampusCode)]
+	_, campusExist := uu.cfg.Campus[strings.ToLower(request.CampusCode)]
 	if !campusExist {
 		return nil, models.ErrorDataNotFound
 	}
 
-	dataExist, err := uu.ur.CheckByEmailPhoneNumber(ctx, strings.ToLower(request.PhoneNumber), strings.ToLower(request.Email))
+	userExist, err := uu.ur.GetOneByEmailPhoneNumber(ctx, common.StringTrimSpaceAndLower(request.Email), common.StringTrimSpaceAndLower(request.PhoneNumber))
 	if err != nil {
 		return nil, err
 	}
 
-	if dataExist {
-		var communityId string
-		switch {
-		case request.JemaatId != "" && request.KKJNumber != "":
-			communityId = request.JemaatId
-		case request.JemaatId != "" && request.KKJNumber == "":
-			return nil, models.ErrorDidNotFillKKJNumber
-		default:
-			communityId = generator.LuhnAccountNumber()
-		}
-
+	if userExist.ID != 0 {
 		salted := append([]byte(request.Password), uu.s...)
 		password, err := hash.Generate(salted)
 		if err != nil {
 			return nil, err
 		}
 
+		location, _ := time.LoadLocation("Asia/Jakarta")
+		dob, err := common.ParseStringToDatetime("2006-01-02", request.DateOfBirth, location)
+		if err != nil {
+			return nil, err
+		}
+
 		input := models.User{
-			CommunityID:   communityId,
-			Name:          common.CapitalizeFirstWord(request.Name),
-			PhoneNumber:   request.PhoneNumber,
-			Email:         strings.ToLower(request.Email),
+			//CommunityID:   userExist.CommunityID,
+			Name:          strings.TrimSpace(common.CapitalizeFirstWord(request.Name)),
+			PhoneNumber:   strings.TrimSpace(request.PhoneNumber),
+			Email:         common.StringTrimSpaceAndLower(request.Email),
 			Password:      password,
-			UserType:      "VOLUNTEER",
+			UserType:      "volunteer",
 			Status:        "active",
-			Roles:         "TODOYAGERALD",
 			Gender:        strings.ToLower(request.Gender),
 			Address:       request.Address,
 			CampusCode:    request.CampusCode,
 			CoolID:        request.CoolID,
 			Department:    request.DepartmentCode,
 			PlaceOfBirth:  request.PlaceOfBirth,
-			DateOfBirth:   &request.DateOfBirth,
+			DateOfBirth:   &dob,
 			MaritalStatus: request.MaritalStatus,
 			KKJNumber:     request.KKJNumber,
 			JemaatID:      request.JemaatId,
@@ -114,10 +113,11 @@ func (uu *userUsecase) CreateVolunteer(ctx context.Context, request *models.Crea
 			IsKom100:      request.IsKOM100,
 		}
 
-		if err := uu.ur.Update(ctx, &input); err != nil {
+		if err := uu.ur.UpdateByEmailPhoneNumber(ctx, common.StringTrimSpaceAndLower(request.Email), strings.TrimSpace(request.PhoneNumber), &input); err != nil {
 			return nil, err
 		}
 
+		input.CommunityID = userExist.CommunityID
 		return &input, nil
 	}
 
@@ -137,22 +137,29 @@ func (uu *userUsecase) CreateVolunteer(ctx context.Context, request *models.Crea
 		return nil, err
 	}
 
+	location, _ := time.LoadLocation("Asia/Jakarta")
+	dob, err := common.ParseStringToDatetime("2006-01-02", request.DateOfBirth, location)
+	if err != nil {
+		return nil, err
+	}
+
+	fmt.Println(dob)
+
 	input := models.User{
 		CommunityID:   communityId,
-		Name:          common.CapitalizeFirstWord(request.Name),
-		PhoneNumber:   request.PhoneNumber,
-		Email:         strings.ToLower(request.Email),
+		Name:          strings.TrimSpace(common.CapitalizeFirstWord(request.Name)),
+		PhoneNumber:   strings.TrimSpace(request.PhoneNumber),
+		Email:         common.StringTrimSpaceAndLower(request.Email),
 		Password:      password,
-		UserType:      "VOLUNTEER",
+		UserType:      "volunteer",
 		Status:        "active",
-		Roles:         "TODOYAGERALD",
 		Gender:        strings.ToLower(request.Gender),
 		Address:       request.Address,
 		CampusCode:    request.CampusCode,
 		CoolID:        request.CoolID,
 		Department:    request.DepartmentCode,
 		PlaceOfBirth:  request.PlaceOfBirth,
-		DateOfBirth:   &request.DateOfBirth,
+		DateOfBirth:   &dob,
 		MaritalStatus: request.MaritalStatus,
 		KKJNumber:     request.KKJNumber,
 		JemaatID:      request.JemaatId,
@@ -185,7 +192,7 @@ func (uu *userUsecase) CreateUserGeneral(ctx context.Context, request *models.Cr
 		return nil, models.ErrorDataNotFound
 	}
 
-	_, campusExist := uu.cfg.Campus[strings.ToUpper(request.CampusCode)]
+	_, campusExist := uu.cfg.Campus[strings.ToLower(request.CampusCode)]
 	if !campusExist {
 		return nil, models.ErrorDataNotFound
 	}
@@ -216,14 +223,14 @@ func (uu *userUsecase) CreateUserGeneral(ctx context.Context, request *models.Cr
 	}
 
 	input := models.User{
-		CommunityID:   communityId,
-		Name:          common.CapitalizeFirstWord(request.Name),
-		PhoneNumber:   request.PhoneNumber,
-		Email:         strings.ToLower(request.Email),
-		Password:      password,
-		UserType:      "VOLUNTEER",
-		Status:        "active",
-		Roles:         "TODOYAGERALD",
+		CommunityID: communityId,
+		Name:        common.CapitalizeFirstWord(request.Name),
+		PhoneNumber: request.PhoneNumber,
+		Email:       strings.ToLower(request.Email),
+		Password:    password,
+		UserType:    "VOLUNTEER",
+		Status:      "active",
+		//Roles:         "TODOYAGERALD",
 		Gender:        strings.ToLower(request.Gender),
 		Address:       request.Address,
 		CampusCode:    request.CampusCode,
@@ -245,32 +252,37 @@ func (uu *userUsecase) CreateUserGeneral(ctx context.Context, request *models.Cr
 	return &input, nil
 }
 
-func (uu *userUsecase) Login(ctx context.Context, request models.LoginUserRequest) (usr *models.User, token string, err error) {
+func (uu *userUsecase) Login(ctx context.Context, request *models.LoginUserRequest) (usr *models.User, tokens *models.UserToken, err error) {
 	defer func() {
 		LogService(ctx, err)
 	}()
 
-	user, err := uu.ur.GetOneByEmailPhone(ctx, strings.ToLower(request.Identifier))
+	user, err := uu.ur.GetOneByIdentifier(ctx, common.StringTrimSpaceAndLower(request.Identifier))
 	if err != nil {
-		return nil, "", err
+		return nil, nil, err
 	}
 
 	if user.ID == 0 {
-		return nil, "", models.ErrorUserNotFound
+		return nil, nil, models.ErrorUserNotFound
 	}
 
 	salted := append([]byte(request.Password), uu.s...)
 	if err = hash.Validate(user.Password, string(salted)); err != nil {
-		return nil, "", models.ErrorInvalidPassword
+		return nil, nil, models.ErrorInvalidPassword
 	}
 
-	tokenStatus := "active"
-	bearerToken, err := uu.a.Generate(user.CommunityID, strings.ToLower(user.Roles), tokenStatus)
+	userType, err := uu.utr.GetByType(ctx, strings.ToLower(user.UserType))
 	if err != nil {
-		return nil, "", err
+		return nil, nil, err
 	}
 
-	return &user, bearerToken, nil
+	userRoles := models.CombineRoles(userType.Roles, user.Roles)
+	tokens, err = uu.a.GenerateTokens(user.CommunityID, user.UserType, userRoles, "active")
+	if err != nil {
+		return nil, nil, err
+	}
+
+	return &user, tokens, nil
 }
 
 func (uu *userUsecase) GetByAccountNumber(ctx context.Context, accountNumber string) (user *models.User, err error) {
@@ -288,4 +300,17 @@ func (uu *userUsecase) GetByAccountNumber(ctx context.Context, accountNumber str
 	}
 
 	return &data, nil
+}
+
+func (uu *userUsecase) Check(ctx context.Context, identifier string) (isExist bool, err error) {
+	defer func() {
+		LogService(ctx, err)
+	}()
+
+	isExist, err = uu.ur.CheckByEmailPhoneNumber(ctx, identifier, identifier)
+	if err != nil {
+		return false, err
+	}
+
+	return isExist, nil
 }

@@ -2,11 +2,13 @@ package pgsql
 
 import (
 	"context"
+	"go-community/internal/models"
 	"gorm.io/gorm"
 )
 
 type CoolRepository interface {
 	CheckById(ctx context.Context, id int) (dataExist bool, err error)
+	GetById(ctx context.Context, id int) (cool models.Cool, err error)
 }
 
 type coolRepository struct {
@@ -29,4 +31,15 @@ func (clr *coolRepository) CheckById(ctx context.Context, id int) (dataExist boo
 	}
 
 	return dataExist, nil
+}
+
+func (clr *coolRepository) GetById(ctx context.Context, id int) (cool models.Cool, err error) {
+	defer func() {
+		LogRepository(ctx, err)
+	}()
+
+	var cl models.Cool
+	err = clr.db.Where("id = ?", id).Find(&cl).Error
+
+	return cl, err
 }

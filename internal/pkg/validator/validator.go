@@ -24,6 +24,7 @@ func init() {
 	registerPhoneFormat()
 	registerEmailPhoneFormat()
 	registeryyyymmddFormat()
+	registerCommunityId()
 }
 
 func Validate(request interface{}) error {
@@ -157,5 +158,13 @@ func registeryyyymmddFormat() {
 
 		_, err := time.Parse(layout, date)
 		return err == nil // Returns true if date is valid
+	})
+}
+
+func registerCommunityId() {
+	valid.RegisterValidation("communityId", func(fl v10.FieldLevel) bool {
+		communityId := fl.Field().String()
+
+		return LuhnAccountNumber(communityId) // Returns true if date is valid
 	})
 }

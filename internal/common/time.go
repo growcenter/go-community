@@ -41,10 +41,15 @@ func NowWithNanoTime() (now time.Time, err error) {
 	return
 }
 
-func ParseStringToDatetime(layout, dateString string) (time.Time, error) {
-	date, err := time.ParseInLocation(layout, dateString, Now().Location())
+func ParseStringToDatetime(layout, dateString string, location *time.Location) (time.Time, error) {
+	date, err := time.ParseInLocation(layout, dateString, location)
 	return date, err
 }
+
+//func ParseStringToDatetime(layout, dateString string, location *time.Location) (time.Time, error) {
+//	date, err := time.ParseInLocation(layout, dateString, Now().Location())
+//	return date, err
+//}
 
 func FormatDatetimeToString(date time.Time, formatLayout string) string {
 	return date.Format(formatLayout)
@@ -54,8 +59,8 @@ func FormatDatetimeToStringInLocalTime(date time.Time, formatLayout string) stri
 	return date.In(GetLocation()).Format(formatLayout)
 }
 
-func ParseStringDateToDateWithTimeNow(layout, date string) (time.Time, error) {
-	timeParam, err := ParseStringToDatetime(layout, date)
+func ParseStringDateToDateWithTimeNow(layout, date string, location *time.Location) (time.Time, error) {
+	timeParam, err := ParseStringToDatetime(layout, date, location)
 	if err != nil {
 		return time.Time{}, err
 	}
