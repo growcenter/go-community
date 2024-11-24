@@ -1,6 +1,7 @@
 package v1
 
 import (
+	"fmt"
 	"github.com/labstack/echo/v4"
 	"go-community/internal/config"
 	"go-community/internal/deliveries/http/common/response"
@@ -32,6 +33,7 @@ func (th *TokenHandler) Refresh(ctx echo.Context) error {
 		response.Error(ctx, err)
 	}
 
+	fmt.Println(claims)
 	newAccess, err := th.auth.GenerateAccessToken(claims.CommunityId, claims.UserType, claims.Roles, "active")
 	if err != nil {
 		response.Error(ctx, err)

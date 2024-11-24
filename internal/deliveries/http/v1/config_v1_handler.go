@@ -6,6 +6,7 @@ import (
 	"go-community/internal/deliveries/http/common/response"
 	"go-community/internal/models"
 	"net/http"
+	"strings"
 )
 
 type ConfigHandler struct {
@@ -29,7 +30,7 @@ func (ch *ConfigHandler) GetDepartments(ctx echo.Context) error {
 	for key, value := range department {
 		departments = append(departments, models.DepartmentsResponse{
 			Type:           models.TYPE_DEPARTMENT,
-			DepartmentCode: key,
+			DepartmentCode: strings.ToUpper(key),
 			DepartmentName: value,
 		})
 	}
@@ -43,8 +44,8 @@ func (ch *ConfigHandler) GetCampuses(ctx echo.Context) error {
 	var campuses []models.CampusesResponse
 	for key, value := range campus {
 		campuses = append(campuses, models.CampusesResponse{
-			Type:       models.TYPE_COOL,
-			CampusCode: key,
+			Type:       models.TYPE_CAMPUS,
+			CampusCode: strings.ToUpper(key),
 			CampusName: value,
 		})
 	}

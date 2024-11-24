@@ -91,6 +91,31 @@ func (uu *userUsecase) CreateVolunteer(ctx context.Context, request *models.Crea
 			return nil, err
 		}
 
+		//userExist.Name = strings.TrimSpace(common.CapitalizeFirstWord(request.Name))
+		//userExist.PhoneNumber = strings.TrimSpace(request.PhoneNumber)
+		//userExist.Email = common.StringTrimSpaceAndLower(request.Email)
+		//userExist.Password = password
+		//userExist.UserType = "volunteer"
+		//userExist.Status = models.UserStatusActive
+		//userExist.Gender = strings.ToLower(request.Gender)
+		//userExist.Address = request.Address
+		//userExist.CampusCode = strings.ToUpper(request.CampusCode)
+		//userExist.CoolID = request.CoolID
+		//userExist.Department = strings.ToUpper(request.DepartmentCode)
+		//userExist.PlaceOfBirth = request.PlaceOfBirth
+		//userExist.DateOfBirth = &dob
+		//userExist.MaritalStatus = request.MaritalStatus
+		//userExist.KKJNumber = request.KKJNumber
+		//userExist.JemaatID = request.JemaatId
+		//userExist.IsBaptized = request.IsBaptized
+		//userExist.IsKom100 = request.IsKOM100
+		//
+		//if err := uu.ur.Update(ctx, &userExist); err != nil {
+		//	return nil, err
+		//}
+		//
+		//return &userExist, nil
+
 		input := models.User{
 			//CommunityID:   userExist.CommunityID,
 			Name:          strings.TrimSpace(common.CapitalizeFirstWord(request.Name)),

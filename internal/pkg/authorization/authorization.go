@@ -2,8 +2,10 @@ package authorization
 
 import (
 	"errors"
+	"fmt"
 	"go-community/internal/config"
 	"go-community/internal/models"
+	"go-community/internal/pkg/validator"
 	"strings"
 	"time"
 
@@ -104,9 +106,14 @@ func (a *Auth) ValidateRefresh(tokenString string) (*Claim, error) {
 	if !ok || !token.Valid {
 		return nil, models.ErrorInvalidToken
 	}
-
+	fmt.Println(claims)
 	if claims.ExpiresAt.Time.Before(time.Now()) {
 		return nil, models.ErrorExpiredToken
+	}
+
+	isValidCommunityId := validator.LuhnAccountNumber(claim.CommunityId)
+	if !isValidCommunityId {
+		return nil, models.ErrorInvalidInput
 	}
 
 	return claims, nil
