@@ -2,7 +2,6 @@ package usecases
 
 import (
 	"context"
-	"fmt"
 	"go-community/internal/common"
 	"go-community/internal/config"
 	"go-community/internal/models"
@@ -171,8 +170,6 @@ func (uu *userUsecase) CreateVolunteer(ctx context.Context, request *models.Crea
 	if err != nil {
 		return nil, err
 	}
-
-	fmt.Println(dob)
 
 	input := models.User{
 		CommunityID:   communityId,

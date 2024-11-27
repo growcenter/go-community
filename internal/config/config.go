@@ -78,21 +78,5 @@ func New(ctx context.Context) (*Configuration, error) {
 		return nil, err
 	}
 
-	fmt.Println(viper.AllSettings())
-	fmt.Println(viper.AllKeys())
-	fmt.Println("----")
-	fmt.Printf("Unmarshalled config: %+v\n", config)
-
-	if config.Department != nil {
-		fmt.Println("Settings:", config.Department)
-		if value, exists := config.Department["tc"]; exists {
-			fmt.Println("Key1 Value:", value)
-		} else {
-			fmt.Println("Key1 not found")
-		}
-	} else {
-		fmt.Println("Settings is nil or not found in the config file.")
-	}
-
 	return &config, nil
 }
