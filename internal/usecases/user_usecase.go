@@ -302,7 +302,8 @@ func (uu *userUsecase) Login(ctx context.Context, request *models.LoginUserReque
 		return nil, nil, err
 	}
 
-	userRoles := models.CombineRoles(userType.Roles, user.Roles)
+	userRoles := common.CombineMapStrings(userType.Roles, user.Roles)
+	user.Roles = userRoles
 	tokens, err = uu.a.GenerateTokens(user.CommunityID, user.UserType, userRoles, "active")
 	if err != nil {
 		return nil, nil, err
@@ -348,7 +349,7 @@ func (uu *userUsecase) GetByCommunityId(ctx context.Context, request models.GetO
 		return nil, err
 	}
 
-	userRoles := models.CombineRoles(userType.Roles, user.Roles)
+	userRoles := common.CombineMapStrings(userType.Roles, user.Roles)
 	roles, err := uu.rr.GetByArray(ctx, userRoles)
 	if err != nil {
 		return nil, err

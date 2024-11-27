@@ -5,13 +5,13 @@ var (
 )
 
 type DepartmentsResponse struct {
-	Type           string `json:"type"`
-	DepartmentCode string `json:"departmentCode"`
-	DepartmentName string `json:"departmentName"`
+	Type           string `json:"type" example:"department"`
+	DepartmentCode string `json:"departmentCode" example:"TC"`
+	DepartmentName string `json:"departmentName" example:"Take Care Department"`
 }
 
 type CampusesResponse struct {
-	Type       string `json:"type"`
-	CampusCode string `json:"campusCode"`
-	CampusName string `json:"campusName"`
+	Type       string `json:"type" example:"campus"`
+	CampusCode string `json:"campusCode" example:"BKS"`
+	CampusName string `json:"campusName" example:"GROW Community Bekasi"`
 }

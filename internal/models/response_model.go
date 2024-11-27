@@ -8,20 +8,20 @@ type Health struct {
 }
 
 type List struct {
-	Type      string      `json:"type"`
+	Type      string      `json:"type" example:"collection"`
 	Data      interface{} `json:"data"`
 	TotalRows int         `json:"totalRows"`
 }
 
 type ListWithDetail struct {
-	Type      string      `json:"type"`
+	Type      string      `json:"type" example:"collection"`
 	Details   interface{} `json:"details"`
 	Data      interface{} `json:"data"`
 	TotalRows int         `json:"totalRows"`
 }
 
 type Pagination struct {
-	Type           string      `json:"type"`
+	Type           string      `json:"type" example:"collection"`
 	Data           interface{} `json:"data"`
 	PaginationInfo interface{} `json:"pagination"`
 }

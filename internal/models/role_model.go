@@ -31,25 +31,3 @@ type (
 		Description string `json:"description" example:"View specifically for event"`
 	}
 )
-
-func CombineRoles(userTypeRoles, additionalRoles []string) []string {
-	uniqueRoles := make(map[string]bool)
-
-	// Add roles from userTypeRoles
-	for _, role := range userTypeRoles {
-		uniqueRoles[role] = true
-	}
-
-	// Add roles from additionalRoles
-	for _, role := range additionalRoles {
-		uniqueRoles[role] = true
-	}
-
-	// Convert map keys back to a slice
-	var allRoles []string
-	for role := range uniqueRoles {
-		allRoles = append(allRoles, role)
-	}
-
-	return allRoles
-}

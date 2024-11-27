@@ -102,22 +102,22 @@ func (u *User) ToCreateUser() *CreateUserResponse {
 
 type (
 	CreateUserRequest struct {
-		Name           string    `json:"name" validate:"required,min=1,max=50,nospecial,noStartEndSpaces" example:"Professionals"`
+		Name           string    `json:"name" validate:"required,min=1,max=50,nospecial,noStartEndSpaces" example:"Tobias"`
 		PhoneNumber    string    `json:"phoneNumber" validate:"omitempty,noStartEndSpaces,phoneFormat"`
-		Email          string    `json:"email" validate:"omitempty,noStartEndSpaces,emailFormat" example:"jeremy@gmail.com"`
-		Password       string    `json:"password" validate:"required,min=6,max=50,noStartEndSpaces" example:"Professionals"`
-		PlaceOfBirth   string    `json:"placeOfBirth" validate:"required"`
-		DateOfBirth    time.Time `json:"dateOfBirth" validate:"required,yyyymmddFormat"`
-		Address        string    `json:"address"`
-		Gender         string    `json:"gender" validate:"omitempty,oneof=male female"`
+		Email          string    `json:"email" validate:"omitempty,noStartEndSpaces,emailFormat" example:"tobias@gmail.com"`
+		Password       string    `json:"password" validate:"required,min=6,max=50,noStartEndSpaces"`
+		PlaceOfBirth   string    `json:"placeOfBirth" validate:"required" example:"Bekasi"`
+		DateOfBirth    time.Time `json:"dateOfBirth" validate:"required,yyyymmddFormat" example:"2001-05-31"`
+		Address        string    `json:"address" example:"Jalan Kenari"`
+		Gender         string    `json:"gender" validate:"omitempty,oneof=male female" example:"male"`
 		DepartmentCode string    `json:"department_code" validate:"required,noStartEndSpaces" example:"MUSIC"`
 		CoolID         int       `json:"coolId" validate:"required" example:"1"`
 		KKJNumber      string    `json:"kkjNumber,omitempty"`
 		JemaatId       string    `json:"jemaatId,omitempty"`
 		IsKom100       bool      `json:"isKom100" validate:"required"`
 		IsBaptized     bool      `json:"isBaptized,omitempty" validate:"required"`
-		CampusCode     string    `json:"campusCode" validate:"omitempty,min=3,max=3" example:"001"`
-		MaritalStatus  string    `json:"maritalStatus" validate:"omitempty,oneof=single married others" example:"active"`
+		CampusCode     string    `json:"campusCode" validate:"omitempty,min=3,max=3" example:"BKS"`
+		MaritalStatus  string    `json:"maritalStatus" validate:"omitempty,oneof=single married others" example:"married"`
 	}
 	CreateUserResponse struct {
 		Type             string `json:"type" example:"coolCategory"`

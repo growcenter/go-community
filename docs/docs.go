@@ -786,13 +786,16 @@ const docTemplate = `{
             "type": "object",
             "properties": {
                 "campusCode": {
-                    "type": "string"
+                    "type": "string",
+                    "example": "BKS"
                 },
                 "campusName": {
-                    "type": "string"
+                    "type": "string",
+                    "example": "GROW Community Bekasi"
                 },
                 "type": {
-                    "type": "string"
+                    "type": "string",
+                    "example": "campus"
                 }
             }
         },
@@ -1011,13 +1014,16 @@ const docTemplate = `{
             "type": "object",
             "properties": {
                 "departmentCode": {
-                    "type": "string"
+                    "type": "string",
+                    "example": "TC"
                 },
                 "departmentName": {
-                    "type": "string"
+                    "type": "string",
+                    "example": "Take Care Department"
                 },
                 "type": {
-                    "type": "string"
+                    "type": "string",
+                    "example": "department"
                 }
             }
         },
@@ -1026,15 +1032,15 @@ const docTemplate = `{
             "properties": {
                 "code": {
                     "type": "integer",
-                    "example": 401
+                    "example": 400
                 },
                 "message": {
                     "type": "string",
-                    "example": "missing field"
+                    "example": "value cannot be blabla"
                 },
                 "status": {
                     "type": "string",
-                    "example": "MISSING_FIELD"
+                    "example": "INVALID_VALUES"
                 }
             }
         },
@@ -1042,11 +1048,13 @@ const docTemplate = `{
             "type": "object",
             "properties": {
                 "code": {
-                    "type": "integer"
+                    "type": "integer",
+                    "example": 422
                 },
                 "errors": {},
                 "message": {
-                    "type": "string"
+                    "type": "string",
+                    "example": "Validation failed for one or more fields."
                 }
             }
         },
@@ -1139,7 +1147,8 @@ const docTemplate = `{
                     "type": "integer"
                 },
                 "type": {
-                    "type": "string"
+                    "type": "string",
+                    "example": "collection"
                 }
             }
         },

@@ -64,13 +64,13 @@ var (
 
 type (
 	ErrorResponse struct {
-		Code    int    `json:"code" example:"401"`
-		Status  string `json:"status" example:"MISSING_FIELD"`
-		Message string `json:"message" example:"missing field"`
+		Code    int    `json:"code" example:"400"`
+		Status  string `json:"status" example:"INVALID_VALUES"`
+		Message string `json:"message" example:"value cannot be blabla"`
 	}
 	ErrorValidationResponse struct {
-		Code    int         `json:"code"`
-		Message string      `json:"message"`
+		Code    int         `json:"code" example:"422"`
+		Message string      `json:"message" example:"Validation failed for one or more fields."`
 		Errors  interface{} `json:"errors"`
 	}
 )

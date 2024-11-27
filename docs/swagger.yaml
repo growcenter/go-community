@@ -2,10 +2,13 @@ definitions:
   models.CampusesResponse:
     properties:
       campusCode:
+        example: BKS
         type: string
       campusName:
+        example: GROW Community Bekasi
         type: string
       type:
+        example: campus
         type: string
     type: object
   models.CheckUserExistResponse:
@@ -162,30 +165,35 @@ definitions:
   models.DepartmentsResponse:
     properties:
       departmentCode:
+        example: TC
         type: string
       departmentName:
+        example: Take Care Department
         type: string
       type:
+        example: department
         type: string
     type: object
   models.ErrorResponse:
     properties:
       code:
-        example: 401
+        example: 400
         type: integer
       message:
-        example: missing field
+        example: value cannot be blabla
         type: string
       status:
-        example: MISSING_FIELD
+        example: INVALID_VALUES
         type: string
     type: object
   models.ErrorValidationResponse:
     properties:
       code:
+        example: 422
         type: integer
       errors: {}
       message:
+        example: Validation failed for one or more fields.
         type: string
     type: object
   models.GetOneByCommunityIdResponse:
@@ -249,6 +257,7 @@ definitions:
       totalRows:
         type: integer
       type:
+        example: collection
         type: string
     type: object
   models.LoginUserRequest:
