@@ -30,7 +30,7 @@ func NewTokenHandler(api *echo.Group, a *authorization.Auth, c *config.Configura
 // @Produce json
 // @Param Cookie path string true "object that needs to be added"
 // @Param X-API-Key header string true "mandatory header to access endpoint"
-// @Success 200 {object} models.TokensResponse "Response indicates that the request succeeded and the resources has been fetched and transmitted in the message body"
+// @Success 200 {object} models.List{data=[]models.TokensResponse} "Response indicates that the request succeeded and the resources has been fetched and transmitted in the message body"
 // @Failure 400 {object} models.ErrorResponse "Bad Request"
 // @Failure 422 {object} models.ErrorValidationResponse{errors=validator.ErrorValidateResponse} "Validation error. This can happen if there is an error validation while create account"
 // @Router /v1/tokens [get]

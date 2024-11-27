@@ -1,4 +1,13 @@
 definitions:
+  models.CampusesResponse:
+    properties:
+      campusCode:
+        type: string
+      campusName:
+        type: string
+      type:
+        type: string
+    type: object
   models.CheckUserExistResponse:
     properties:
       identifier:
@@ -8,6 +17,17 @@ definitions:
         type: string
       user:
         type: boolean
+    type: object
+  models.CreateRoleRequest:
+    properties:
+      description:
+        example: View specifically for event
+        type: string
+      role:
+        example: event-view-volunteer
+        type: string
+    required:
+    - role
     type: object
   models.CreateUserTypeRequest:
     properties:
@@ -139,6 +159,15 @@ definitions:
         example: coolCategory
         type: string
     type: object
+  models.DepartmentsResponse:
+    properties:
+      departmentCode:
+        type: string
+      departmentName:
+        type: string
+      type:
+        type: string
+    type: object
   models.ErrorResponse:
     properties:
       code:
@@ -212,6 +241,14 @@ definitions:
         example: coolCategory
         type: string
       userType:
+        type: string
+    type: object
+  models.List:
+    properties:
+      data: {}
+      totalRows:
+        type: integer
+      type:
         type: string
     type: object
   models.LoginUserRequest:
@@ -374,6 +411,92 @@ definitions:
 info:
   contact: {}
 paths:
+  /v1/campuses:
+    get:
+      consumes:
+      - application/json
+      description: Get All Roles
+      parameters:
+      - description: mandatory header to access endpoint
+        in: header
+        name: X-API-Key
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Response indicates that the request succeeded and the resources
+            has been fetched and transmitted in the message body
+          schema:
+            allOf:
+            - $ref: '#/definitions/models.List'
+            - properties:
+                data:
+                  items:
+                    $ref: '#/definitions/models.RoleResponse'
+                  type: array
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+        "422":
+          description: Validation error. This can happen if there is an error validation
+            while create account
+          schema:
+            allOf:
+            - $ref: '#/definitions/models.ErrorValidationResponse'
+            - properties:
+                errors:
+                  $ref: '#/definitions/validator.ErrorValidateResponse'
+              type: object
+      summary: Get All Roles
+      tags:
+      - roles
+  /v1/departments:
+    get:
+      consumes:
+      - application/json
+      description: Get Departments from Config
+      parameters:
+      - description: mandatory header to access endpoint
+        in: header
+        name: X-API-Key
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Response indicates that the request succeeded and the resources
+            has been fetched and transmitted in the message body
+          schema:
+            allOf:
+            - $ref: '#/definitions/models.List'
+            - properties:
+                data:
+                  items:
+                    $ref: '#/definitions/models.DepartmentsResponse'
+                  type: array
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+        "422":
+          description: Validation error. This can happen if there is an error validation
+            while create account
+          schema:
+            allOf:
+            - $ref: '#/definitions/models.ErrorValidationResponse'
+            - properties:
+                errors:
+                  $ref: '#/definitions/validator.ErrorValidateResponse'
+              type: object
+      summary: Get Departments from Config
+      tags:
+      - config
   /v1/tokens:
     get:
       consumes:
@@ -397,7 +520,14 @@ paths:
           description: Response indicates that the request succeeded and the resources
             has been fetched and transmitted in the message body
           schema:
-            $ref: '#/definitions/models.TokensResponse'
+            allOf:
+            - $ref: '#/definitions/models.List'
+            - properties:
+                data:
+                  items:
+                    $ref: '#/definitions/models.TokensResponse'
+                  type: array
+              type: object
         "400":
           description: Bad Request
           schema:
@@ -438,7 +568,14 @@ paths:
           description: Response indicates that the request succeeded and the resources
             has been fetched and transmitted in the message body
           schema:
-            $ref: '#/definitions/models.GetOneByCommunityIdResponse'
+            allOf:
+            - $ref: '#/definitions/models.GetOneByCommunityIdResponse'
+            - properties:
+                roles:
+                  items:
+                    $ref: '#/definitions/models.RoleResponse'
+                  type: array
+              type: object
         "400":
           description: Bad Request
           schema:
@@ -572,7 +709,9 @@ paths:
             - $ref: '#/definitions/models.LoginUserResponse'
             - properties:
                 tokens:
-                  $ref: '#/definitions/models.TokensResponse'
+                  items:
+                    $ref: '#/definitions/models.TokensResponse'
+                  type: array
               type: object
         "400":
           description: Bad Request
@@ -642,7 +781,14 @@ paths:
           description: Response indicates that the request succeeded and the resources
             has been fetched and transmitted in the message body
           schema:
-            $ref: '#/definitions/models.UserTypeResponse'
+            allOf:
+            - $ref: '#/definitions/models.List'
+            - properties:
+                data:
+                  items:
+                    $ref: '#/definitions/models.UserTypeResponse'
+                  type: array
+              type: object
         "400":
           description: Bad Request
           schema:

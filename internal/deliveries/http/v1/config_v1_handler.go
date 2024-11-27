@@ -23,6 +23,17 @@ func NewConfigHandler(api *echo.Group, c *config.Configuration) {
 	campusEndpoint.GET("", handler.GetCampuses)
 }
 
+// GetDepartments godoc
+// @Summary Get Departments from Config
+// @Description Get Departments from Config
+// @Tags config
+// @Accept json
+// @Produce json
+// @Param X-API-Key header string true "mandatory header to access endpoint"
+// @Success 200 {object} models.List{data=[]models.DepartmentsResponse} "Response indicates that the request succeeded and the resources has been fetched and transmitted in the message body"
+// @Failure 400 {object} models.ErrorResponse "Bad Request"
+// @Failure 422 {object} models.ErrorValidationResponse{errors=validator.ErrorValidateResponse} "Validation error. This can happen if there is an error validation while create account"
+// @Router /v1/departments [get]
 func (ch *ConfigHandler) GetDepartments(ctx echo.Context) error {
 	department := ch.conf.Department
 
@@ -38,6 +49,17 @@ func (ch *ConfigHandler) GetDepartments(ctx echo.Context) error {
 	return response.SuccessList(ctx, http.StatusOK, len(departments), departments)
 }
 
+// GetCampuses godoc
+// @Summary Get Campuses from Config
+// @Description Get Campuses from Config
+// @Tags config
+// @Accept json
+// @Produce json
+// @Param X-API-Key header string true "mandatory header to access endpoint"
+// @Success 200 {object} models.List{data=[]models.CampusesResponse} "Response indicates that the request succeeded and the resources has been fetched and transmitted in the message body"
+// @Failure 400 {object} models.ErrorResponse "Bad Request"
+// @Failure 422 {object} models.ErrorValidationResponse{errors=validator.ErrorValidateResponse} "Validation error. This can happen if there is an error validation while create account"
+// @Router /v1/campuses [get]
 func (ch *ConfigHandler) GetCampuses(ctx echo.Context) error {
 	campus := ch.conf.Campus
 

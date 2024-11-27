@@ -74,7 +74,7 @@ func (uh *UserHandler) CreateVolunteer(ctx echo.Context) error {
 // @Produce json
 // @Param user body models.LoginUserRequest true "User object that needs to be added"
 // @Param X-API-Key header string true "mandatory header to access endpoint"
-// @Success 200 {object} models.LoginUserResponse{tokens=models.TokensResponse} "Response indicates that the request succeeded and the resources has been fetched and transmitted in the message body"
+// @Success 200 {object} models.LoginUserResponse{tokens=[]models.TokensResponse} "Response indicates that the request succeeded and the resources has been fetched and transmitted in the message body"
 // @Failure 400 {object} models.ErrorResponse "Bad Request"
 // @Failure 422 {object} models.ErrorValidationResponse{errors=validator.ErrorValidateResponse} "Validation error. This can happen if there is an error validation while create account"
 // @Router /v1/users/login [post]
@@ -168,7 +168,7 @@ func (uh *UserHandler) CreateUserType(ctx echo.Context) error {
 // @Accept json
 // @Produce json
 // @Param X-API-Key header string true "mandatory header to access endpoint"
-// @Success 200 {object} models.UserTypeResponse "Response indicates that the request succeeded and the resources has been fetched and transmitted in the message body"
+// @Success 200 {object} models.List{data=[]models.UserTypeResponse} "Response indicates that the request succeeded and the resources has been fetched and transmitted in the message body"
 // @Failure 400 {object} models.ErrorResponse "Bad Request"
 // @Failure 422 {object} models.ErrorValidationResponse{errors=validator.ErrorValidateResponse} "Validation error. This can happen if there is an error validation while create account"
 // @Router /v1/users/types [get]
@@ -233,7 +233,7 @@ func (uh *UserHandler) UpdatePassword(ctx echo.Context) error {
 // @Produce json
 // @Param communityId path int true "object that needs to be added"
 // @Param X-API-Key header string true "mandatory header to access endpoint"
-// @Success 200 {object} models.GetOneByCommunityIdResponse "Response indicates that the request succeeded and the resources has been fetched and transmitted in the message body"
+// @Success 200 {object} models.GetOneByCommunityIdResponse{roles=[]models.RoleResponse} "Response indicates that the request succeeded and the resources has been fetched and transmitted in the message body"
 // @Failure 400 {object} models.ErrorResponse "Bad Request"
 // @Failure 422 {object} models.ErrorValidationResponse{errors=validator.ErrorValidateResponse} "Validation error. This can happen if there is an error validation while create account"
 // @Router /v1/users/{communityId} [get]

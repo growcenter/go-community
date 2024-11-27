@@ -15,6 +15,148 @@ const docTemplate = `{
     "host": "{{.Host}}",
     "basePath": "{{.BasePath}}",
     "paths": {
+        "/v1/campuses": {
+            "get": {
+                "description": "Get All Roles",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "roles"
+                ],
+                "summary": "Get All Roles",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "mandatory header to access endpoint",
+                        "name": "X-API-Key",
+                        "in": "header",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Response indicates that the request succeeded and the resources has been fetched and transmitted in the message body",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/models.List"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "$ref": "#/definitions/models.RoleResponse"
+                                            }
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/models.ErrorResponse"
+                        }
+                    },
+                    "422": {
+                        "description": "Validation error. This can happen if there is an error validation while create account",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/models.ErrorValidationResponse"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "errors": {
+                                            "$ref": "#/definitions/validator.ErrorValidateResponse"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                }
+            }
+        },
+        "/v1/departments": {
+            "get": {
+                "description": "Get Departments from Config",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "config"
+                ],
+                "summary": "Get Departments from Config",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "mandatory header to access endpoint",
+                        "name": "X-API-Key",
+                        "in": "header",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Response indicates that the request succeeded and the resources has been fetched and transmitted in the message body",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/models.List"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "$ref": "#/definitions/models.DepartmentsResponse"
+                                            }
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/models.ErrorResponse"
+                        }
+                    },
+                    "422": {
+                        "description": "Validation error. This can happen if there is an error validation while create account",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/models.ErrorValidationResponse"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "errors": {
+                                            "$ref": "#/definitions/validator.ErrorValidateResponse"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                }
+            }
+        },
         "/v1/tokens": {
             "get": {
                 "description": "Generate both Access and Refresh Token",
@@ -48,7 +190,22 @@ const docTemplate = `{
                     "200": {
                         "description": "Response indicates that the request succeeded and the resources has been fetched and transmitted in the message body",
                         "schema": {
-                            "$ref": "#/definitions/models.TokensResponse"
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/models.List"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "$ref": "#/definitions/models.TokensResponse"
+                                            }
+                                        }
+                                    }
+                                }
+                            ]
                         }
                     },
                     "400": {
@@ -184,7 +341,10 @@ const docTemplate = `{
                                     "type": "object",
                                     "properties": {
                                         "tokens": {
-                                            "$ref": "#/definitions/models.TokensResponse"
+                                            "type": "array",
+                                            "items": {
+                                                "$ref": "#/definitions/models.TokensResponse"
+                                            }
                                         }
                                     }
                                 }
@@ -297,7 +457,22 @@ const docTemplate = `{
                     "200": {
                         "description": "Response indicates that the request succeeded and the resources has been fetched and transmitted in the message body",
                         "schema": {
-                            "$ref": "#/definitions/models.UserTypeResponse"
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/models.List"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "$ref": "#/definitions/models.UserTypeResponse"
+                                            }
+                                        }
+                                    }
+                                }
+                            ]
                         }
                     },
                     "400": {
@@ -488,7 +663,22 @@ const docTemplate = `{
                     "200": {
                         "description": "Response indicates that the request succeeded and the resources has been fetched and transmitted in the message body",
                         "schema": {
-                            "$ref": "#/definitions/models.GetOneByCommunityIdResponse"
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/models.GetOneByCommunityIdResponse"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "roles": {
+                                            "type": "array",
+                                            "items": {
+                                                "$ref": "#/definitions/models.RoleResponse"
+                                            }
+                                        }
+                                    }
+                                }
+                            ]
                         }
                     },
                     "400": {
@@ -592,6 +782,20 @@ const docTemplate = `{
         }
     },
     "definitions": {
+        "models.CampusesResponse": {
+            "type": "object",
+            "properties": {
+                "campusCode": {
+                    "type": "string"
+                },
+                "campusName": {
+                    "type": "string"
+                },
+                "type": {
+                    "type": "string"
+                }
+            }
+        },
         "models.CheckUserExistResponse": {
             "type": "object",
             "properties": {
@@ -604,6 +808,22 @@ const docTemplate = `{
                 },
                 "user": {
                     "type": "boolean"
+                }
+            }
+        },
+        "models.CreateRoleRequest": {
+            "type": "object",
+            "required": [
+                "role"
+            ],
+            "properties": {
+                "description": {
+                    "type": "string",
+                    "example": "View specifically for event"
+                },
+                "role": {
+                    "type": "string",
+                    "example": "event-view-volunteer"
                 }
             }
         },
@@ -787,6 +1007,20 @@ const docTemplate = `{
                 }
             }
         },
+        "models.DepartmentsResponse": {
+            "type": "object",
+            "properties": {
+                "departmentCode": {
+                    "type": "string"
+                },
+                "departmentName": {
+                    "type": "string"
+                },
+                "type": {
+                    "type": "string"
+                }
+            }
+        },
         "models.ErrorResponse": {
             "type": "object",
             "properties": {
@@ -893,6 +1127,18 @@ const docTemplate = `{
                     "example": "coolCategory"
                 },
                 "userType": {
+                    "type": "string"
+                }
+            }
+        },
+        "models.List": {
+            "type": "object",
+            "properties": {
+                "data": {},
+                "totalRows": {
+                    "type": "integer"
+                },
+                "type": {
                     "type": "string"
                 }
             }
