@@ -14,6 +14,7 @@ type RoleRepository interface {
 	GetAll(ctx context.Context) (roles []models.Role, err error)
 	Check(ctx context.Context, role string) (dataExist bool, err error)
 	CheckMultiple(ctx context.Context, roles []string) (count int64, err error)
+	GetByArray(ctx context.Context, array []string) (roles []models.Role, err error)
 }
 
 type roleRepository struct {
@@ -81,4 +82,14 @@ func (rr *roleRepository) CheckMultiple(ctx context.Context, roles []string) (co
 	}
 
 	return count, nil
+}
+
+func (rr *roleRepository) GetByArray(ctx context.Context, array []string) (roles []models.Role, err error) {
+	defer func() {
+		LogRepository(ctx, err)
+	}()
+
+	err = rr.db.Raw(queryGetRolesByArray, pq.Array(array)).Scan(&roles).Error
+
+	return roles, err
 }

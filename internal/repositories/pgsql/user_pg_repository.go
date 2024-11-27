@@ -11,8 +11,8 @@ type UserRepository interface {
 	Create(ctx context.Context, user *models.User) (err error)
 	Update(ctx context.Context, user *models.User) (err error)
 	UpdateByEmailPhoneNumber(ctx context.Context, email string, phoneNumber string, user *models.User) (err error)
-	GetByAccountNumber(ctx context.Context, accountNumber string) (user models.User, err error)
-	GetOneByAccountNumber(ctx context.Context, accountNumber string) (user models.User, err error)
+	GetByCommunityId(ctx context.Context, communityId string) (user models.User, err error)
+	GetOneByCommunityId(ctx context.Context, communityId string) (user models.User, err error)
 	GetByEmail(ctx context.Context, email string) (user models.User, err error)
 	GetByPhoneNumber(ctx context.Context, phoneNumber string) (user models.User, err error)
 	GetOneByIdentifier(ctx context.Context, identifier string) (user models.User, err error)
@@ -60,24 +60,24 @@ func (ur *userRepository) UpdateByEmailPhoneNumber(ctx context.Context, email st
 	})
 }
 
-func (ur *userRepository) GetByAccountNumber(ctx context.Context, accountNumber string) (user models.User, err error) {
+func (ur *userRepository) GetByCommunityId(ctx context.Context, communityId string) (user models.User, err error) {
 	defer func() {
 		LogRepository(ctx, err)
 	}()
 
 	var u models.User
-	err = ur.db.Where("account_number = ?", accountNumber).Preload("Campus").Preload("CoolCategory").Find(&u).Error
+	err = ur.db.Where("community_id = ?", communityId).Find(&u).Error
 
 	return u, err
 }
 
-func (ur *userRepository) GetOneByAccountNumber(ctx context.Context, accountNumber string) (user models.User, err error) {
+func (ur *userRepository) GetOneByCommunityId(ctx context.Context, communityId string) (user models.User, err error) {
 	defer func() {
 		LogRepository(ctx, err)
 	}()
 
 	var u models.User
-	err = ur.db.Where("account_number = ?", accountNumber).Preload("Campus").Preload("CoolCategory").First(&u).Error
+	err = ur.db.Where("community_id = ?", communityId).First(&u).Error
 
 	return u, err
 }

@@ -1,6 +1,8 @@
 package http
 
 import (
+	echoSwagger "github.com/swaggo/echo-swagger"
+	_ "go-community/docs"
 	"go-community/internal/config"
 	"go-community/internal/deliveries/http/health"
 	"go-community/internal/deliveries/http/middleware"
@@ -32,12 +34,12 @@ func New(e *echo.Echo, u *usecases.Usecases, c *config.Configuration, a *authori
 	middleware := middleware.New(e)
 	middleware.Default(c)
 
-	// Input swagger initalization here
-
 	e.GET("/", func(ctx echo.Context) error {
 		message := "Welcome to GROW Community API Service!"
 		return ctx.String(http.StatusOK, message)
 	})
+
+	e.GET("/swagger/*", echoSwagger.WrapHandler)
 
 	// API Grouping
 	api := e.Group("/api")

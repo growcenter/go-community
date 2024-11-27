@@ -14,6 +14,22 @@ type UserToken struct {
 	RefreshExpiry time.Time `json:"refreshTokenExpiry"`
 }
 
+func (ut UserToken) ToGenerateTokens() []interface{} {
+	access := TokensResponse{
+		Type:      TYPE_ACCESS_TOKEN,
+		Token:     ut.AccessToken,
+		ExpiresAt: ut.AccessExpiry,
+	}
+
+	refresh := TokensResponse{
+		Type:      TYPE_REFRESH_TOKEN,
+		Token:     ut.RefreshToken,
+		ExpiresAt: ut.RefreshExpiry,
+	}
+
+	return []interface{}{access, refresh}
+}
+
 func (at *GenerateAccessTokenResponse) ToCreateAccessToken() GenerateAccessTokenResponse {
 	return GenerateAccessTokenResponse{
 		Type:        TYPE_ACCESS_TOKEN,
@@ -27,6 +43,11 @@ type GenerateAccessTokenResponse struct {
 }
 
 type (
+	TokensResponse struct {
+		Type      string    `json:"type" example:"accessToken"`
+		Token     string    `json:"token"`
+		ExpiresAt time.Time `json:"expiresAt"`
+	}
 	UserAccessTokenResponse struct {
 		Type        string    `json:"type" example:"accessToken"`
 		AccessToken string    `json:"accessToken"`

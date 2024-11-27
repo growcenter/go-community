@@ -18,8 +18,9 @@ type UserUsecase interface {
 	CreateVolunteer(ctx context.Context, request *models.CreateVolunteerRequest) (user *models.User, err error)
 	CreateUserGeneral(ctx context.Context, request *models.CreateUserRequest) (user *models.User, err error)
 	Login(ctx context.Context, request models.LoginUserRequest) (user *models.User, token string, err error)
-	GetByAccountNumber(ctx context.Context, accountNumber string) (user *models.User, err error)
+	GetByCommunityId(ctx context.Context, request models.GetOneByCommunityIdParameter) (response *models.GetOneByCommunityIdResponse, err error)
 	Check(ctx context.Context, identifier string) (isExist bool, err error)
+	UpdatePassword(ctx context.Context, param *models.UpdateUserPasswordParam, request *models.UpdateUserPasswordRequest) (user *models.User, err error)
 }
 
 type userUsecase struct {
@@ -28,19 +29,22 @@ type userUsecase struct {
 	ccr pgsql.CoolCategoryRepository
 	clr pgsql.CoolRepository
 	utr pgsql.UserTypeRepository
+	rr  pgsql.RoleRepository
 	cfg *config.Configuration
 	a   authorization.Auth
 	s   []byte
 }
 
-func NewUserUsecase(ur pgsql.UserRepository, cr pgsql.CampusRepository, ccr pgsql.CoolCategoryRepository, clr pgsql.CoolRepository, utr pgsql.UserTypeRepository, cfg config.Configuration, s []byte) *userUsecase {
+func NewUserUsecase(ur pgsql.UserRepository, cr pgsql.CampusRepository, ccr pgsql.CoolCategoryRepository, clr pgsql.CoolRepository, utr pgsql.UserTypeRepository, rr pgsql.RoleRepository, cfg config.Configuration, a authorization.Auth, s []byte) *userUsecase {
 	return &userUsecase{
 		ur:  ur,
 		cr:  cr,
 		ccr: ccr,
 		clr: clr,
 		utr: utr,
+		rr:  rr,
 		cfg: &cfg,
+		a:   a,
 		s:   s,
 	}
 }
@@ -310,18 +314,78 @@ func (uu *userUsecase) Login(ctx context.Context, request *models.LoginUserReque
 	return &user, tokens, nil
 }
 
-func (uu *userUsecase) GetByAccountNumber(ctx context.Context, accountNumber string) (user *models.User, err error) {
+func (uu *userUsecase) GetByCommunityId(ctx context.Context, request models.GetOneByCommunityIdParameter) (response *models.GetOneByCommunityIdResponse, err error) {
 	defer func() {
 		LogService(ctx, err)
 	}()
 
-	data, err := uu.ur.GetOneByAccountNumber(ctx, accountNumber)
+	user, err := uu.ur.GetOneByCommunityId(ctx, request.CommunityId)
 	if err != nil {
+		return nil, err
+	}
+
+	if user.ID == 0 {
 		return nil, models.ErrorDataNotFound
 	}
 
-	if data.ID == 0 {
+	campusName, campus := uu.cfg.Campus[strings.ToLower(user.CampusCode)]
+	if !campus {
 		return nil, models.ErrorDataNotFound
+	}
+
+	location, _ := time.LoadLocation("Asia/Jakarta")
+	dob := user.DateOfBirth.In(location)
+
+	departmentName, department := uu.cfg.Department[strings.ToLower(user.Department)]
+	if !department {
+		return nil, models.ErrorDataNotFound
+	}
+
+	cool, err := uu.clr.GetNameById(ctx, user.CoolID)
+	if err != nil {
+		return nil, err
+	}
+
+	userType, err := uu.utr.GetByType(ctx, strings.ToLower(user.UserType))
+	if err != nil {
+		return nil, err
+	}
+
+	userRoles := models.CombineRoles(userType.Roles, user.Roles)
+	roles, err := uu.rr.GetByArray(ctx, userRoles)
+	if err != nil {
+		return nil, err
+	}
+
+	var rolesRes []models.RoleResponse
+	for _, v := range roles {
+		rolesRes = append(rolesRes, *v.ToResponse())
+	}
+
+	data := models.GetOneByCommunityIdResponse{
+		Type:           models.TYPE_USER,
+		Name:           user.Name,
+		PhoneNumber:    user.PhoneNumber,
+		Email:          user.Email,
+		CommunityId:    user.CommunityID,
+		UserType:       user.UserType,
+		CampusCode:     user.CampusCode,
+		CampusName:     campusName,
+		PlaceOfBirth:   user.PlaceOfBirth,
+		DateOfBirth:    &dob,
+		Address:        user.Address,
+		Gender:         user.Gender,
+		DepartmentCode: user.Department,
+		DepartmentName: departmentName,
+		CoolID:         user.CoolID,
+		CoolName:       cool.Name,
+		KKJNumber:      user.KKJNumber,
+		JemaatId:       user.JemaatID,
+		IsKOM100:       user.IsKom100,
+		IsBaptized:     user.IsBaptized,
+		MaritalStatus:  user.MaritalStatus,
+		Roles:          rolesRes,
+		Status:         user.Status,
 	}
 
 	return &data, nil
@@ -338,4 +402,36 @@ func (uu *userUsecase) Check(ctx context.Context, identifier string) (isExist bo
 	}
 
 	return isExist, nil
+}
+
+func (uu *userUsecase) UpdatePassword(ctx context.Context, param *models.UpdateUserPasswordParam, request *models.UpdateUserPasswordRequest) (user *models.User, err error) {
+	defer func() {
+		LogService(ctx, err)
+	}()
+
+	if request.Password != request.ConfirmPassword {
+		return nil, models.ErrorMismatchFields
+	}
+
+	data, err := uu.ur.GetOneByIdentifier(ctx, strings.ToLower(param.Identifier))
+	if err != nil {
+		return nil, err
+	}
+
+	if data.ID == 0 {
+		return nil, models.ErrorDataNotFound
+	}
+
+	salted := append([]byte(request.Password), uu.s...)
+	password, err := hash.Generate(salted)
+	if err != nil {
+		return nil, err
+	}
+
+	data.Password = password
+	if err := uu.ur.Update(ctx, &data); err != nil {
+		return nil, err
+	}
+
+	return &data, nil
 }

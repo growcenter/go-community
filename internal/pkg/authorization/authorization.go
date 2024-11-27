@@ -2,10 +2,8 @@ package authorization
 
 import (
 	"errors"
-	"fmt"
 	"go-community/internal/config"
 	"go-community/internal/models"
-	"go-community/internal/pkg/validator"
 	"strings"
 	"time"
 
@@ -32,7 +30,14 @@ func NewAuthorization(config *config.Configuration) (*Auth, error) {
 		return nil, errors.New("auth components are missing")
 	}
 
-	return &Auth{bearerSecret: config.Auth.BearerSecret, bearerDuration: config.Auth.BearerDuration, refreshSecret: config.Auth.RefreshSecret, refreshDuration: config.Auth.RefreshDuration}, nil
+	auth := &Auth{
+		bearerSecret:    config.Auth.BearerSecret,
+		bearerDuration:  config.Auth.BearerDuration,
+		refreshSecret:   config.Auth.RefreshSecret,
+		refreshDuration: config.Auth.RefreshDuration,
+	}
+
+	return auth, nil
 }
 
 type Claims struct {
@@ -89,36 +94,6 @@ func (a *Auth) Generate(accountNumber string, role string, status string) (strin
 //	return token, nil
 //}
 
-func (a *Auth) ValidateRefresh(tokenString string) (*Claim, error) {
-	claim := &Claim{}
-	token, err := jwt.ParseWithClaims(tokenString, claim, func(token *jwt.Token) (interface{}, error) {
-		return []byte(a.bearerSecret), nil
-	})
-
-	if err != nil {
-		if errors.Is(err, jwt.ErrSignatureInvalid) {
-			return nil, models.ErrorTokenSignature
-		}
-		return nil, err
-	}
-
-	claims, ok := token.Claims.(*Claim)
-	if !ok || !token.Valid {
-		return nil, models.ErrorInvalidToken
-	}
-	fmt.Println(claims)
-	if claims.ExpiresAt.Time.Before(time.Now()) {
-		return nil, models.ErrorExpiredToken
-	}
-
-	isValidCommunityId := validator.LuhnAccountNumber(claim.CommunityId)
-	if !isValidCommunityId {
-		return nil, models.ErrorInvalidInput
-	}
-
-	return claims, nil
-}
-
 func (a *Auth) GenerateAccessToken(communityId string, userType string, role []string, status string) (string, error) {
 	expired := time.Now().Add(time.Duration(a.bearerDuration) * time.Minute)
 	claims := &Claim{
@@ -148,7 +123,12 @@ func (a *Auth) GenerateRefreshToken(communityId string, userType string, role []
 	}
 
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
-	return token.SignedString([]byte(a.refreshSecret))
+	tokenString, err := token.SignedString([]byte(a.refreshSecret))
+	if err != nil {
+		return "", err
+	}
+
+	return tokenString, nil
 }
 
 func (a *Auth) GenerateTokens(communityId string, userType string, role []string, status string) (*models.UserToken, error) {
@@ -166,7 +146,7 @@ func (a *Auth) GenerateTokens(communityId string, userType string, role []string
 		AccessToken:   access,
 		AccessExpiry:  time.Now().Add(time.Duration(a.bearerDuration) * time.Minute),
 		RefreshToken:  refresh,
-		RefreshExpiry: time.Now().Add(time.Duration(a.refreshDuration) * time.Hour),
+		RefreshExpiry: time.Now().Add(time.Duration(a.refreshDuration) * 24 * time.Hour),
 	}
 
 	return &tokens, nil

@@ -59,13 +59,14 @@ var (
 
 	// User Error
 	ErrorDidNotFillKKJNumber = errors.New("please input the kkj number if you input jemaat id")
+	ErrorMismatchFields      = errors.New("please input the same input on both fields")
 )
 
 type (
 	ErrorResponse struct {
-		Code    int    `json:"code"`
-		Status  string `json:"status"`
-		Message string `json:"message"`
+		Code    int    `json:"code" example:"401"`
+		Status  string `json:"status" example:"MISSING_FIELD"`
+		Message string `json:"message" example:"missing field"`
 	}
 	ErrorValidationResponse struct {
 		Code    int         `json:"code"`
@@ -261,7 +262,12 @@ func ErrorMapping(err error) ErrorResponse {
 			Status:  "MISSING_FIELD",
 			Message: err.Error(),
 		}
-
+	case ErrorMismatchFields:
+		return ErrorResponse{
+			Code:    http.StatusBadRequest,
+			Status:  "MISMATCH_FIELDS",
+			Message: err.Error(),
+		}
 	default:
 		return ErrorResponse{
 			Code:    http.StatusInternalServerError,
