@@ -57,7 +57,7 @@ type (
 		RegisterEndAt      time.Time `json:"registerEndAt"`
 		MaxRegister        int       `json:"maxRegister,omitempty"`
 		TotalSeats         int       `json:"totalSeats,omitempty"`
-		AvailabilityStatus string    `json:"availabilityStatus" example:"available"`
+		AvailabilityStatus string    `json:"availabilityStatus,omitempty" example:"available"`
 		IsRequired         bool      `json:"isRequired"`
 	}
 )
