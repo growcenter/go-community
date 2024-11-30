@@ -18,6 +18,10 @@ func StringTrimSpaceAndLower(str string) string {
 	return strings.TrimSpace(strings.ToLower(str))
 }
 
+func StringTrimSpaceAndUpper(str string) string {
+	return strings.TrimSpace(strings.ToUpper(str))
+}
+
 func GetValueFromMapString(header string, value string) (string, bool) {
 	headerMap := viper.GetStringMapString(header)
 	result, exist := headerMap[value]
@@ -27,28 +31,6 @@ func GetValueFromMapString(header string, value string) (string, bool) {
 
 	return result, true
 }
-
-//func CombineMapStrings(userTypeRoles, additionalRoles []string) []string {
-//	uniqueRoles := make(map[string]bool)
-//
-//	// Add roles from userTypeRoles
-//	for _, role := range userTypeRoles {
-//		uniqueRoles[role] = true
-//	}
-//
-//	// Add roles from additionalRoles
-//	for _, role := range additionalRoles {
-//		uniqueRoles[role] = true
-//	}
-//
-//	// Convert map keys back to a slice
-//	var allRoles []string
-//	for role := range uniqueRoles {
-//		allRoles = append(allRoles, role)
-//	}
-//
-//	return allRoles
-//}
 
 func CombineMapStrings(mappingA, mappingB []string) []string {
 	uniqueStrings := make(map[string]bool)
@@ -70,4 +52,15 @@ func CombineMapStrings(mappingA, mappingB []string) []string {
 	}
 
 	return allMappedStrings
+}
+
+func CheckDataMapStructure(mapstructure map[string]string, input []string) bool {
+	for _, val := range input {
+		if _, exists := mapstructure[val]; !exists {
+			// If any value doesn't exist, return false immediately
+			return false
+		}
+	}
+	// Return true if all values exist
+	return true
 }

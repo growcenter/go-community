@@ -7,6 +7,7 @@ import (
 	"go-community/internal/deliveries/http/health"
 	"go-community/internal/deliveries/http/middleware"
 	v1 "go-community/internal/deliveries/http/v1"
+	v2 "go-community/internal/deliveries/http/v2"
 	"go-community/internal/pkg/authorization"
 	"go-community/internal/usecases"
 	"net/http"
@@ -47,4 +48,5 @@ func New(e *echo.Echo, u *usecases.Usecases, c *config.Configuration, a *authori
 	// Initialize Health & V1 Handlers
 	health.NewHealhHandler(api, *u)
 	v1.NewV1Handler(api, u, c, a)
+	v2.NewV2Handler(api, u, c, a)
 }

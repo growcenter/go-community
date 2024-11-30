@@ -21,6 +21,180 @@ definitions:
       user:
         type: boolean
     type: object
+  models.CreateEventRequest:
+    properties:
+      allowedRoles:
+        items:
+          type: string
+        type: array
+      allowedUsers:
+        items:
+          type: string
+        type: array
+      campusCode:
+        items:
+          type: string
+        type: array
+      code:
+        maxLength: 30
+        minLength: 1
+        type: string
+      description:
+        type: string
+      eventEndAt:
+        type: string
+      eventStartAt:
+        type: string
+      instances:
+        items:
+          $ref: '#/definitions/models.CreateInstanceRequest'
+        type: array
+      isRecurring:
+        type: boolean
+      location:
+        type: string
+      name:
+        type: string
+      recurrence:
+        type: string
+      registerEndAt:
+        type: string
+      registerStartAt:
+        type: string
+    required:
+    - allowedRoles
+    - campusCode
+    - code
+    - instances
+    - isRecurring
+    - location
+    - name
+    type: object
+  models.CreateEventResponse:
+    properties:
+      allowedRoles:
+        items:
+          type: string
+        type: array
+      allowedUsers:
+        items:
+          type: string
+        type: array
+      availabilityStatus:
+        example: available
+        type: string
+      campusCode:
+        items:
+          type: string
+        type: array
+      code:
+        example: 2024-HOMEBASE
+        type: string
+      description:
+        example: This event blabla
+        type: string
+      eventEndAt:
+        example: ""
+        type: string
+      eventStartAt:
+        example: ""
+        type: string
+      instances:
+        items:
+          $ref: '#/definitions/models.CreateInstanceResponse'
+        type: array
+      isRecurring:
+        example: true
+        type: boolean
+      location:
+        example: PIOT 6 Lt. 6
+        type: string
+      recurrence:
+        example: monthly
+        type: string
+      registerEndAt:
+        example: ""
+        type: string
+      registerStartAt:
+        example: ""
+        type: string
+      title:
+        example: Homebase
+        type: string
+      type:
+        example: Event
+        type: string
+    required:
+    - instances
+    type: object
+  models.CreateInstanceRequest:
+    properties:
+      description:
+        type: string
+      eventCode:
+        type: string
+      instanceEndAt:
+        type: string
+      instanceStartAt:
+        type: string
+      isInherit:
+        type: boolean
+      isRequired:
+        type: boolean
+      location:
+        type: string
+      maxRegister:
+        type: integer
+      registerEndAt:
+        type: string
+      registerStartAt:
+        type: string
+      title:
+        type: string
+      totalSeats:
+        type: integer
+    required:
+    - eventCode
+    - instanceEndAt
+    - instanceStartAt
+    - isRequired
+    - location
+    - registerEndAt
+    - registerStartAt
+    - title
+    type: object
+  models.CreateInstanceResponse:
+    properties:
+      availabilityStatus:
+        example: available
+        type: string
+      description:
+        type: string
+      eventCode:
+        type: string
+      instanceCode:
+        type: string
+      instanceEndAt:
+        type: string
+      instanceStartAt:
+        type: string
+      isRequired:
+        type: boolean
+      location:
+        type: string
+      maxRegister:
+        type: integer
+      registerEndAt:
+        type: string
+      registerStartAt:
+        type: string
+      title:
+        type: string
+      totalSeats:
+        type: integer
+      type:
+        type: string
+    type: object
   models.CreateRoleRequest:
     properties:
       description:
@@ -860,14 +1034,14 @@ paths:
     post:
       consumes:
       - application/json
-      description: Create user for volunteer
+      description: Create event with the instances/sessions
       parameters:
       - description: User object that needs to be added
         in: body
         name: user
         required: true
         schema:
-          $ref: '#/definitions/models.CreateVolunteerRequest'
+          $ref: '#/definitions/models.CreateEventRequest'
       - description: mandatory header to access endpoint
         in: header
         name: X-API-Key
@@ -880,7 +1054,12 @@ paths:
           description: Response indicates that the request succeeded and the resources
             has been fetched and transmitted in the message body
           schema:
-            $ref: '#/definitions/models.CreateVolunteerResponse'
+            allOf:
+            - $ref: '#/definitions/models.CreateEventResponse'
+            - properties:
+                instances:
+                  $ref: '#/definitions/models.CreateInstanceResponse'
+              type: object
         "400":
           description: Bad Request
           schema:
@@ -895,7 +1074,7 @@ paths:
                 errors:
                   $ref: '#/definitions/validator.ErrorValidateResponse'
               type: object
-      summary: Create Volunteer User
+      summary: Create Event
       tags:
-      - users
+      - events
 swagger: "2.0"

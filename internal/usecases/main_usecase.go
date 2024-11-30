@@ -28,6 +28,7 @@ type Usecases struct {
 	EventCommunityRequest eventCommunityRequestUsecase
 	Role                  roleUsecase
 	UserType              userTypeUsecase
+	Event                 eventUsecase
 }
 
 func New(d Dependencies) *Usecases {
@@ -44,5 +45,6 @@ func New(d Dependencies) *Usecases {
 		EventCommunityRequest: *NewEventCommunityRequestUsecase(d.Repository.EventCommunityRequest, d.Repository.EventUser),
 		Role:                  *NewRoleUsecase(d.Repository.Role),
 		UserType:              *NewUserTypeUsecase(d.Repository.UserType, d.Repository.Role),
+		Event:                 *NewEventUsecase(*d.Config, *d.Authorization, *d.Repository),
 	}
 }

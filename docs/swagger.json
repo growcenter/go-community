@@ -556,7 +556,7 @@
         },
         "/v1/users/volunteer": {
             "post": {
-                "description": "Create user for volunteer",
+                "description": "Create event with the instances/sessions",
                 "consumes": [
                     "application/json"
                 ],
@@ -564,9 +564,9 @@
                     "application/json"
                 ],
                 "tags": [
-                    "users"
+                    "events"
                 ],
-                "summary": "Create Volunteer User",
+                "summary": "Create Event",
                 "parameters": [
                     {
                         "description": "User object that needs to be added",
@@ -574,7 +574,7 @@
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/models.CreateVolunteerRequest"
+                            "$ref": "#/definitions/models.CreateEventRequest"
                         }
                     },
                     {
@@ -589,7 +589,19 @@
                     "201": {
                         "description": "Response indicates that the request succeeded and the resources has been fetched and transmitted in the message body",
                         "schema": {
-                            "$ref": "#/definitions/models.CreateVolunteerResponse"
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/models.CreateEventResponse"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "instances": {
+                                            "$ref": "#/definitions/models.CreateInstanceResponse"
+                                        }
+                                    }
+                                }
+                            ]
                         }
                     },
                     "400": {
@@ -800,6 +812,255 @@
                 },
                 "user": {
                     "type": "boolean"
+                }
+            }
+        },
+        "models.CreateEventRequest": {
+            "type": "object",
+            "required": [
+                "allowedRoles",
+                "campusCode",
+                "code",
+                "instances",
+                "isRecurring",
+                "location",
+                "name"
+            ],
+            "properties": {
+                "allowedRoles": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "allowedUsers": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "campusCode": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "code": {
+                    "type": "string",
+                    "maxLength": 30,
+                    "minLength": 1
+                },
+                "description": {
+                    "type": "string"
+                },
+                "eventEndAt": {
+                    "type": "string"
+                },
+                "eventStartAt": {
+                    "type": "string"
+                },
+                "instances": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/models.CreateInstanceRequest"
+                    }
+                },
+                "isRecurring": {
+                    "type": "boolean"
+                },
+                "location": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "recurrence": {
+                    "type": "string"
+                },
+                "registerEndAt": {
+                    "type": "string"
+                },
+                "registerStartAt": {
+                    "type": "string"
+                }
+            }
+        },
+        "models.CreateEventResponse": {
+            "type": "object",
+            "required": [
+                "instances"
+            ],
+            "properties": {
+                "allowedRoles": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "allowedUsers": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "availabilityStatus": {
+                    "type": "string",
+                    "example": "available"
+                },
+                "campusCode": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "code": {
+                    "type": "string",
+                    "example": "2024-HOMEBASE"
+                },
+                "description": {
+                    "type": "string",
+                    "example": "This event blabla"
+                },
+                "eventEndAt": {
+                    "type": "string",
+                    "example": ""
+                },
+                "eventStartAt": {
+                    "type": "string",
+                    "example": ""
+                },
+                "instances": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/models.CreateInstanceResponse"
+                    }
+                },
+                "isRecurring": {
+                    "type": "boolean",
+                    "example": true
+                },
+                "location": {
+                    "type": "string",
+                    "example": "PIOT 6 Lt. 6"
+                },
+                "recurrence": {
+                    "type": "string",
+                    "example": "monthly"
+                },
+                "registerEndAt": {
+                    "type": "string",
+                    "example": ""
+                },
+                "registerStartAt": {
+                    "type": "string",
+                    "example": ""
+                },
+                "title": {
+                    "type": "string",
+                    "example": "Homebase"
+                },
+                "type": {
+                    "type": "string",
+                    "example": "Event"
+                }
+            }
+        },
+        "models.CreateInstanceRequest": {
+            "type": "object",
+            "required": [
+                "eventCode",
+                "instanceEndAt",
+                "instanceStartAt",
+                "isRequired",
+                "location",
+                "registerEndAt",
+                "registerStartAt",
+                "title"
+            ],
+            "properties": {
+                "description": {
+                    "type": "string"
+                },
+                "eventCode": {
+                    "type": "string"
+                },
+                "instanceEndAt": {
+                    "type": "string"
+                },
+                "instanceStartAt": {
+                    "type": "string"
+                },
+                "isInherit": {
+                    "type": "boolean"
+                },
+                "isRequired": {
+                    "type": "boolean"
+                },
+                "location": {
+                    "type": "string"
+                },
+                "maxRegister": {
+                    "type": "integer"
+                },
+                "registerEndAt": {
+                    "type": "string"
+                },
+                "registerStartAt": {
+                    "type": "string"
+                },
+                "title": {
+                    "type": "string"
+                },
+                "totalSeats": {
+                    "type": "integer"
+                }
+            }
+        },
+        "models.CreateInstanceResponse": {
+            "type": "object",
+            "properties": {
+                "availabilityStatus": {
+                    "type": "string",
+                    "example": "available"
+                },
+                "description": {
+                    "type": "string"
+                },
+                "eventCode": {
+                    "type": "string"
+                },
+                "instanceCode": {
+                    "type": "string"
+                },
+                "instanceEndAt": {
+                    "type": "string"
+                },
+                "instanceStartAt": {
+                    "type": "string"
+                },
+                "isRequired": {
+                    "type": "boolean"
+                },
+                "location": {
+                    "type": "string"
+                },
+                "maxRegister": {
+                    "type": "integer"
+                },
+                "registerEndAt": {
+                    "type": "string"
+                },
+                "registerStartAt": {
+                    "type": "string"
+                },
+                "title": {
+                    "type": "string"
+                },
+                "totalSeats": {
+                    "type": "integer"
+                },
+                "type": {
+                    "type": "string"
                 }
             }
         },

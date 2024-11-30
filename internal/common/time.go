@@ -5,7 +5,8 @@ import (
 )
 
 const (
-	defaultTimeZone = "Asia/Jakarta"
+	defaultTimeZone    = "Asia/Jakarta"
+	DateFormatYYYYMMDD = "2006-01-02"
 )
 
 var addedNanoSecond = Now().Nanosecond()

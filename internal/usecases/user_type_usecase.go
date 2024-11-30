@@ -35,7 +35,7 @@ func (utu *userTypeUsecase) Create(ctx context.Context, request *models.CreateUs
 	}
 
 	if int(countRole) != len(request.Roles) {
-		return nil, models.ErrorAlreadyExist
+		return nil, models.ErrorDataNotFound
 	}
 
 	exist, err := utu.utr.Check(ctx, request.UserType)

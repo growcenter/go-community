@@ -60,6 +60,9 @@ var (
 	// User Error
 	ErrorDidNotFillKKJNumber = errors.New("please input the kkj number if you input jemaat id")
 	ErrorMismatchFields      = errors.New("please input the same input on both fields")
+
+	// Time error
+	ErrorStartDateLater = errors.New("start time cannot be later than end time")
 )
 
 type (
@@ -268,6 +271,13 @@ func ErrorMapping(err error) ErrorResponse {
 			Status:  "MISMATCH_FIELDS",
 			Message: err.Error(),
 		}
+	case ErrorStartDateLater:
+		return ErrorResponse{
+			Code:    http.StatusBadRequest,
+			Status:  "INVALID_VALUES",
+			Message: err.Error(),
+		}
+
 	default:
 		return ErrorResponse{
 			Code:    http.StatusInternalServerError,
