@@ -4,7 +4,9 @@ import (
 	"github.com/labstack/echo/v4"
 	"go-community/internal/config"
 	"go-community/internal/deliveries/http/common/response"
+	"go-community/internal/deliveries/http/middleware"
 	"go-community/internal/models"
+	"go-community/internal/pkg/authorization"
 	"go-community/internal/pkg/validator"
 	"go-community/internal/usecases"
 	"net/http"
@@ -14,14 +16,15 @@ type EventHandler struct {
 	usecase *usecases.Usecases
 }
 
-func NewEventHandler(api *echo.Group, u *usecases.Usecases, c *config.Configuration) {
+func NewEventHandler(api *echo.Group, u *usecases.Usecases, c *config.Configuration, a *authorization.Auth) {
 	handler := &EventHandler{usecase: u}
 
 	// Define campus routes
 	endpoint := api.Group("/events")
 	endpoint.POST("", handler.Create)
-	//endpoint.Use(middleware.UserMiddleware(c))
-	//endpoint.GET("", handler.GetAll)
+	endpointUserAuth := endpoint.Group("")
+	endpointUserAuth.Use(middleware.UserV2Middleware(c))
+	endpointUserAuth.GET("", handler.GetAll)
 }
 
 // Create godoc
@@ -52,4 +55,13 @@ func (eh *EventHandler) Create(ctx echo.Context) error {
 	}
 
 	return response.Success(ctx, http.StatusCreated, event.ToResponse())
+}
+
+func (eh *EventHandler) GetAll(ctx echo.Context) error {
+	events, err := eh.usecase.Event.GetAll(ctx.Request().Context(), ctx.Get("roles").([]string))
+	if err != nil {
+		return response.Error(ctx, err)
+	}
+
+	return response.SuccessList(ctx, http.StatusOK, len(*events), events)
 }

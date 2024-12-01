@@ -88,3 +88,83 @@ type (
 		Instances          []CreateInstanceResponse `json:"instances" validate:"dive,required"`
 	}
 )
+
+func (e *GetAllEventsResponse) ToResponse() GetAllEventsResponse {
+	return GetAllEventsResponse{
+		Type:               TYPE_EVENT,
+		Code:               e.Code,
+		Title:              e.Title,
+		Location:           e.Location,
+		CampusCode:         e.CampusCode,
+		IsRecurring:        e.IsRecurring,
+		Recurrence:         e.Recurrence,
+		EventStartAt:       e.EventStartAt,
+		EventEndAt:         e.EventEndAt,
+		RegisterStartAt:    e.RegisterStartAt,
+		RegisterEndAt:      e.RegisterEndAt,
+		AvailabilityStatus: e.AvailabilityStatus,
+	}
+}
+
+type (
+	GetAllEventsDBOutput struct {
+		EventCode            string         `json:"event_code"`
+		EventTitle           string         `json:"event_title"`
+		EventLocation        string         `json:"event_location"`
+		EventCampusCode      pq.StringArray `json:"event_campus_code" gorm:"type:text[]"`
+		EventIsRecurring     bool           `json:"event_is_recurring"`
+		EventRecurrence      string         `json:"event_recurrence"`
+		EventStartAt         time.Time
+		EventEndAt           time.Time
+		EventRegisterStartAt time.Time `json:"event_register_start_at"`
+		EventRegisterEndAt   time.Time `json:"event_register_end_at"`
+		TotalRemainingSeats  int       `json:"total_remaining_seats"`
+		InstanceIsRequired   bool      `json:"instance_is_required"`
+	}
+	GetAllEventsResponse struct {
+		Type               string    `json:"type" example:"Event"`
+		Code               string    `json:"code" example:"2024-HOMEBASE"`
+		Title              string    `json:"title" example:"Homebase"`
+		Location           string    `json:"location" example:"PIOT 6 Lt. 6"`
+		CampusCode         []string  `json:"campusCode"`
+		IsRecurring        bool      `json:"isRecurring" example:"true"`
+		Recurrence         string    `json:"recurrence,omitempty" example:"monthly"`
+		EventStartAt       time.Time `json:"eventStartAt,omitempty" example:""`
+		EventEndAt         time.Time `json:"eventEndAt,omitempty" example:""`
+		RegisterStartAt    time.Time `json:"registerStartAt,omitempty" example:""`
+		RegisterEndAt      time.Time `json:"registerEndAt,omitempty" example:""`
+		AvailabilityStatus string    `json:"availabilityStatus,omitempty" example:"available"`
+	}
+)
+
+type (
+	GetEventByCodeDBOutput struct {
+		EventCode               string         `json:"event_code"`
+		EventTitle              string         `json:"event_title"`
+		EventLocation           string         `json:"event_location"`
+		EventDescription        string         `json:"event_description"`
+		EventCampusCode         pq.StringArray `json:"event_campus_code" gorm:"type:text[]"`
+		EventIsRecurring        bool           `json:"event_is_recurring"`
+		EventRecurrence         string         `json:"event_recurrence"`
+		EventStartAt            time.Time
+		EventEndAt              time.Time
+		EventRegisterStartAt    time.Time `json:"event_register_start_at"`
+		EventRegisterEndAt      time.Time `json:"event_register_end_at"`
+		EventStatus             string
+		InstanceCode            string    `json:"instance_code"`
+		InstanceTitle           string    `json:"instance_title"`
+		InstanceLocation        string    `json:"instance_location"`
+		InstanceStartAt         time.Time `json:"instance_start_at"`
+		InstanceEndAt           time.Time `json:"instance_end_at"`
+		InstanceRegisterStartAt time.Time `json:"instance_register_start_at"`
+		InstanceRegisterEndAt   time.Time `json:"instance_register_end_at"`
+		InstanceDescription     string    `json:"instance_description"`
+		InstanceMaxRegister     int       `json:"instance_max_register"`
+		InstanceTotalSeats      int       `json:"instance_total_seats"`
+		InstanceBookedSeats     int       `json:"instance_booked_seats"`
+		InstanceScannedSeats    int       `json:"instance_scanned_seats"`
+		InstanceStatus          string    `json:"instance_status"`
+		TotalRemainingSeats     int       `json:"total_remaining_seats"`
+		InstanceIsRequired      bool      `json:"instance_is_required"`
+	}
+)

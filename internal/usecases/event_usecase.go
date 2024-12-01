@@ -13,6 +13,8 @@ import (
 )
 
 type EventUsecase interface {
+	Create(ctx context.Context, request models.CreateEventRequest) (response *models.CreateEventResponse, err error)
+	GetAll(ctx context.Context, roles []string) (responses *[]models.GetAllEventsResponse, err error)
 }
 
 type eventUsecase struct {
@@ -172,4 +174,49 @@ func (eu *eventUsecase) Create(ctx context.Context, request models.CreateEventRe
 	}
 
 	return &mainResponse, nil
+}
+
+func (eu *eventUsecase) GetAll(ctx context.Context, roles []string) (responses *[]models.GetAllEventsResponse, err error) {
+	defer func() {
+		LogService(ctx, err)
+	}()
+	fmt.Println("roles are ", roles)
+	events, err := eu.r.Event.GetAllByRoles(ctx, roles, "active")
+	if err != nil {
+		return nil, err
+	}
+
+	fmt.Println("events is ", events)
+
+	list := make([]models.GetAllEventsResponse, len(events))
+	for i, e := range events {
+		var availableStatus string
+		switch {
+		case e.TotalRemainingSeats <= 0 && e.InstanceIsRequired == true && e.EventIsRecurring == false:
+			availableStatus = "full"
+		case common.Now().Before(e.EventRegisterStartAt.In(common.GetLocation())):
+			availableStatus = "soon"
+		case common.Now().After(e.EventRegisterEndAt.In(common.GetLocation())):
+			availableStatus = "unavailable"
+		default:
+			availableStatus = "available"
+		}
+
+		list[i] = models.GetAllEventsResponse{
+			Type:               models.TYPE_EVENT,
+			Code:               e.EventCode,
+			Title:              e.EventTitle,
+			Location:           e.EventLocation,
+			CampusCode:         e.EventCampusCode,
+			IsRecurring:        e.EventIsRecurring,
+			Recurrence:         e.EventRecurrence,
+			EventStartAt:       e.EventStartAt,
+			EventEndAt:         e.EventEndAt,
+			RegisterStartAt:    e.EventRegisterStartAt,
+			RegisterEndAt:      e.EventRegisterEndAt,
+			AvailabilityStatus: availableStatus,
+		}
+	}
+
+	return &list, nil
 }

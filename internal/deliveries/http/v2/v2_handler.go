@@ -14,6 +14,6 @@ func NewV2Handler(g *echo.Group, u *usecases.Usecases, c *config.Configuration, 
 	v2.Use(middleware.InternalMiddleware(c))
 
 	// Initialize handlers
-	NewEventHandler(v2, u, c)
+	NewEventHandler(v2, u, c, a)
 	//v1noGuard := g.Group("/v1")
 }
