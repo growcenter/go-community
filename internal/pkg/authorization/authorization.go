@@ -49,7 +49,7 @@ type Claims struct {
 
 type Claim struct {
 	CommunityId string   `json:"communityId"`
-	UserType    string   `json:"userType"`
+	UserTypes   []string `json:"userTypes"`
 	Roles       []string `json:"roles"`
 	Status      string   `json:"status"`
 	jwt.RegisteredClaims
@@ -94,11 +94,11 @@ func (a *Auth) Generate(accountNumber string, role string, status string) (strin
 //	return token, nil
 //}
 
-func (a *Auth) GenerateAccessToken(communityId string, userType string, role []string, status string) (string, error) {
+func (a *Auth) GenerateAccessToken(communityId string, userTypes []string, role []string, status string) (string, error) {
 	expired := time.Now().Add(time.Duration(a.bearerDuration) * time.Minute)
 	claims := &Claim{
 		CommunityId: communityId,
-		UserType:    strings.TrimSpace(strings.ToLower(userType)),
+		UserTypes:   userTypes,
 		Roles:       role,
 		Status:      strings.ToLower(status),
 		RegisteredClaims: jwt.RegisteredClaims{
@@ -110,11 +110,11 @@ func (a *Auth) GenerateAccessToken(communityId string, userType string, role []s
 	return token.SignedString([]byte(a.bearerSecret))
 }
 
-func (a *Auth) GenerateRefreshToken(communityId string, userType string, role []string, status string) (string, error) {
+func (a *Auth) GenerateRefreshToken(communityId string, userTypes []string, role []string, status string) (string, error) {
 	expired := time.Now().Add(time.Duration(a.refreshDuration) * 24 * time.Hour)
 	claims := &Claim{
 		CommunityId: communityId,
-		UserType:    strings.TrimSpace(strings.ToLower(userType)),
+		UserTypes:   userTypes,
 		Roles:       role,
 		Status:      strings.ToLower(status),
 		RegisteredClaims: jwt.RegisteredClaims{
@@ -131,13 +131,13 @@ func (a *Auth) GenerateRefreshToken(communityId string, userType string, role []
 	return tokenString, nil
 }
 
-func (a *Auth) GenerateTokens(communityId string, userType string, role []string, status string) (*models.UserToken, error) {
-	access, err := a.GenerateAccessToken(communityId, userType, role, status)
+func (a *Auth) GenerateTokens(communityId string, userTypes []string, role []string, status string) (*models.UserToken, error) {
+	access, err := a.GenerateAccessToken(communityId, userTypes, role, status)
 	if err != nil {
 		return nil, err
 	}
 
-	refresh, err := a.GenerateRefreshToken(communityId, userType, role, status)
+	refresh, err := a.GenerateRefreshToken(communityId, userTypes, role, status)
 	if err != nil {
 		return nil, err
 	}

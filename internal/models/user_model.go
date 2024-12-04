@@ -15,7 +15,7 @@ type User struct {
 	PhoneNumber      string
 	Email            string
 	Password         string
-	UserType         string
+	UserTypes        pq.StringArray `gorm:"type:text[]"`
 	Status           string
 	Roles            pq.StringArray `gorm:"type:text[]"`
 	Gender           string
@@ -87,48 +87,75 @@ type User struct {
 //	}
 //)
 
-func (u *User) ToCreateUser() *CreateUserResponse {
+func (u *CreateUserResponse) ToCreateUser() *CreateUserResponse {
 	return &CreateUserResponse{
-		Type:             TYPE_USER,
-		Name:             u.Name,
-		Email:            u.Email,
-		Gender:           u.Gender,
-		PhoneNumber:      u.PhoneNumber,
-		CampusCode:       u.CampusCode,
-		CoolCategoryCode: u.CoolCategoryCode,
-		MaritalStatus:    u.MaritalStatus,
+		Type:           TYPE_USER,
+		CommunityId:    u.CommunityId,
+		Name:           u.Name,
+		PhoneNumber:    u.PhoneNumber,
+		Email:          u.Email,
+		UserTypes:      u.UserTypes,
+		CampusCode:     u.CampusCode,
+		PlaceOfBirth:   u.PlaceOfBirth,
+		DateOfBirth:    u.DateOfBirth,
+		Address:        u.Address,
+		Gender:         u.Gender,
+		DepartmentCode: u.DepartmentCode,
+		CoolID:         u.CoolID,
+		KKJNumber:      u.KKJNumber,
+		JemaatId:       u.JemaatId,
+		IsKOM100:       u.IsKOM100,
+		IsBaptized:     u.IsBaptized,
+		MaritalStatus:  u.MaritalStatus,
+		Status:         u.Status,
+		CreatedAt:      u.CreatedAt,
+		UpdatedAt:      u.UpdatedAt,
 	}
 }
 
 type (
 	CreateUserRequest struct {
-		Name           string    `json:"name" validate:"required,min=1,max=50,nospecial,noStartEndSpaces" example:"Tobias"`
-		PhoneNumber    string    `json:"phoneNumber" validate:"omitempty,noStartEndSpaces,phoneFormat"`
-		Email          string    `json:"email" validate:"omitempty,noStartEndSpaces,emailFormat" example:"tobias@gmail.com"`
-		Password       string    `json:"password" validate:"required,min=6,max=50,noStartEndSpaces"`
-		PlaceOfBirth   string    `json:"placeOfBirth" validate:"required" example:"Bekasi"`
-		DateOfBirth    time.Time `json:"dateOfBirth" validate:"required,yyyymmddFormat" example:"2001-05-31"`
-		Address        string    `json:"address" example:"Jalan Kenari"`
-		Gender         string    `json:"gender" validate:"omitempty,oneof=male female" example:"male"`
-		DepartmentCode string    `json:"department_code" validate:"required,noStartEndSpaces" example:"MUSIC"`
-		CoolID         int       `json:"coolId" validate:"required" example:"1"`
-		KKJNumber      string    `json:"kkjNumber,omitempty"`
-		JemaatId       string    `json:"jemaatId,omitempty"`
-		IsKom100       bool      `json:"isKom100" validate:"required"`
-		IsBaptized     bool      `json:"isBaptized,omitempty" validate:"required"`
-		CampusCode     string    `json:"campusCode" validate:"omitempty,min=3,max=3" example:"BKS"`
-		MaritalStatus  string    `json:"maritalStatus" validate:"omitempty,oneof=single married others" example:"married"`
+		Name           string   `json:"name" validate:"required,min=1,max=50,nospecial" example:"Professionals"`
+		PhoneNumber    string   `json:"phoneNumber" validate:"omitempty,phoneFormat"`
+		Email          string   `json:"email" validate:"omitempty,emailFormat" example:"jeremy@gmail.com"`
+		Password       string   `json:"password" validate:"required,min=6,max=50,noStartEndSpaces" example:"Professionals"`
+		UserTypes      []string `json:"userTypes" validate:"required" example:"volunteer"`
+		CampusCode     string   `json:"campusCode" validate:"omitempty,min=3,max=3" example:"001"`
+		PlaceOfBirth   string   `json:"placeOfBirth" validate:"required"`
+		DateOfBirth    string   `json:"dateOfBirth" validate:"required,yyymmddFormat"`
+		Address        string   `json:"address"`
+		Gender         string   `json:"gender" validate:"omitempty,oneof=male female"`
+		DepartmentCode string   `json:"department_code" example:"MUSIC"`
+		CoolID         int      `json:"coolId" example:"1"`
+		KKJNumber      string   `json:"kkjNumber,omitempty"`
+		JemaatId       string   `json:"jemaatId,omitempty"`
+		IsKOM100       bool     `json:"isKom100" validate:"required"`
+		IsBaptized     bool     `json:"isBaptized,omitempty" validate:"required"`
+		MaritalStatus  string   `json:"maritalStatus" validate:"omitempty,oneof=single married others" example:"active"`
 	}
 	CreateUserResponse struct {
-		Type             string `json:"type" example:"coolCategory"`
-		Name             string `json:"name"`
-		Email            string `json:"email"`
-		Gender           string `json:"gender"`
-		Age              int    `json:"age"`
-		PhoneNumber      string `json:"phoneNumber"`
-		CampusCode       string `json:"campusCode"`
-		CoolCategoryCode string `json:"coolCategoryCode"`
-		MaritalStatus    string `json:"maritalStatus"`
+		Type           string     `json:"type" example:"user"`
+		ID             int        `json:"-" example:"1"`
+		CommunityId    string     `json:"communityId"`
+		Name           string     `json:"name" example:"Profesionals"`
+		PhoneNumber    string     `json:"phoneNumber"`
+		Email          string     `json:"email"`
+		UserTypes      []string   `json:"userTypes"`
+		CampusCode     string     `json:"campusCode"`
+		PlaceOfBirth   string     `json:"placeOfBirth"`
+		DateOfBirth    *time.Time `json:"dateOfBirth"`
+		Address        string     `json:"address"`
+		Gender         string     `json:"gender"`
+		DepartmentCode string     `json:"departmentCode"`
+		CoolID         int        `json:"coolId" example:"1"`
+		KKJNumber      string     `json:"kkjNumber,omitempty"`
+		JemaatId       string     `json:"jemaatId,omitempty"`
+		IsKOM100       bool       `json:"isKom100"`
+		IsBaptized     bool       `json:"isBaptized"`
+		MaritalStatus  string     `json:"maritalStatus"`
+		Status         string     `json:"status" example:"active"`
+		CreatedAt      *time.Time `json:"-" example:"2006-01-02 15:04:05"`
+		UpdatedAt      *time.Time `json:"-" example:"2006-01-02 15:04:05"`
 	}
 )
 
@@ -139,6 +166,7 @@ func (u *CreateVolunteerResponse) ToCreateVolunteer() *CreateVolunteerResponse {
 		Name:           u.Name,
 		PhoneNumber:    u.PhoneNumber,
 		Email:          u.Email,
+		UserTypes:      u.UserTypes,
 		CampusCode:     u.CampusCode,
 		PlaceOfBirth:   u.PlaceOfBirth,
 		DateOfBirth:    u.DateOfBirth,
@@ -159,22 +187,23 @@ func (u *CreateVolunteerResponse) ToCreateVolunteer() *CreateVolunteerResponse {
 
 type (
 	CreateVolunteerRequest struct {
-		Name           string `json:"name" validate:"required,min=1,max=50,nospecial" example:"Professionals"`
-		PhoneNumber    string `json:"phoneNumber" validate:"omitempty,phoneFormat"`
-		Email          string `json:"email" validate:"omitempty,emailFormat" example:"jeremy@gmail.com"`
-		Password       string `json:"password" validate:"required,min=6,max=50,noStartEndSpaces" example:"Professionals"`
-		CampusCode     string `json:"campusCode" validate:"omitempty,min=3,max=3" example:"001"`
-		PlaceOfBirth   string `json:"placeOfBirth" validate:"required"`
-		DateOfBirth    string `json:"dateOfBirth" validate:"required,yyymmddFormat"`
-		Address        string `json:"address"`
-		Gender         string `json:"gender" validate:"omitempty,oneof=male female"`
-		DepartmentCode string `json:"department_code" validate:"required,noStartEndSpaces" example:"MUSIC"`
-		CoolID         int    `json:"coolId" validate:"required" example:"1"`
-		KKJNumber      string `json:"kkjNumber,omitempty"`
-		JemaatId       string `json:"jemaatId,omitempty"`
-		IsKOM100       bool   `json:"isKom100" validate:"required"`
-		IsBaptized     bool   `json:"isBaptized,omitempty" validate:"required"`
-		MaritalStatus  string `json:"maritalStatus" validate:"omitempty,oneof=single married others" example:"active"`
+		Name           string   `json:"name" validate:"required,min=1,max=50,nospecial" example:"Professionals"`
+		PhoneNumber    string   `json:"phoneNumber" validate:"omitempty,phoneFormat"`
+		Email          string   `json:"email" validate:"omitempty,emailFormat" example:"jeremy@gmail.com"`
+		Password       string   `json:"password" validate:"required,min=6,max=50,noStartEndSpaces" example:"Professionals"`
+		UserTypes      []string `json:"userTypes" validate:"required" example:"volunteer"`
+		CampusCode     string   `json:"campusCode" validate:"omitempty,min=3,max=3" example:"001"`
+		PlaceOfBirth   string   `json:"placeOfBirth" validate:"required"`
+		DateOfBirth    string   `json:"dateOfBirth" validate:"required,yyymmddFormat"`
+		Address        string   `json:"address"`
+		Gender         string   `json:"gender" validate:"omitempty,oneof=male female"`
+		DepartmentCode string   `json:"department_code" validate:"required,noStartEndSpaces" example:"MUSIC"`
+		CoolID         int      `json:"coolId" validate:"required" example:"1"`
+		KKJNumber      string   `json:"kkjNumber,omitempty"`
+		JemaatId       string   `json:"jemaatId,omitempty"`
+		IsKOM100       bool     `json:"isKom100" validate:"required"`
+		IsBaptized     bool     `json:"isBaptized,omitempty" validate:"required"`
+		MaritalStatus  string   `json:"maritalStatus" validate:"omitempty,oneof=single married others" example:"active"`
 	}
 	CreateVolunteerResponse struct {
 		Type           string     `json:"type" example:"coolCategory"`
@@ -183,6 +212,7 @@ type (
 		Name           string     `json:"name" example:"Profesionals"`
 		PhoneNumber    string     `json:"phoneNumber"`
 		Email          string     `json:"email"`
+		UserTypes      []string   `json:"userTypes"`
 		CampusCode     string     `json:"campusCode"`
 		PlaceOfBirth   string     `json:"placeOfBirth"`
 		DateOfBirth    *time.Time `json:"dateOfBirth"`
@@ -208,7 +238,7 @@ func (u *LoginUserResponse) ToLogin() LoginUserResponse {
 		Email:          u.Email,
 		PhoneNumber:    u.PhoneNumber,
 		CommunityId:    u.CommunityId,
-		UserType:       u.UserType,
+		UserTypes:      u.UserTypes,
 		CampusCode:     u.CampusCode,
 		DateOfBirth:    u.DateOfBirth,
 		Gender:         u.Gender,
@@ -236,7 +266,7 @@ type (
 		PhoneNumber    string        `json:"phoneNumber"`
 		Email          string        `json:"email"`
 		CommunityId    string        `json:"communityId"`
-		UserType       string        `json:"userType"`
+		UserTypes      []string      `json:"userTypes"`
 		CampusCode     string        `json:"campusCode"`
 		PlaceOfBirth   string        `json:"placeOfBirth"`
 		DateOfBirth    *time.Time    `json:"dateOfBirth"`
@@ -276,7 +306,7 @@ func (u *GetOneByCommunityIdResponse) ToGetOneByCommunityId() *GetOneByCommunity
 		Email:          u.Email,
 		PhoneNumber:    u.PhoneNumber,
 		CommunityId:    u.CommunityId,
-		UserType:       u.UserType,
+		UserTypes:      u.UserTypes,
 		CampusCode:     u.CampusCode,
 		CampusName:     u.CampusName,
 		DateOfBirth:    u.DateOfBirth,
@@ -305,7 +335,7 @@ type (
 		PhoneNumber    string         `json:"phoneNumber"`
 		Email          string         `json:"email"`
 		CommunityId    string         `json:"communityId"`
-		UserType       string         `json:"userType"`
+		UserTypes      []string       `json:"userTypes"`
 		CampusCode     string         `json:"campusCode"`
 		CampusName     string         `json:"campusName"`
 		PlaceOfBirth   string         `json:"placeOfBirth"`
@@ -333,7 +363,7 @@ func (u *User) ToUpdatePassword() UpdateUserPasswordResponse {
 		Email:       u.Email,
 		PhoneNumber: u.PhoneNumber,
 		CommunityId: u.CommunityID,
-		UserType:    u.UserType,
+		UserTypes:   u.UserTypes,
 		CampusCode:  u.CampusCode,
 		Roles:       u.Roles,
 		Status:      u.Status,
@@ -354,7 +384,7 @@ type (
 		Email       string   `json:"email,omitempty"`
 		PhoneNumber string   `json:"phoneNumber,omitempty"`
 		CommunityId string   `json:"communityId"`
-		UserType    string   `json:"userType"`
+		UserTypes   []string `json:"userTypes"`
 		CampusCode  string   `json:"campusCode"`
 		Roles       []string `json:"roles"`
 		Status      string   `json:"status" example:"active"`

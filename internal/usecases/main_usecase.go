@@ -44,7 +44,7 @@ func New(d Dependencies) *Usecases {
 		EventRegistration:     *NewEventRegistrationUsecase(d.Repository.EventRegistration, d.Repository.EventGeneral, d.Repository.EventSession, d.Repository.EventUser),
 		EventCommunityRequest: *NewEventCommunityRequestUsecase(d.Repository.EventCommunityRequest, d.Repository.EventUser),
 		Role:                  *NewRoleUsecase(d.Repository.Role),
-		UserType:              *NewUserTypeUsecase(d.Repository.UserType, d.Repository.Role),
+		UserType:              *NewUserTypeUsecase(*d.Repository),
 		Event:                 *NewEventUsecase(*d.Config, *d.Authorization, *d.Repository),
 	}
 }

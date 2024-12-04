@@ -7,7 +7,7 @@ CREATE TABLE "users" (
     "phone_number" varchar(15) NULL,
     "email" varchar(50) NULL,
     "password" varchar(70) NOT NULL,
-    "user_type" varchar(20) NOT NULL,
+    "user_types" TEXT[] NOT NULL,
     "roles" TEXT[],
     "status" varchar(20) NOT NULL,
     "token" varchar(255),

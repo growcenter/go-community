@@ -1,4 +1,4 @@
-package v1
+package v2
 
 import (
 	"github.com/labstack/echo/v4"
@@ -23,7 +23,8 @@ func NewUserHandler(api *echo.Group, u *usecases.Usecases, c *config.Configurati
 	handler := &UserHandler{usecase: u, conf: c}
 
 	endpoint := api.Group("/users")
-	endpoint.POST("/volunteers", handler.CreateVolunteer)
+	endpoint.POST("", handler.Create)
+	//endpoint.POST("/volunteers", handler.CreateVolunteer)
 	endpoint.POST("/login", handler.Login)
 	endpoint.GET("/check/:identifier", handler.Check)
 	endpoint.GET("/:communityId", handler.GetByCommunityId)
@@ -33,6 +34,36 @@ func NewUserHandler(api *echo.Group, u *usecases.Usecases, c *config.Configurati
 	userTypeEndpoint := endpoint.Group("/types")
 	userTypeEndpoint.POST("", handler.CreateUserType)
 	userTypeEndpoint.GET("", handler.GetAllUserTypes)
+}
+
+// Create godoc
+// @Summary Create User
+// @Description Create user for all
+// @Tags users
+// @Accept json
+// @Produce json
+// @Param user body models.CreateUserRequest true "User object that needs to be added"
+// @Param X-API-Key header string true "mandatory header to access endpoint"
+// @Success 201 {object} models.CreateUserResponse "Response indicates that the request succeeded and the resources has been fetched and transmitted in the message body"
+// @Failure 400 {object} models.ErrorResponse "Bad Request"
+// @Failure 422 {object} models.ErrorValidationResponse{errors=validator.ErrorValidateResponse} "Validation error. This can happen if there is an error validation while create account"
+// @Router /v1/users/volunteer [post]
+func (uh *UserHandler) Create(ctx echo.Context) error {
+	var request models.CreateUserRequest
+	if err := ctx.Bind(&request); err != nil {
+		return response.Error(ctx, err)
+	}
+
+	if err := validator.Validate(request); err != nil {
+		return response.ErrorValidation(ctx, err)
+	}
+
+	user, err := uh.usecase.User.Create(ctx.Request().Context(), &request)
+	if err != nil {
+		return response.Error(ctx, err)
+	}
+
+	return response.Success(ctx, http.StatusCreated, user.ToCreateUser())
 }
 
 // CreateVolunteer godoc
@@ -102,13 +133,13 @@ func (uh *UserHandler) Login(ctx echo.Context) error {
 		SameSite: http.SameSiteStrictMode, // Prevent CSRF
 	})
 
-	res := models.LoginUserResponse{Type: models.TYPE_USER, CommunityId: user.CommunityID, Name: user.Name, PhoneNumber: user.PhoneNumber, Email: user.Email, CampusCode: user.CampusCode, PlaceOfBirth: user.PlaceOfBirth, DateOfBirth: user.DateOfBirth, Address: user.Address, Gender: user.Gender, DepartmentCode: user.Department, CoolID: user.CoolID, KKJNumber: user.KKJNumber, JemaatId: user.JemaatID, IsKOM100: user.IsKom100, IsBaptized: user.IsBaptized, MaritalStatus: user.MaritalStatus, Status: user.Status, Token: tokens.ToGenerateTokens(), UserType: user.UserType, Roles: user.Roles}
+	res := models.LoginUserResponse{Type: models.TYPE_USER, CommunityId: user.CommunityID, Name: user.Name, PhoneNumber: user.PhoneNumber, Email: user.Email, CampusCode: user.CampusCode, PlaceOfBirth: user.PlaceOfBirth, DateOfBirth: user.DateOfBirth, Address: user.Address, Gender: user.Gender, DepartmentCode: user.Department, CoolID: user.CoolID, KKJNumber: user.KKJNumber, JemaatId: user.JemaatID, IsKOM100: user.IsKom100, IsBaptized: user.IsBaptized, MaritalStatus: user.MaritalStatus, Status: user.Status, Token: tokens.ToGenerateTokens(), UserTypes: user.UserTypes, Roles: user.Roles}
 	return response.Success(ctx, http.StatusCreated, res.ToLogin())
 }
 
 // Check godoc
 // @Summary Check User Exist
-// @Description To check whether user is exist or not by email or phone number
+// @Description To check whether user is existed or not by email or phone number
 // @Tags users
 // @Accept json
 // @Produce json
@@ -227,7 +258,7 @@ func (uh *UserHandler) UpdatePassword(ctx echo.Context) error {
 
 // GetByCommunityId godoc
 // @Summary Get User By Community ID
-// @Description Get all information needed about user by community Id
+// @Description Get all information needed about user by community id
 // @Tags users
 // @Accept json
 // @Produce json
@@ -278,35 +309,3 @@ func (uh *UserHandler) Logout(ctx echo.Context) error {
 
 	return ctx.NoContent(http.StatusNoContent)
 }
-
-//
-//func (uh *UserHandler) CreateUser(ctx echo.Context) error {
-//	var request models.CreateUserRequest
-//	if err := ctx.Bind(&request); err != nil {
-//		return response.Error(ctx, models.ErrorInvalidInput)
-//	}
-//
-//	if err := validator.Validate(request); err != nil {
-//		return response.ErrorValidation(ctx, err)
-//	}
-//
-//	new, err := uh.usecase.User.CreateUser(ctx.Request().Context(), &request)
-//	if err != nil {
-//		return response.Error(ctx, err)
-//	}
-//
-//	return response.Success(ctx, http.StatusCreated, new.ToCreateUser())
-//}
-//
-//func (uh *UserHandler) Check(ctx echo.Context) error {
-//	request := ctx.QueryParam("email")
-//
-//	isExist, data, err := uh.usecase.User.CheckByEmail(ctx.Request().Context(), request)
-//	if err != nil {
-//		return response.Error(ctx, err)
-//	}
-//
-//	res := models.CheckUserEmailResponse{IsExist: isExist, UserType: data.UserType, Email: request}
-//	return response.Success(ctx, http.StatusOK, res.ToCheck())
-//}
-//

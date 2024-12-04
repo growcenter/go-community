@@ -58,8 +58,9 @@ var (
 	ErrorRateLimiterExceeds = errors.New("too much input, please try again later")
 
 	// User Error
-	ErrorDidNotFillKKJNumber = errors.New("please input the kkj number if you input jemaat id")
-	ErrorMismatchFields      = errors.New("please input the same input on both fields")
+	ErrorDidNotFillKKJNumber   = errors.New("please input the kkj number if you input jemaat id")
+	ErrorMismatchFields        = errors.New("please input the same input on both fields")
+	ErrorMissingDepartmentCool = errors.New("please input department code or cool id")
 
 	// Time error
 	ErrorStartDateLater = errors.New("start time cannot be later than end time")
@@ -277,7 +278,12 @@ func ErrorMapping(err error) ErrorResponse {
 			Status:  "INVALID_VALUES",
 			Message: err.Error(),
 		}
-
+	case ErrorMissingDepartmentCool:
+		return ErrorResponse{
+			Code:    http.StatusBadRequest,
+			Status:  "MISSING_FIELDS",
+			Message: err.Error(),
+		}
 	default:
 		return ErrorResponse{
 			Code:    http.StatusInternalServerError,

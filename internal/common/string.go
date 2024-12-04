@@ -1,9 +1,11 @@
 package common
 
 import (
+	"fmt"
 	"github.com/spf13/viper"
 	"golang.org/x/text/cases"
 	"golang.org/x/text/language"
+	"reflect"
 	"strings"
 )
 
@@ -81,4 +83,60 @@ func CheckOneDataInList(list []string, input []string) bool {
 	}
 	// Return false if none of the values exist in the list
 	return false
+}
+
+func ContainsValueInModel[T any](items []T, predicate func(T) bool) bool {
+	for _, item := range items {
+		if predicate(item) {
+			return true
+		}
+	}
+	return false
+}
+
+// Utility function to get unique values from a slice of structs
+func GetUniqueFieldValuesFromModel(data interface{}, fieldName string) ([]string, error) {
+	// Ensure that the input is a slice
+	val := reflect.ValueOf(data)
+	if val.Kind() != reflect.Slice {
+		return nil, fmt.Errorf("expected a slice, got %s", val.Kind())
+	}
+
+	// Create a map to store unique values
+	uniqueValues := make(map[string]struct{})
+
+	// Iterate through each element in the slice
+	for i := 0; i < val.Len(); i++ {
+		item := val.Index(i)
+
+		// Ensure the item is a struct
+		if item.Kind() != reflect.Struct {
+			return nil, fmt.Errorf("expected a struct, got %s", item.Kind())
+		}
+
+		// Get the field by name
+		fieldVal := item.FieldByName(fieldName)
+		if !fieldVal.IsValid() {
+			return nil, fmt.Errorf("field %s not found in struct", fieldName)
+		}
+
+		// Ensure the field is of the expected type (a slice of strings)
+		if fieldVal.Kind() != reflect.Slice {
+			return nil, fmt.Errorf("expected field %s to be a slice, got %s", fieldName, fieldVal.Kind())
+		}
+
+		// Iterate through the slice and add unique values
+		for j := 0; j < fieldVal.Len(); j++ {
+			role := fieldVal.Index(j).String()
+			uniqueValues[role] = struct{}{}
+		}
+	}
+
+	// Collect the unique values into a slice
+	var result []string
+	for value := range uniqueValues {
+		result = append(result, value)
+	}
+
+	return result, nil
 }

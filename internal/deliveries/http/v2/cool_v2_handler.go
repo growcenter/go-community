@@ -1,4 +1,4 @@
-package v1
+package v2
 
 import (
 	"go-community/internal/deliveries/http/common/response"
@@ -15,19 +15,19 @@ type CoolHandler struct {
 }
 
 func NewCoolHandler(api *echo.Group, u *usecases.Usecases) {
-    handler := &CoolHandler{usecase: u}
+	handler := &CoolHandler{usecase: u}
 
 	// Define campus routes
 	endpoint := api.Group("/cool")
-    endpoint.POST("/category", handler.CreateCategory)
+	endpoint.POST("/category", handler.CreateCategory)
 	endpoint.GET("/category", handler.GetAllCategory)
 }
 
 func (clh *CoolHandler) CreateCategory(ctx echo.Context) error {
 	var request models.CreateCoolCategoryRequest
 	if err := ctx.Bind(&request); err != nil {
-        return response.Error(ctx, models.ErrorInvalidInput)
-    }
+		return response.Error(ctx, models.ErrorInvalidInput)
+	}
 
 	if err := validator.Validate(request); err != nil {
 		return response.ErrorValidation(ctx, err)

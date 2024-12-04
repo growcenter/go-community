@@ -257,8 +257,6 @@ func (eu *eventUsecase) GetByCode(ctx context.Context, code string, roles []stri
 		return nil, err
 	}
 
-	fmt.Println("instances are ", instances)
-
 	if instances == nil {
 		return nil, models.ErrorDataNotFound
 	}

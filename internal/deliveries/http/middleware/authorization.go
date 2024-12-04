@@ -20,7 +20,7 @@ type jwtClaims struct {
 
 type jwtClaim struct {
 	CommunityId string   `json:"communityId"`
-	UserType    string   `json:"userType"`
+	UserTypes   []string `json:"userTypes"`
 	Roles       []string `json:"roles"`
 	Status      string   `json:"status"`
 	jwt.RegisteredClaims
@@ -167,11 +167,13 @@ func RoleUserMiddleware(config *config.Configuration, allowedRoles []string) ech
 				return response.Error(ctx, models.ErrorLoggedOut)
 			}
 
-			if strings.ToLower(claims.UserType) == "superadmin" {
-				ctx.Set("communityId", claims.CommunityId)
-				ctx.Set("userType", claims.UserType)
-				ctx.Set("roles", claims.Roles)
-				return next(ctx)
+			for _, userType := range claims.UserTypes {
+				if userType == "superadmin" {
+					ctx.Set("communityId", claims.CommunityId)
+					ctx.Set("userType", claims.UserTypes)
+					ctx.Set("roles", claims.Roles)
+					return next(ctx)
+				}
 			}
 
 			// Check if the user's roles match the required roles
@@ -179,7 +181,7 @@ func RoleUserMiddleware(config *config.Configuration, allowedRoles []string) ech
 				for _, userRole := range claims.Roles {
 					if userRole == allowedRole {
 						ctx.Set("communityId", claims.CommunityId)
-						ctx.Set("userType", claims.UserType)
+						ctx.Set("userType", claims.UserTypes)
 						ctx.Set("roles", claims.Roles)
 						return next(ctx)
 					}
@@ -234,7 +236,7 @@ func RefreshMiddleware(config *config.Configuration) echo.MiddlewareFunc {
 			}
 
 			ctx.Set("communityId", claims.CommunityId)
-			ctx.Set("userType", claims.UserType)
+			ctx.Set("userType", claims.UserTypes)
 			ctx.Set("roles", claims.Roles)
 			return next(ctx)
 		}
@@ -279,7 +281,7 @@ func UserV2Middleware(config *config.Configuration) echo.MiddlewareFunc {
 			}
 
 			ctx.Set("communityId", claims.CommunityId)
-			ctx.Set("userType", claims.UserType)
+			ctx.Set("userType", claims.UserTypes)
 			ctx.Set("roles", claims.Roles)
 			return next(ctx)
 		}

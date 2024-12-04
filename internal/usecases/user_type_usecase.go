@@ -13,14 +13,12 @@ type UserTypeUsecase interface {
 }
 
 type userTypeUsecase struct {
-	utr pgsql.UserTypeRepository
-	rr  pgsql.RoleRepository
+	r pgsql.PostgreRepositories
 }
 
-func NewUserTypeUsecase(utr pgsql.UserTypeRepository, rr pgsql.RoleRepository) *userTypeUsecase {
+func NewUserTypeUsecase(r pgsql.PostgreRepositories) *userTypeUsecase {
 	return &userTypeUsecase{
-		utr: utr,
-		rr:  rr,
+		r: r,
 	}
 }
 
@@ -29,7 +27,7 @@ func (utu *userTypeUsecase) Create(ctx context.Context, request *models.CreateUs
 		LogService(ctx, err)
 	}()
 
-	countRole, err := utu.rr.CheckMultiple(ctx, request.Roles)
+	countRole, err := utu.r.Role.CheckMultiple(ctx, request.Roles)
 	if err != nil {
 		return nil, err
 	}
@@ -38,7 +36,7 @@ func (utu *userTypeUsecase) Create(ctx context.Context, request *models.CreateUs
 		return nil, models.ErrorDataNotFound
 	}
 
-	exist, err := utu.utr.Check(ctx, request.UserType)
+	exist, err := utu.r.UserType.Check(ctx, request.UserType)
 	if err != nil {
 		return nil, err
 	}
@@ -52,9 +50,10 @@ func (utu *userTypeUsecase) Create(ctx context.Context, request *models.CreateUs
 		Name:        strings.TrimSpace(request.Name),
 		Roles:       request.Roles,
 		Description: request.Description,
+		Category:    request.Category,
 	}
 
-	if err := utu.utr.Create(ctx, &input); err != nil {
+	if err := utu.r.UserType.Create(ctx, &input); err != nil {
 		return nil, err
 	}
 
@@ -66,7 +65,7 @@ func (utu *userTypeUsecase) GetAll(ctx context.Context) (userTypes []models.User
 		LogService(ctx, err)
 	}()
 
-	data, err := utu.utr.GetAll(ctx)
+	data, err := utu.r.UserType.GetAll(ctx)
 	if err != nil {
 		return nil, err
 	}

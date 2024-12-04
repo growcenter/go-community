@@ -206,8 +206,130 @@ definitions:
     required:
     - role
     type: object
+  models.CreateUserRequest:
+    properties:
+      address:
+        type: string
+      campusCode:
+        example: "001"
+        maxLength: 3
+        minLength: 3
+        type: string
+      coolId:
+        example: 1
+        type: integer
+      dateOfBirth:
+        type: string
+      department_code:
+        example: MUSIC
+        type: string
+      email:
+        example: jeremy@gmail.com
+        type: string
+      gender:
+        enum:
+        - male
+        - female
+        type: string
+      isBaptized:
+        type: boolean
+      isKom100:
+        type: boolean
+      jemaatId:
+        type: string
+      kkjNumber:
+        type: string
+      maritalStatus:
+        enum:
+        - single
+        - married
+        - others
+        example: active
+        type: string
+      name:
+        example: Professionals
+        maxLength: 50
+        minLength: 1
+        type: string
+      password:
+        example: Professionals
+        maxLength: 50
+        minLength: 6
+        type: string
+      phoneNumber:
+        type: string
+      placeOfBirth:
+        type: string
+      userTypes:
+        example:
+        - volunteer
+        items:
+          type: string
+        type: array
+    required:
+    - dateOfBirth
+    - isBaptized
+    - isKom100
+    - name
+    - password
+    - placeOfBirth
+    - userTypes
+    type: object
+  models.CreateUserResponse:
+    properties:
+      address:
+        type: string
+      campusCode:
+        type: string
+      communityId:
+        type: string
+      coolId:
+        example: 1
+        type: integer
+      dateOfBirth:
+        type: string
+      departmentCode:
+        type: string
+      email:
+        type: string
+      gender:
+        type: string
+      isBaptized:
+        type: boolean
+      isKom100:
+        type: boolean
+      jemaatId:
+        type: string
+      kkjNumber:
+        type: string
+      maritalStatus:
+        type: string
+      name:
+        example: Profesionals
+        type: string
+      phoneNumber:
+        type: string
+      placeOfBirth:
+        type: string
+      status:
+        example: active
+        type: string
+      type:
+        example: user
+        type: string
+      userTypes:
+        items:
+          type: string
+        type: array
+    type: object
   models.CreateUserTypeRequest:
     properties:
+      category:
+        enum:
+        - general
+        - internal
+        - cool
+        type: string
       description:
         example: General Volunteer
         type: string
@@ -225,6 +347,7 @@ definitions:
         example: volunteer
         type: string
     required:
+    - category
     - name
     - roles
     - userType
@@ -283,6 +406,12 @@ definitions:
         type: string
       placeOfBirth:
         type: string
+      userTypes:
+        example:
+        - volunteer
+        items:
+          type: string
+        type: array
     required:
     - coolId
     - dateOfBirth
@@ -292,6 +421,7 @@ definitions:
     - name
     - password
     - placeOfBirth
+    - userTypes
     type: object
   models.CreateVolunteerResponse:
     properties:
@@ -335,6 +465,10 @@ definitions:
       type:
         example: coolCategory
         type: string
+      userTypes:
+        items:
+          type: string
+        type: array
     type: object
   models.DepartmentsResponse:
     properties:
@@ -368,6 +502,46 @@ definitions:
       errors: {}
       message:
         example: Validation failed for one or more fields.
+        type: string
+    type: object
+  models.GetAllEventsResponse:
+    properties:
+      availabilityStatus:
+        example: available
+        type: string
+      campusCode:
+        items:
+          type: string
+        type: array
+      code:
+        example: 2024-HOMEBASE
+        type: string
+      eventEndAt:
+        example: ""
+        type: string
+      eventStartAt:
+        example: ""
+        type: string
+      isRecurring:
+        example: true
+        type: boolean
+      location:
+        example: PIOT 6 Lt. 6
+        type: string
+      recurrence:
+        example: monthly
+        type: string
+      registerEndAt:
+        example: ""
+        type: string
+      registerStartAt:
+        example: ""
+        type: string
+      title:
+        example: Homebase
+        type: string
+      type:
+        example: Event
         type: string
     type: object
   models.GetEventByCodeResponse:
@@ -517,8 +691,10 @@ definitions:
       type:
         example: coolCategory
         type: string
-      userType:
-        type: string
+      userTypes:
+        items:
+          type: string
+        type: array
     type: object
   models.List:
     properties:
@@ -588,8 +764,10 @@ definitions:
       type:
         example: coolCategory
         type: string
-      userType:
-        type: string
+      userTypes:
+        items:
+          type: string
+        type: array
     type: object
   models.RoleResponse:
     properties:
@@ -650,11 +828,16 @@ definitions:
       type:
         example: coolCategory
         type: string
-      userType:
-        type: string
+      userTypes:
+        items:
+          type: string
+        type: array
     type: object
   models.UserTypeResponse:
     properties:
+      category:
+        example: general
+        type: string
       description:
         example: Volunteer
         type: string
@@ -877,7 +1060,7 @@ paths:
     get:
       consumes:
       - application/json
-      description: Get all information needed about user by community Id
+      description: Get all information needed about user by community id
       parameters:
       - description: object that needs to be added
         in: path
@@ -972,7 +1155,7 @@ paths:
     get:
       consumes:
       - application/json
-      description: To check whether user is exist or not by email or phone number
+      description: To check whether user is existed or not by email or phone number
       parameters:
       - description: object that needs to be added
         in: path
@@ -1218,6 +1401,50 @@ paths:
       tags:
       - users
   /v2/events:
+    get:
+      consumes:
+      - application/json
+      description: Get All Events based on User Roles
+      parameters:
+      - description: mandatory header to access endpoint
+        in: header
+        name: X-API-Key
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Response indicates that the request succeeded and the resources
+            has been fetched and transmitted in the message body
+          schema:
+            allOf:
+            - $ref: '#/definitions/models.List'
+            - properties:
+                data:
+                  items:
+                    $ref: '#/definitions/models.GetAllEventsResponse'
+                  type: array
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+        "422":
+          description: Validation error. This can happen if there is an error validation
+            while create account
+          schema:
+            allOf:
+            - $ref: '#/definitions/models.ErrorValidationResponse'
+            - properties:
+                errors:
+                  $ref: '#/definitions/validator.ErrorValidateResponse'
+              type: object
+      security:
+      - BearerAuth: []
+      summary: Get All Events
+      tags:
+      - events
     post:
       consumes:
       - application/json

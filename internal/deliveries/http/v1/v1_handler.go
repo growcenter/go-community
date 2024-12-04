@@ -15,18 +15,13 @@ func NewV1Handler(g *echo.Group, u *usecases.Usecases, c *config.Configuration, 
 
 	// Initialize handlers
 	NewCampusHandler(v1, u)
-	NewCoolHandler(v1, u)
 	NewLocationHandler(v1, u)
-	NewUserHandler(v1, u, c)
 	NewEventUserHandler(v1, u, c)
 	NewEventGeneralHandler(v1, u, c)
 	NewEventSessionHandler(v1, u, c)
 	NewEventRegistrationHandler(v1, u, c)
 	NewEventInternalHandler(v1, u, c)
 	NewEventCommunityRequestHandler(v1, u, c)
-	NewRoleHandler(v1, u)
-	NewConfigHandler(v1, c)
-	NewTokenHandler(v1, a, c)
 
 	v1noGuard := g.Group("/v1")
 	NewEventGoogleHandler(v1noGuard, u)

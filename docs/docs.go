@@ -320,7 +320,7 @@ const docTemplate = `{
         },
         "/v1/users/check/{identifier}": {
             "get": {
-                "description": "To check whether user is exist or not by email or phone number",
+                "description": "To check whether user is existed or not by email or phone number",
                 "consumes": [
                     "application/json"
                 ],
@@ -715,7 +715,7 @@ const docTemplate = `{
         },
         "/v1/users/{communityId}": {
             "get": {
-                "description": "Get all information needed about user by community Id",
+                "description": "Get all information needed about user by community id",
                 "consumes": [
                     "application/json"
                 ],
@@ -864,6 +864,80 @@ const docTemplate = `{
             }
         },
         "/v2/events": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Get All Events based on User Roles",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "events"
+                ],
+                "summary": "Get All Events",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "mandatory header to access endpoint",
+                        "name": "X-API-Key",
+                        "in": "header",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Response indicates that the request succeeded and the resources has been fetched and transmitted in the message body",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/models.List"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "$ref": "#/definitions/models.GetAllEventsResponse"
+                                            }
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/models.ErrorResponse"
+                        }
+                    },
+                    "422": {
+                        "description": "Validation error. This can happen if there is an error validation while create account",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/models.ErrorValidationResponse"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "errors": {
+                                            "$ref": "#/definitions/validator.ErrorValidateResponse"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                }
+            },
             "post": {
                 "security": [
                     {
@@ -1244,49 +1318,16 @@ const docTemplate = `{
                 }
             }
         },
-        "models.CreateUserTypeRequest": {
+        "models.CreateUserRequest": {
             "type": "object",
             "required": [
-                "name",
-                "roles",
-                "userType"
-            ],
-            "properties": {
-                "description": {
-                    "type": "string",
-                    "example": "General Volunteer"
-                },
-                "name": {
-                    "type": "string",
-                    "example": "Volunteer"
-                },
-                "roles": {
-                    "type": "array",
-                    "items": {
-                        "type": "string"
-                    },
-                    "example": [
-                        "event-view-volunteer",
-                        " event-edit-volunteer"
-                    ]
-                },
-                "userType": {
-                    "type": "string",
-                    "example": "volunteer"
-                }
-            }
-        },
-        "models.CreateVolunteerRequest": {
-            "type": "object",
-            "required": [
-                "coolId",
                 "dateOfBirth",
-                "department_code",
                 "isBaptized",
                 "isKom100",
                 "name",
                 "password",
-                "placeOfBirth"
+                "placeOfBirth",
+                "userTypes"
             ],
             "properties": {
                 "address": {
@@ -1358,6 +1399,220 @@ const docTemplate = `{
                 },
                 "placeOfBirth": {
                     "type": "string"
+                },
+                "userTypes": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    },
+                    "example": [
+                        "volunteer"
+                    ]
+                }
+            }
+        },
+        "models.CreateUserResponse": {
+            "type": "object",
+            "properties": {
+                "address": {
+                    "type": "string"
+                },
+                "campusCode": {
+                    "type": "string"
+                },
+                "communityId": {
+                    "type": "string"
+                },
+                "coolId": {
+                    "type": "integer",
+                    "example": 1
+                },
+                "dateOfBirth": {
+                    "type": "string"
+                },
+                "departmentCode": {
+                    "type": "string"
+                },
+                "email": {
+                    "type": "string"
+                },
+                "gender": {
+                    "type": "string"
+                },
+                "isBaptized": {
+                    "type": "boolean"
+                },
+                "isKom100": {
+                    "type": "boolean"
+                },
+                "jemaatId": {
+                    "type": "string"
+                },
+                "kkjNumber": {
+                    "type": "string"
+                },
+                "maritalStatus": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string",
+                    "example": "Profesionals"
+                },
+                "phoneNumber": {
+                    "type": "string"
+                },
+                "placeOfBirth": {
+                    "type": "string"
+                },
+                "status": {
+                    "type": "string",
+                    "example": "active"
+                },
+                "type": {
+                    "type": "string",
+                    "example": "user"
+                },
+                "userTypes": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                }
+            }
+        },
+        "models.CreateUserTypeRequest": {
+            "type": "object",
+            "required": [
+                "category",
+                "name",
+                "roles",
+                "userType"
+            ],
+            "properties": {
+                "category": {
+                    "type": "string",
+                    "enum": [
+                        "general",
+                        "internal",
+                        "cool"
+                    ]
+                },
+                "description": {
+                    "type": "string",
+                    "example": "General Volunteer"
+                },
+                "name": {
+                    "type": "string",
+                    "example": "Volunteer"
+                },
+                "roles": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    },
+                    "example": [
+                        "event-view-volunteer",
+                        " event-edit-volunteer"
+                    ]
+                },
+                "userType": {
+                    "type": "string",
+                    "example": "volunteer"
+                }
+            }
+        },
+        "models.CreateVolunteerRequest": {
+            "type": "object",
+            "required": [
+                "coolId",
+                "dateOfBirth",
+                "department_code",
+                "isBaptized",
+                "isKom100",
+                "name",
+                "password",
+                "placeOfBirth",
+                "userTypes"
+            ],
+            "properties": {
+                "address": {
+                    "type": "string"
+                },
+                "campusCode": {
+                    "type": "string",
+                    "maxLength": 3,
+                    "minLength": 3,
+                    "example": "001"
+                },
+                "coolId": {
+                    "type": "integer",
+                    "example": 1
+                },
+                "dateOfBirth": {
+                    "type": "string"
+                },
+                "department_code": {
+                    "type": "string",
+                    "example": "MUSIC"
+                },
+                "email": {
+                    "type": "string",
+                    "example": "jeremy@gmail.com"
+                },
+                "gender": {
+                    "type": "string",
+                    "enum": [
+                        "male",
+                        "female"
+                    ]
+                },
+                "isBaptized": {
+                    "type": "boolean"
+                },
+                "isKom100": {
+                    "type": "boolean"
+                },
+                "jemaatId": {
+                    "type": "string"
+                },
+                "kkjNumber": {
+                    "type": "string"
+                },
+                "maritalStatus": {
+                    "type": "string",
+                    "enum": [
+                        "single",
+                        "married",
+                        "others"
+                    ],
+                    "example": "active"
+                },
+                "name": {
+                    "type": "string",
+                    "maxLength": 50,
+                    "minLength": 1,
+                    "example": "Professionals"
+                },
+                "password": {
+                    "type": "string",
+                    "maxLength": 50,
+                    "minLength": 6,
+                    "example": "Professionals"
+                },
+                "phoneNumber": {
+                    "type": "string"
+                },
+                "placeOfBirth": {
+                    "type": "string"
+                },
+                "userTypes": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    },
+                    "example": [
+                        "volunteer"
+                    ]
                 }
             }
         },
@@ -1421,6 +1676,12 @@ const docTemplate = `{
                 "type": {
                     "type": "string",
                     "example": "coolCategory"
+                },
+                "userTypes": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
                 }
             }
         },
@@ -1469,6 +1730,61 @@ const docTemplate = `{
                 "message": {
                     "type": "string",
                     "example": "Validation failed for one or more fields."
+                }
+            }
+        },
+        "models.GetAllEventsResponse": {
+            "type": "object",
+            "properties": {
+                "availabilityStatus": {
+                    "type": "string",
+                    "example": "available"
+                },
+                "campusCode": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "code": {
+                    "type": "string",
+                    "example": "2024-HOMEBASE"
+                },
+                "eventEndAt": {
+                    "type": "string",
+                    "example": ""
+                },
+                "eventStartAt": {
+                    "type": "string",
+                    "example": ""
+                },
+                "isRecurring": {
+                    "type": "boolean",
+                    "example": true
+                },
+                "location": {
+                    "type": "string",
+                    "example": "PIOT 6 Lt. 6"
+                },
+                "recurrence": {
+                    "type": "string",
+                    "example": "monthly"
+                },
+                "registerEndAt": {
+                    "type": "string",
+                    "example": ""
+                },
+                "registerStartAt": {
+                    "type": "string",
+                    "example": ""
+                },
+                "title": {
+                    "type": "string",
+                    "example": "Homebase"
+                },
+                "type": {
+                    "type": "string",
+                    "example": "Event"
                 }
             }
         },
@@ -1678,8 +1994,11 @@ const docTemplate = `{
                     "type": "string",
                     "example": "coolCategory"
                 },
-                "userType": {
-                    "type": "string"
+                "userTypes": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
                 }
             }
         },
@@ -1782,8 +2101,11 @@ const docTemplate = `{
                     "type": "string",
                     "example": "coolCategory"
                 },
-                "userType": {
-                    "type": "string"
+                "userTypes": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
                 }
             }
         },
@@ -1871,14 +2193,21 @@ const docTemplate = `{
                     "type": "string",
                     "example": "coolCategory"
                 },
-                "userType": {
-                    "type": "string"
+                "userTypes": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
                 }
             }
         },
         "models.UserTypeResponse": {
             "type": "object",
             "properties": {
+                "category": {
+                    "type": "string",
+                    "example": "general"
+                },
                 "description": {
                     "type": "string",
                     "example": "Volunteer"

@@ -1,4 +1,4 @@
-package v1
+package v2
 
 import (
 	"github.com/labstack/echo/v4"
@@ -35,7 +35,7 @@ func NewTokenHandler(api *echo.Group, a *authorization.Auth, c *config.Configura
 // @Failure 422 {object} models.ErrorValidationResponse{errors=validator.ErrorValidateResponse} "Validation error. This can happen if there is an error validation while create account"
 // @Router /v1/tokens [get]
 func (th *TokenHandler) Refresh(ctx echo.Context) error {
-	tokens, err := th.auth.GenerateTokens(ctx.Get("communityId").(string), ctx.Get("userType").(string), ctx.Get("roles").([]string), "active")
+	tokens, err := th.auth.GenerateTokens(ctx.Get("communityId").(string), ctx.Get("userType").([]string), ctx.Get("roles").([]string), "active")
 	if err != nil {
 		response.Error(ctx, err)
 	}

@@ -61,6 +61,18 @@ func (eh *EventHandler) Create(ctx echo.Context) error {
 	return response.Success(ctx, http.StatusCreated, event.ToResponse())
 }
 
+// GetAll godoc
+// @Summary Get All Events
+// @Description Get All Events based on User Roles
+// @Tags events
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Param X-API-Key header string true "mandatory header to access endpoint"
+// @Success 200 {object} models.List{data=[]models.GetAllEventsResponse} "Response indicates that the request succeeded and the resources has been fetched and transmitted in the message body"
+// @Failure 400 {object} models.ErrorResponse "Bad Request"
+// @Failure 422 {object} models.ErrorValidationResponse{errors=validator.ErrorValidateResponse} "Validation error. This can happen if there is an error validation while create account"
+// @Router /v2/events [get]
 func (eh *EventHandler) GetAll(ctx echo.Context) error {
 	events, err := eh.usecase.Event.GetAll(ctx.Request().Context(), ctx.Get("roles").([]string))
 	if err != nil {
