@@ -157,6 +157,89 @@ const docTemplate = `{
                 }
             }
         },
+        "/v1/events/{code}": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Get Event and Instances by Event Code",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "events"
+                ],
+                "summary": "Get Event by Event Code",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "object that needs to be added",
+                        "name": "code",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "mandatory header to access endpoint",
+                        "name": "X-API-Key",
+                        "in": "header",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Response indicates that the request succeeded and the resources has been fetched and transmitted in the message body",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/models.GetEventByCodeResponse"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "instances": {
+                                            "type": "array",
+                                            "items": {
+                                                "$ref": "#/definitions/models.GetInstancesByEventCodeResponse"
+                                            }
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/models.ErrorResponse"
+                        }
+                    },
+                    "422": {
+                        "description": "Validation error. This can happen if there is an error validation while create account",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/models.ErrorValidationResponse"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "errors": {
+                                            "$ref": "#/definitions/validator.ErrorValidateResponse"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                }
+            }
+        },
         "/v1/tokens": {
             "get": {
                 "description": "Generate both Access and Refresh Token",
@@ -567,7 +650,7 @@ const docTemplate = `{
         },
         "/v1/users/volunteer": {
             "post": {
-                "description": "Create event with the instances/sessions",
+                "description": "Create user for volunteer",
                 "consumes": [
                     "application/json"
                 ],
@@ -575,9 +658,9 @@ const docTemplate = `{
                     "application/json"
                 ],
                 "tags": [
-                    "events"
+                    "users"
                 ],
-                "summary": "Create Event",
+                "summary": "Create Volunteer User",
                 "parameters": [
                     {
                         "description": "User object that needs to be added",
@@ -585,7 +668,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/models.CreateEventRequest"
+                            "$ref": "#/definitions/models.CreateVolunteerRequest"
                         }
                     },
                     {
@@ -600,19 +683,7 @@ const docTemplate = `{
                     "201": {
                         "description": "Response indicates that the request succeeded and the resources has been fetched and transmitted in the message body",
                         "schema": {
-                            "allOf": [
-                                {
-                                    "$ref": "#/definitions/models.CreateEventResponse"
-                                },
-                                {
-                                    "type": "object",
-                                    "properties": {
-                                        "instances": {
-                                            "$ref": "#/definitions/models.CreateInstanceResponse"
-                                        }
-                                    }
-                                }
-                            ]
+                            "$ref": "#/definitions/models.CreateVolunteerResponse"
                         }
                     },
                     "400": {
@@ -763,6 +834,88 @@ const docTemplate = `{
                         "description": "Response indicates that the request succeeded and the resources has been fetched and transmitted in the message body",
                         "schema": {
                             "$ref": "#/definitions/models.UpdateUserPasswordResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/models.ErrorResponse"
+                        }
+                    },
+                    "422": {
+                        "description": "Validation error. This can happen if there is an error validation while create account",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/models.ErrorValidationResponse"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "errors": {
+                                            "$ref": "#/definitions/validator.ErrorValidateResponse"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                }
+            }
+        },
+        "/v2/events": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Create event with the instances/sessions",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "events"
+                ],
+                "summary": "Create Event",
+                "parameters": [
+                    {
+                        "description": "User object that needs to be added",
+                        "name": "user",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/models.CreateEventRequest"
+                        }
+                    },
+                    {
+                        "type": "string",
+                        "description": "mandatory header to access endpoint",
+                        "name": "X-API-Key",
+                        "in": "header",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Response indicates that the request succeeded and the resources has been fetched and transmitted in the message body",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/models.CreateEventResponse"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "instances": {
+                                            "$ref": "#/definitions/models.CreateInstanceResponse"
+                                        }
+                                    }
+                                }
+                            ]
                         }
                     },
                     "400": {
@@ -1316,6 +1469,136 @@ const docTemplate = `{
                 "message": {
                     "type": "string",
                     "example": "Validation failed for one or more fields."
+                }
+            }
+        },
+        "models.GetEventByCodeResponse": {
+            "type": "object",
+            "properties": {
+                "availabilityStatus": {
+                    "type": "string",
+                    "example": "available"
+                },
+                "campusCode": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "code": {
+                    "type": "string",
+                    "example": "2024-HOMEBASE"
+                },
+                "description": {
+                    "type": "string",
+                    "example": "Homebase"
+                },
+                "eventEndAt": {
+                    "type": "string",
+                    "example": ""
+                },
+                "eventStartAt": {
+                    "type": "string",
+                    "example": ""
+                },
+                "instances": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/models.GetInstancesByEventCodeResponse"
+                    }
+                },
+                "isRecurring": {
+                    "type": "boolean",
+                    "example": true
+                },
+                "location": {
+                    "type": "string",
+                    "example": "PIOT 6 Lt. 6"
+                },
+                "recurrence": {
+                    "type": "string",
+                    "example": "monthly"
+                },
+                "registerEndAt": {
+                    "type": "string",
+                    "example": ""
+                },
+                "registerStartAt": {
+                    "type": "string",
+                    "example": ""
+                },
+                "title": {
+                    "type": "string",
+                    "example": "Homebase"
+                },
+                "type": {
+                    "type": "string",
+                    "example": "Event"
+                }
+            }
+        },
+        "models.GetInstancesByEventCodeResponse": {
+            "type": "object",
+            "properties": {
+                "availabilityStatus": {
+                    "type": "string",
+                    "example": "available"
+                },
+                "bookedSeats": {
+                    "type": "integer",
+                    "example": 0
+                },
+                "code": {
+                    "type": "string",
+                    "example": "2024-HOMEBASE"
+                },
+                "description": {
+                    "type": "string",
+                    "example": "Homebase"
+                },
+                "instanceEndAt": {
+                    "type": "string",
+                    "example": ""
+                },
+                "instanceStartAt": {
+                    "type": "string",
+                    "example": ""
+                },
+                "isRequired": {
+                    "type": "boolean",
+                    "example": true
+                },
+                "location": {
+                    "type": "string",
+                    "example": "PIOT 6 Lt. 6"
+                },
+                "maxRegister": {
+                    "type": "integer",
+                    "example": 0
+                },
+                "registerEndAt": {
+                    "type": "string",
+                    "example": ""
+                },
+                "registerStartAt": {
+                    "type": "string",
+                    "example": ""
+                },
+                "title": {
+                    "type": "string",
+                    "example": "Homebase"
+                },
+                "totalRemainingSeats": {
+                    "type": "integer",
+                    "example": 0
+                },
+                "totalSeats": {
+                    "type": "integer",
+                    "example": 0
+                },
+                "type": {
+                    "type": "string",
+                    "example": "eventInstance"
                 }
             }
         },

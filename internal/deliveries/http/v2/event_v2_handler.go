@@ -2,6 +2,7 @@ package v2
 
 import (
 	"github.com/labstack/echo/v4"
+	"go-community/internal/common"
 	"go-community/internal/config"
 	"go-community/internal/deliveries/http/common/response"
 	"go-community/internal/deliveries/http/middleware"
@@ -10,6 +11,7 @@ import (
 	"go-community/internal/pkg/validator"
 	"go-community/internal/usecases"
 	"net/http"
+	"strings"
 )
 
 type EventHandler struct {
@@ -25,6 +27,7 @@ func NewEventHandler(api *echo.Group, u *usecases.Usecases, c *config.Configurat
 	endpointUserAuth := endpoint.Group("")
 	endpointUserAuth.Use(middleware.UserV2Middleware(c))
 	endpointUserAuth.GET("", handler.GetAll)
+	endpointUserAuth.GET("/:code", handler.GetByCode)
 }
 
 // Create godoc
@@ -35,10 +38,11 @@ func NewEventHandler(api *echo.Group, u *usecases.Usecases, c *config.Configurat
 // @Produce json
 // @Param user body models.CreateEventRequest true "User object that needs to be added"
 // @Param X-API-Key header string true "mandatory header to access endpoint"
+// @Security BearerAuth
 // @Success 201 {object} models.CreateEventResponse{instances=models.CreateInstanceResponse} "Response indicates that the request succeeded and the resources has been fetched and transmitted in the message body"
 // @Failure 400 {object} models.ErrorResponse "Bad Request"
 // @Failure 422 {object} models.ErrorValidationResponse{errors=validator.ErrorValidateResponse} "Validation error. This can happen if there is an error validation while create account"
-// @Router /v1/users/volunteer [post]
+// @Router /v2/events [post]
 func (eh *EventHandler) Create(ctx echo.Context) error {
 	var request models.CreateEventRequest
 	if err := ctx.Bind(&request); err != nil {
@@ -64,4 +68,34 @@ func (eh *EventHandler) GetAll(ctx echo.Context) error {
 	}
 
 	return response.SuccessList(ctx, http.StatusOK, len(*events), events)
+}
+
+// GetByCode godoc
+// @Summary Get Event by Event Code
+// @Description Get Event and Instances by Event Code
+// @Tags events
+// @Accept json
+// @Produce json
+// @Param code path int true "object that needs to be added"
+// @Param X-API-Key header string true "mandatory header to access endpoint"
+// @Security BearerAuth
+// @Success 200 {object} models.GetEventByCodeResponse{instances=[]models.GetInstancesByEventCodeResponse} "Response indicates that the request succeeded and the resources has been fetched and transmitted in the message body"
+// @Failure 400 {object} models.ErrorResponse "Bad Request"
+// @Failure 422 {object} models.ErrorValidationResponse{errors=validator.ErrorValidateResponse} "Validation error. This can happen if there is an error validation while create account"
+// @Router /v1/events/{code} [get]
+func (eh *EventHandler) GetByCode(ctx echo.Context) error {
+	parameter := models.GetEventByCodeParameter{
+		Code: strings.ToUpper(ctx.Param("code")),
+	}
+
+	if err := validator.Validate(parameter); err != nil {
+		return response.ErrorValidation(ctx, err)
+	}
+
+	events, err := eh.usecase.Event.GetByCode(ctx.Request().Context(), common.StringTrimSpaceAndUpper(parameter.Code), ctx.Get("roles").([]string))
+	if err != nil {
+		return response.Error(ctx, err)
+	}
+
+	return response.Success(ctx, http.StatusOK, events.ToResponse())
 }

@@ -370,6 +370,101 @@ definitions:
         example: Validation failed for one or more fields.
         type: string
     type: object
+  models.GetEventByCodeResponse:
+    properties:
+      availabilityStatus:
+        example: available
+        type: string
+      campusCode:
+        items:
+          type: string
+        type: array
+      code:
+        example: 2024-HOMEBASE
+        type: string
+      description:
+        example: Homebase
+        type: string
+      eventEndAt:
+        example: ""
+        type: string
+      eventStartAt:
+        example: ""
+        type: string
+      instances:
+        items:
+          $ref: '#/definitions/models.GetInstancesByEventCodeResponse'
+        type: array
+      isRecurring:
+        example: true
+        type: boolean
+      location:
+        example: PIOT 6 Lt. 6
+        type: string
+      recurrence:
+        example: monthly
+        type: string
+      registerEndAt:
+        example: ""
+        type: string
+      registerStartAt:
+        example: ""
+        type: string
+      title:
+        example: Homebase
+        type: string
+      type:
+        example: Event
+        type: string
+    type: object
+  models.GetInstancesByEventCodeResponse:
+    properties:
+      availabilityStatus:
+        example: available
+        type: string
+      bookedSeats:
+        example: 0
+        type: integer
+      code:
+        example: 2024-HOMEBASE
+        type: string
+      description:
+        example: Homebase
+        type: string
+      instanceEndAt:
+        example: ""
+        type: string
+      instanceStartAt:
+        example: ""
+        type: string
+      isRequired:
+        example: true
+        type: boolean
+      location:
+        example: PIOT 6 Lt. 6
+        type: string
+      maxRegister:
+        example: 0
+        type: integer
+      registerEndAt:
+        example: ""
+        type: string
+      registerStartAt:
+        example: ""
+        type: string
+      title:
+        example: Homebase
+        type: string
+      totalRemainingSeats:
+        example: 0
+        type: integer
+      totalSeats:
+        example: 0
+        type: integer
+      type:
+        example: eventInstance
+        type: string
+    type: object
   models.GetOneByCommunityIdResponse:
     properties:
       address:
@@ -680,6 +775,56 @@ paths:
       summary: Get Departments from Config
       tags:
       - config
+  /v1/events/{code}:
+    get:
+      consumes:
+      - application/json
+      description: Get Event and Instances by Event Code
+      parameters:
+      - description: object that needs to be added
+        in: path
+        name: code
+        required: true
+        type: integer
+      - description: mandatory header to access endpoint
+        in: header
+        name: X-API-Key
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Response indicates that the request succeeded and the resources
+            has been fetched and transmitted in the message body
+          schema:
+            allOf:
+            - $ref: '#/definitions/models.GetEventByCodeResponse'
+            - properties:
+                instances:
+                  items:
+                    $ref: '#/definitions/models.GetInstancesByEventCodeResponse'
+                  type: array
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+        "422":
+          description: Validation error. This can happen if there is an error validation
+            while create account
+          schema:
+            allOf:
+            - $ref: '#/definitions/models.ErrorValidationResponse'
+            - properties:
+                errors:
+                  $ref: '#/definitions/validator.ErrorValidateResponse'
+              type: object
+      security:
+      - BearerAuth: []
+      summary: Get Event by Event Code
+      tags:
+      - events
   /v1/tokens:
     get:
       consumes:
@@ -1034,6 +1179,48 @@ paths:
     post:
       consumes:
       - application/json
+      description: Create user for volunteer
+      parameters:
+      - description: User object that needs to be added
+        in: body
+        name: user
+        required: true
+        schema:
+          $ref: '#/definitions/models.CreateVolunteerRequest'
+      - description: mandatory header to access endpoint
+        in: header
+        name: X-API-Key
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Response indicates that the request succeeded and the resources
+            has been fetched and transmitted in the message body
+          schema:
+            $ref: '#/definitions/models.CreateVolunteerResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+        "422":
+          description: Validation error. This can happen if there is an error validation
+            while create account
+          schema:
+            allOf:
+            - $ref: '#/definitions/models.ErrorValidationResponse'
+            - properties:
+                errors:
+                  $ref: '#/definitions/validator.ErrorValidateResponse'
+              type: object
+      summary: Create Volunteer User
+      tags:
+      - users
+  /v2/events:
+    post:
+      consumes:
+      - application/json
       description: Create event with the instances/sessions
       parameters:
       - description: User object that needs to be added
@@ -1074,6 +1261,8 @@ paths:
                 errors:
                   $ref: '#/definitions/validator.ErrorValidateResponse'
               type: object
+      security:
+      - BearerAuth: []
       summary: Create Event
       tags:
       - events

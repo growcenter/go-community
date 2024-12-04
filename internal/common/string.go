@@ -54,7 +54,8 @@ func CombineMapStrings(mappingA, mappingB []string) []string {
 	return allMappedStrings
 }
 
-func CheckDataMapStructure(mapstructure map[string]string, input []string) bool {
+// all data inputted should be matched
+func CheckAllDataMapStructure(mapstructure map[string]string, input []string) bool {
 	for _, val := range input {
 		if _, exists := mapstructure[val]; !exists {
 			// If any value doesn't exist, return false immediately
@@ -63,4 +64,21 @@ func CheckDataMapStructure(mapstructure map[string]string, input []string) bool 
 	}
 	// Return true if all values exist
 	return true
+}
+
+// only need one data to get true
+func CheckOneDataInList(list []string, input []string) bool {
+	set := make(map[string]struct{})
+	for _, item := range list {
+		set[item] = struct{}{}
+	}
+
+	for _, val := range input {
+		if _, exists := set[val]; exists {
+			// Return true immediately if any value is found in the list
+			return true
+		}
+	}
+	// Return false if none of the values exist in the list
+	return false
 }

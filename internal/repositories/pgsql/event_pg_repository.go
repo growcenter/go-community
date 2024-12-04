@@ -13,7 +13,7 @@ type EventRepository interface {
 	GetAll(ctx context.Context) (campus []models.Event, err error)
 	GetAllByRoles(ctx context.Context, roles []string, status string) (output []models.GetAllEventsDBOutput, err error)
 	CheckByCode(ctx context.Context, code string) (dataExist bool, err error)
-	GetEventAndInstancesByCode(ctx context.Context, code string) (eventWithInstances *models.GetEventByCodeDBOutput, err error)
+	GetOneByCode(ctx context.Context, code string) (output *models.GetEventByCodeDBOutput, err error)
 }
 
 type eventRepository struct {
@@ -83,29 +83,15 @@ func (er *eventRepository) GetAllByRoles(ctx context.Context, roles []string, st
 	return output, nil
 }
 
-func (er *eventRepository) GetEventAndInstancesByCode(ctx context.Context, code string) (eventWithInstances *models.GetEventByCodeDBOutput, err error) {
+func (er *eventRepository) GetOneByCode(ctx context.Context, code string) (output *models.GetEventByCodeDBOutput, err error) {
 	defer func() {
 		LogRepository(ctx, err)
 	}()
 
-	//rows, err := er.db.Raw(queryGetEventAndInstancesByEventCode, code).Rows()
-	//if err != nil {
-	//	return nil, err
-	//}
-	//
-	//defer rows.Close()
-	//
-	//for rows.Next() {
-	//	var res models.GetEventByCodeDBOutput
-	//
-	//	if err := rows.Scan(
-	//		&res.EventCode, &res.EventTitle, &res.EventLocation, &res.EventDescription, &res.EventCampusCode, &res.EventIsRecurring, &res.EventRecurrence, &res.EventStartAt, &res.EventEndAt, &res.EventRegisterStartAt, &res.EventRegisterEndAt, &res.EventStatus, &res.InstanceCode, &res.InstanceTitle, &res.InstanceLocation, &res.InstanceDescription, &res.InstanceStartAt, &res.InstanceEndAt, &res.InstanceRegisterStartAt, &res.InstanceRegisterEndAt, &res.InstanceMaxRegister, &res.InstanceTotalSeats, &res.InstanceBookedSeats, &res.InstanceScannedSeats, &res.InstanceStatus, &res.InstanceIsRequired, &res.TotalRemainingSeats,
-	//	); err != nil {
-	//		log.Println("Error scanning row:", err)
-	//		return nil, err
-	//	}
-	//}
-	//
-	//return res, nil
-	return nil, nil
+	err = er.db.Raw(queryGetEventInstancesByEventCode, code).Scan(&output).Error
+	if err != nil {
+		return nil, err
+	}
+
+	return output, nil
 }

@@ -20,6 +20,11 @@ import (
 // @description This is a go-community api docs.
 // @termsOfService http://swagger.io/terms/
 
+// @securityDefinitions.bearer BearerAuth
+// @in header
+// @name Authorization
+// @BearerAuth.description Please provide the Bearer token in the "Authorization" header.
+
 // @contact.name API Support
 // @contact.url http://www.swagger.io/support
 // @contact.email support@swagger.io
