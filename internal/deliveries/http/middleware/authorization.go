@@ -170,7 +170,7 @@ func RoleUserMiddleware(config *config.Configuration, allowedRoles []string) ech
 			for _, userType := range claims.UserTypes {
 				if userType == "superadmin" {
 					ctx.Set("communityId", claims.CommunityId)
-					ctx.Set("userType", claims.UserTypes)
+					ctx.Set("userTypes", claims.UserTypes)
 					ctx.Set("roles", claims.Roles)
 					return next(ctx)
 				}
@@ -181,7 +181,7 @@ func RoleUserMiddleware(config *config.Configuration, allowedRoles []string) ech
 				for _, userRole := range claims.Roles {
 					if userRole == allowedRole {
 						ctx.Set("communityId", claims.CommunityId)
-						ctx.Set("userType", claims.UserTypes)
+						ctx.Set("userTypes", claims.UserTypes)
 						ctx.Set("roles", claims.Roles)
 						return next(ctx)
 					}
@@ -236,7 +236,7 @@ func RefreshMiddleware(config *config.Configuration) echo.MiddlewareFunc {
 			}
 
 			ctx.Set("communityId", claims.CommunityId)
-			ctx.Set("userType", claims.UserTypes)
+			ctx.Set("userTypes", claims.UserTypes)
 			ctx.Set("roles", claims.Roles)
 			return next(ctx)
 		}
@@ -281,7 +281,7 @@ func UserV2Middleware(config *config.Configuration) echo.MiddlewareFunc {
 			}
 
 			ctx.Set("communityId", claims.CommunityId)
-			ctx.Set("userType", claims.UserTypes)
+			ctx.Set("userTypes", claims.UserTypes)
 			ctx.Set("roles", claims.Roles)
 			return next(ctx)
 		}

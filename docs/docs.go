@@ -1056,15 +1056,29 @@ const docTemplate = `{
         "models.CreateEventRequest": {
             "type": "object",
             "required": [
+                "allowedCampuses",
+                "allowedFor",
                 "allowedRoles",
-                "campusCode",
-                "code",
+                "allowedUsers",
                 "instances",
-                "isRecurring",
-                "location",
+                "locationName",
+                "locationType",
                 "name"
             ],
             "properties": {
+                "allowedCampuses": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "allowedFor": {
+                    "type": "string",
+                    "enum": [
+                        "public",
+                        "private"
+                    ]
+                },
                 "allowedRoles": {
                     "type": "array",
                     "items": {
@@ -1076,17 +1090,6 @@ const docTemplate = `{
                     "items": {
                         "type": "string"
                     }
-                },
-                "campusCode": {
-                    "type": "array",
-                    "items": {
-                        "type": "string"
-                    }
-                },
-                "code": {
-                    "type": "string",
-                    "maxLength": 30,
-                    "minLength": 1
                 },
                 "description": {
                     "type": "string"
@@ -1106,8 +1109,16 @@ const docTemplate = `{
                 "isRecurring": {
                     "type": "boolean"
                 },
-                "location": {
+                "locationName": {
                     "type": "string"
+                },
+                "locationType": {
+                    "type": "string",
+                    "enum": [
+                        "online",
+                        "onsite",
+                        "hybrid"
+                    ]
                 },
                 "name": {
                     "type": "string"
@@ -1120,6 +1131,15 @@ const docTemplate = `{
                 },
                 "registerStartAt": {
                     "type": "string"
+                },
+                "termsAndConditions": {
+                    "type": "string"
+                },
+                "topics": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
                 }
             }
         },
@@ -1129,6 +1149,16 @@ const docTemplate = `{
                 "instances"
             ],
             "properties": {
+                "allowedCampuses": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "allowedFor": {
+                    "type": "string",
+                    "example": "public"
+                },
                 "allowedRoles": {
                     "type": "array",
                     "items": {
@@ -1141,19 +1171,9 @@ const docTemplate = `{
                         "type": "string"
                     }
                 },
-                "availabilityStatus": {
-                    "type": "string",
-                    "example": "available"
-                },
-                "campusCode": {
-                    "type": "array",
-                    "items": {
-                        "type": "string"
-                    }
-                },
                 "code": {
                     "type": "string",
-                    "example": "2024-HOMEBASE"
+                    "example": "bhfe382"
                 },
                 "description": {
                     "type": "string",
@@ -1177,9 +1197,13 @@ const docTemplate = `{
                     "type": "boolean",
                     "example": true
                 },
-                "location": {
+                "locationName": {
                     "type": "string",
                     "example": "PIOT 6 Lt. 6"
+                },
+                "locationType": {
+                    "type": "string",
+                    "example": "offline"
                 },
                 "recurrence": {
                     "type": "string",
@@ -1193,33 +1217,55 @@ const docTemplate = `{
                     "type": "string",
                     "example": ""
                 },
+                "status": {
+                    "type": "string",
+                    "example": "available"
+                },
+                "termsAndConditions": {
+                    "type": "string",
+                    "example": "This event blabla"
+                },
                 "title": {
                     "type": "string",
                     "example": "Homebase"
                 },
+                "topics": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
                 "type": {
                     "type": "string",
-                    "example": "Event"
+                    "example": "event"
                 }
             }
         },
         "models.CreateInstanceRequest": {
             "type": "object",
             "required": [
-                "eventCode",
                 "instanceEndAt",
                 "instanceStartAt",
-                "isRequired",
-                "location",
+                "locationName",
+                "locationType",
                 "registerEndAt",
                 "registerStartAt",
                 "title"
             ],
             "properties": {
-                "description": {
-                    "type": "string"
+                "allowPersonalQr": {
+                    "type": "boolean"
                 },
-                "eventCode": {
+                "attendanceType": {
+                    "type": "string",
+                    "enum": [
+                        "check-in",
+                        "check-out",
+                        "both",
+                        "none"
+                    ]
+                },
+                "description": {
                     "type": "string"
                 },
                 "instanceEndAt": {
@@ -1228,16 +1274,27 @@ const docTemplate = `{
                 "instanceStartAt": {
                     "type": "string"
                 },
-                "isInherit": {
+                "isOnePerAccount": {
+                    "type": "boolean"
+                },
+                "isOnePerTicket": {
                     "type": "boolean"
                 },
                 "isRequired": {
                     "type": "boolean"
                 },
-                "location": {
+                "locationName": {
                     "type": "string"
                 },
-                "maxRegister": {
+                "locationType": {
+                    "type": "string",
+                    "enum": [
+                        "online",
+                        "onsite",
+                        "hybrid"
+                    ]
+                },
+                "maxPerTransaction": {
                     "type": "integer"
                 },
                 "registerEndAt": {
@@ -1257,9 +1314,11 @@ const docTemplate = `{
         "models.CreateInstanceResponse": {
             "type": "object",
             "properties": {
-                "availabilityStatus": {
-                    "type": "string",
-                    "example": "available"
+                "allowPersonalQr": {
+                    "type": "boolean"
+                },
+                "attendanceType": {
+                    "type": "string"
                 },
                 "description": {
                     "type": "string"
@@ -1276,13 +1335,22 @@ const docTemplate = `{
                 "instanceStartAt": {
                     "type": "string"
                 },
+                "isOnePerAccount": {
+                    "type": "boolean"
+                },
+                "isOnePerTicket": {
+                    "type": "boolean"
+                },
                 "isRequired": {
                     "type": "boolean"
                 },
-                "location": {
+                "locationName": {
                     "type": "string"
                 },
-                "maxRegister": {
+                "locationType": {
+                    "type": "string"
+                },
+                "maxPerTransaction": {
                     "type": "integer"
                 },
                 "registerEndAt": {
@@ -1290,6 +1358,10 @@ const docTemplate = `{
                 },
                 "registerStartAt": {
                     "type": "string"
+                },
+                "status": {
+                    "type": "string",
+                    "example": "active"
                 },
                 "title": {
                     "type": "string"
@@ -1736,15 +1808,31 @@ const docTemplate = `{
         "models.GetAllEventsResponse": {
             "type": "object",
             "properties": {
-                "availabilityStatus": {
-                    "type": "string",
-                    "example": "available"
-                },
-                "campusCode": {
+                "allowedCampuses": {
                     "type": "array",
                     "items": {
                         "type": "string"
                     }
+                },
+                "allowedFor": {
+                    "type": "string",
+                    "example": "public"
+                },
+                "allowedRoles": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "allowedUsers": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "availabilityStatus": {
+                    "type": "string",
+                    "example": "available"
                 },
                 "code": {
                     "type": "string",
@@ -1762,9 +1850,9 @@ const docTemplate = `{
                     "type": "boolean",
                     "example": true
                 },
-                "location": {
+                "locationType": {
                     "type": "string",
-                    "example": "PIOT 6 Lt. 6"
+                    "example": "offline"
                 },
                 "recurrence": {
                     "type": "string",
@@ -1782,6 +1870,16 @@ const docTemplate = `{
                     "type": "string",
                     "example": "Homebase"
                 },
+                "topics": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "totalRemainingSeats": {
+                    "type": "integer",
+                    "example": 2
+                },
                 "type": {
                     "type": "string",
                     "example": "Event"
@@ -1791,23 +1889,39 @@ const docTemplate = `{
         "models.GetEventByCodeResponse": {
             "type": "object",
             "properties": {
-                "availabilityStatus": {
-                    "type": "string",
-                    "example": "available"
-                },
-                "campusCode": {
+                "allowedCampuses": {
                     "type": "array",
                     "items": {
                         "type": "string"
                     }
                 },
+                "allowedFor": {
+                    "type": "string",
+                    "example": "public"
+                },
+                "allowedRoles": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "allowedUsers": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "availabilityStatus": {
+                    "type": "string",
+                    "example": "available"
+                },
                 "code": {
                     "type": "string",
-                    "example": "2024-HOMEBASE"
+                    "example": "bhfe382"
                 },
                 "description": {
                     "type": "string",
-                    "example": "Homebase"
+                    "example": "This event blabla"
                 },
                 "eventEndAt": {
                     "type": "string",
@@ -1827,9 +1941,13 @@ const docTemplate = `{
                     "type": "boolean",
                     "example": true
                 },
-                "location": {
+                "locationName": {
                     "type": "string",
                     "example": "PIOT 6 Lt. 6"
+                },
+                "locationType": {
+                    "type": "string",
+                    "example": "offline"
                 },
                 "recurrence": {
                     "type": "string",
@@ -1843,19 +1961,39 @@ const docTemplate = `{
                     "type": "string",
                     "example": ""
                 },
+                "termsAndConditions": {
+                    "type": "string",
+                    "example": "This event blabla"
+                },
                 "title": {
                     "type": "string",
                     "example": "Homebase"
                 },
+                "topics": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
                 "type": {
                     "type": "string",
-                    "example": "Event"
+                    "example": "event"
                 }
             }
         },
         "models.GetInstancesByEventCodeResponse": {
             "type": "object",
             "properties": {
+                "LocationName": {
+                    "type": "string",
+                    "example": "PIOT 6 Lt. 6"
+                },
+                "allowPersonalQr": {
+                    "type": "boolean"
+                },
+                "attendanceType": {
+                    "type": "string"
+                },
                 "availabilityStatus": {
                     "type": "string",
                     "example": "available"
@@ -1880,17 +2018,21 @@ const docTemplate = `{
                     "type": "string",
                     "example": ""
                 },
+                "isOnePerAccount": {
+                    "type": "boolean"
+                },
+                "isOnePerTicket": {
+                    "type": "boolean"
+                },
                 "isRequired": {
-                    "type": "boolean",
-                    "example": true
+                    "type": "boolean"
                 },
-                "location": {
+                "locationType": {
                     "type": "string",
-                    "example": "PIOT 6 Lt. 6"
+                    "example": "offline"
                 },
-                "maxRegister": {
-                    "type": "integer",
-                    "example": 0
+                "maxPerTransaction": {
+                    "type": "integer"
                 },
                 "registerEndAt": {
                     "type": "string",

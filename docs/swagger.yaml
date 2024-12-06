@@ -23,6 +23,15 @@ definitions:
     type: object
   models.CreateEventRequest:
     properties:
+      allowedCampuses:
+        items:
+          type: string
+        type: array
+      allowedFor:
+        enum:
+        - public
+        - private
+        type: string
       allowedRoles:
         items:
           type: string
@@ -31,14 +40,6 @@ definitions:
         items:
           type: string
         type: array
-      campusCode:
-        items:
-          type: string
-        type: array
-      code:
-        maxLength: 30
-        minLength: 1
-        type: string
       description:
         type: string
       eventEndAt:
@@ -51,7 +52,13 @@ definitions:
         type: array
       isRecurring:
         type: boolean
-      location:
+      locationName:
+        type: string
+      locationType:
+        enum:
+        - online
+        - onsite
+        - hybrid
         type: string
       name:
         type: string
@@ -61,17 +68,31 @@ definitions:
         type: string
       registerStartAt:
         type: string
+      termsAndConditions:
+        type: string
+      topics:
+        items:
+          type: string
+        type: array
     required:
+    - allowedCampuses
+    - allowedFor
     - allowedRoles
-    - campusCode
-    - code
+    - allowedUsers
     - instances
-    - isRecurring
-    - location
+    - locationName
+    - locationType
     - name
     type: object
   models.CreateEventResponse:
     properties:
+      allowedCampuses:
+        items:
+          type: string
+        type: array
+      allowedFor:
+        example: public
+        type: string
       allowedRoles:
         items:
           type: string
@@ -80,15 +101,8 @@ definitions:
         items:
           type: string
         type: array
-      availabilityStatus:
-        example: available
-        type: string
-      campusCode:
-        items:
-          type: string
-        type: array
       code:
-        example: 2024-HOMEBASE
+        example: bhfe382
         type: string
       description:
         example: This event blabla
@@ -106,8 +120,11 @@ definitions:
       isRecurring:
         example: true
         type: boolean
-      location:
+      locationName:
         example: PIOT 6 Lt. 6
+        type: string
+      locationType:
+        example: offline
         type: string
       recurrence:
         example: monthly
@@ -118,32 +135,57 @@ definitions:
       registerStartAt:
         example: ""
         type: string
+      status:
+        example: available
+        type: string
+      termsAndConditions:
+        example: This event blabla
+        type: string
       title:
         example: Homebase
         type: string
+      topics:
+        items:
+          type: string
+        type: array
       type:
-        example: Event
+        example: event
         type: string
     required:
     - instances
     type: object
   models.CreateInstanceRequest:
     properties:
-      description:
+      allowPersonalQr:
+        type: boolean
+      attendanceType:
+        enum:
+        - check-in
+        - check-out
+        - both
+        - none
         type: string
-      eventCode:
+      description:
         type: string
       instanceEndAt:
         type: string
       instanceStartAt:
         type: string
-      isInherit:
+      isOnePerAccount:
+        type: boolean
+      isOnePerTicket:
         type: boolean
       isRequired:
         type: boolean
-      location:
+      locationName:
         type: string
-      maxRegister:
+      locationType:
+        enum:
+        - online
+        - onsite
+        - hybrid
+        type: string
+      maxPerTransaction:
         type: integer
       registerEndAt:
         type: string
@@ -154,19 +196,19 @@ definitions:
       totalSeats:
         type: integer
     required:
-    - eventCode
     - instanceEndAt
     - instanceStartAt
-    - isRequired
-    - location
+    - locationName
+    - locationType
     - registerEndAt
     - registerStartAt
     - title
     type: object
   models.CreateInstanceResponse:
     properties:
-      availabilityStatus:
-        example: available
+      allowPersonalQr:
+        type: boolean
+      attendanceType:
         type: string
       description:
         type: string
@@ -178,15 +220,24 @@ definitions:
         type: string
       instanceStartAt:
         type: string
+      isOnePerAccount:
+        type: boolean
+      isOnePerTicket:
+        type: boolean
       isRequired:
         type: boolean
-      location:
+      locationName:
         type: string
-      maxRegister:
+      locationType:
+        type: string
+      maxPerTransaction:
         type: integer
       registerEndAt:
         type: string
       registerStartAt:
+        type: string
+      status:
+        example: active
         type: string
       title:
         type: string
@@ -506,13 +557,24 @@ definitions:
     type: object
   models.GetAllEventsResponse:
     properties:
-      availabilityStatus:
-        example: available
-        type: string
-      campusCode:
+      allowedCampuses:
         items:
           type: string
         type: array
+      allowedFor:
+        example: public
+        type: string
+      allowedRoles:
+        items:
+          type: string
+        type: array
+      allowedUsers:
+        items:
+          type: string
+        type: array
+      availabilityStatus:
+        example: available
+        type: string
       code:
         example: 2024-HOMEBASE
         type: string
@@ -525,8 +587,8 @@ definitions:
       isRecurring:
         example: true
         type: boolean
-      location:
-        example: PIOT 6 Lt. 6
+      locationType:
+        example: offline
         type: string
       recurrence:
         example: monthly
@@ -540,24 +602,42 @@ definitions:
       title:
         example: Homebase
         type: string
+      topics:
+        items:
+          type: string
+        type: array
+      totalRemainingSeats:
+        example: 2
+        type: integer
       type:
         example: Event
         type: string
     type: object
   models.GetEventByCodeResponse:
     properties:
-      availabilityStatus:
-        example: available
-        type: string
-      campusCode:
+      allowedCampuses:
         items:
           type: string
         type: array
+      allowedFor:
+        example: public
+        type: string
+      allowedRoles:
+        items:
+          type: string
+        type: array
+      allowedUsers:
+        items:
+          type: string
+        type: array
+      availabilityStatus:
+        example: available
+        type: string
       code:
-        example: 2024-HOMEBASE
+        example: bhfe382
         type: string
       description:
-        example: Homebase
+        example: This event blabla
         type: string
       eventEndAt:
         example: ""
@@ -572,8 +652,11 @@ definitions:
       isRecurring:
         example: true
         type: boolean
-      location:
+      locationName:
         example: PIOT 6 Lt. 6
+        type: string
+      locationType:
+        example: offline
         type: string
       recurrence:
         example: monthly
@@ -584,15 +667,29 @@ definitions:
       registerStartAt:
         example: ""
         type: string
+      termsAndConditions:
+        example: This event blabla
+        type: string
       title:
         example: Homebase
         type: string
+      topics:
+        items:
+          type: string
+        type: array
       type:
-        example: Event
+        example: event
         type: string
     type: object
   models.GetInstancesByEventCodeResponse:
     properties:
+      LocationName:
+        example: PIOT 6 Lt. 6
+        type: string
+      allowPersonalQr:
+        type: boolean
+      attendanceType:
+        type: string
       availabilityStatus:
         example: available
         type: string
@@ -611,14 +708,16 @@ definitions:
       instanceStartAt:
         example: ""
         type: string
-      isRequired:
-        example: true
+      isOnePerAccount:
         type: boolean
-      location:
-        example: PIOT 6 Lt. 6
+      isOnePerTicket:
+        type: boolean
+      isRequired:
+        type: boolean
+      locationType:
+        example: offline
         type: string
-      maxRegister:
-        example: 0
+      maxPerTransaction:
         type: integer
       registerEndAt:
         example: ""

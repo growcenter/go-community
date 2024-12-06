@@ -18,6 +18,8 @@ type UserRepository interface {
 	GetOneByIdentifier(ctx context.Context, identifier string) (user models.User, err error)
 	GetOneByEmailPhoneNumber(ctx context.Context, email string, phoneNumber string) (user models.User, err error)
 	CheckByEmailPhoneNumber(ctx context.Context, email string, phoneNumber string) (dataExist bool, err error)
+	GetUserNameByIdentifier(ctx context.Context, identifier string) (output *models.GetNameOnUserDBOutput, err error)
+	GetUserNameByCommunityId(ctx context.Context, communityId string) (output *models.GetNameOnUserDBOutput, err error)
 }
 
 type userRepository struct {
@@ -137,4 +139,30 @@ func (ur *userRepository) CheckByEmailPhoneNumber(ctx context.Context, email str
 	}
 
 	return dataExist, nil
+}
+
+func (ur *userRepository) GetUserNameByIdentifier(ctx context.Context, identifier string) (output *models.GetNameOnUserDBOutput, err error) {
+	defer func() {
+		LogRepository(ctx, err)
+	}()
+
+	err = ur.db.Raw(queryGetUserNameByIdentifier, identifier).Scan(&output).Error
+	if err != nil {
+		return nil, err
+	}
+
+	return output, nil
+}
+
+func (ur *userRepository) GetUserNameByCommunityId(ctx context.Context, communityId string) (output *models.GetNameOnUserDBOutput, err error) {
+	defer func() {
+		LogRepository(ctx, err)
+	}()
+
+	err = ur.db.Raw(queryGetUserNameByCommunityId, communityId).Scan(&output).Error
+	if err != nil {
+		return nil, err
+	}
+
+	return output, nil
 }

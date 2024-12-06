@@ -13,6 +13,7 @@ type UserTypeRepository interface {
 	GetByType(ctx context.Context, uType string) (userType models.UserType, err error)
 	GetAll(ctx context.Context) (userTypes []models.UserType, err error)
 	Check(ctx context.Context, uType string) (dataExist bool, err error)
+	CheckMultiple(ctx context.Context, uTypes []string) (count int64, err error)
 	GetByArray(ctx context.Context, array []string) (uType []models.UserType, err error)
 }
 
@@ -68,6 +69,19 @@ func (utr *userTypeRepository) Check(ctx context.Context, uType string) (dataExi
 	}
 
 	return dataExist, nil
+}
+
+func (utr *userTypeRepository) CheckMultiple(ctx context.Context, uTypes []string) (count int64, err error) {
+	defer func() {
+		LogRepository(ctx, err)
+	}()
+
+	err = utr.db.Raw(queryMultipleCheckUserType, pq.Array(uTypes)).Scan(&count).Error
+	if err != nil {
+		return 0, err
+	}
+
+	return count, nil
 }
 
 func (utr *userTypeRepository) GetByArray(ctx context.Context, array []string) (uType []models.UserType, err error) {

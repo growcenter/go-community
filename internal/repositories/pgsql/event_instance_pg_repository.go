@@ -13,7 +13,7 @@ type EventInstanceRepository interface {
 	GetByCode(ctx context.Context, code string) (campus models.EventInstance, err error)
 	GetAll(ctx context.Context) (campus []models.EventInstance, err error)
 	CountByCode(ctx context.Context, code string) (count int64, err error)
-	GetManyByEventCode(ctx context.Context, eventCode string) (outputs *[]models.GetInstanceByEventCodeDBOutput, err error)
+	GetManyByEventCode(ctx context.Context, eventCode string, status string) (outputs *[]models.GetInstanceByEventCodeDBOutput, err error)
 }
 
 type eventInstanceRepository struct {
@@ -80,12 +80,12 @@ func (eir *eventInstanceRepository) CountByCode(ctx context.Context, code string
 	return count, nil
 }
 
-func (eir *eventInstanceRepository) GetManyByEventCode(ctx context.Context, eventCode string) (outputs *[]models.GetInstanceByEventCodeDBOutput, err error) {
+func (eir *eventInstanceRepository) GetManyByEventCode(ctx context.Context, eventCode string, status string) (outputs *[]models.GetInstanceByEventCodeDBOutput, err error) {
 	defer func() {
 		LogRepository(ctx, err)
 	}()
 
-	err = eir.db.Raw(queryGetSessionsByEventCode, eventCode).Scan(&outputs).Error
+	err = eir.db.Raw(queryGetSessionsByEventCode, eventCode, status).Scan(&outputs).Error
 	if err != nil {
 		return nil, err
 	}

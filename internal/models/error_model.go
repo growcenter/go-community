@@ -30,6 +30,10 @@ var (
 	ErrorRegistrationAlreadyCancel   = errors.New("you already cancelled the registration")
 	ErrorRegistrationAlreadyVerified = errors.New("your registration code is already verified")
 	ErrorNoRegistrationNeeded        = errors.New("you do not need to register for this session")
+	ErrorViolateAllowedForPrivate    = errors.New("allowedFor is private but either allowedUsers, allowedRoles, allowedCampuses are empty")
+	ErrorMaxPerTrxIsZero             = errors.New("since registration is required, cannot set maxPerTrx to 0")
+	ErrorAttendanceTypeWhenRequired  = errors.New("since registration is required, attendance type cannot be empty")
+	ErrorEventNotAvailable           = errors.New("event is not available")
 
 	// Google Error
 	ErrorFetchGoogle = errors.New("error while retrieving user from google")
@@ -284,6 +288,31 @@ func ErrorMapping(err error) ErrorResponse {
 			Status:  "MISSING_FIELDS",
 			Message: err.Error(),
 		}
+	case ErrorViolateAllowedForPrivate:
+		return ErrorResponse{
+			Code:    http.StatusBadRequest,
+			Status:  "MISSING_FIELDS",
+			Message: err.Error(),
+		}
+	case ErrorMaxPerTrxIsZero:
+		return ErrorResponse{
+			Code:    http.StatusBadRequest,
+			Status:  "INVALID_VALUES",
+			Message: err.Error(),
+		}
+	case ErrorAttendanceTypeWhenRequired:
+		return ErrorResponse{
+			Code:    http.StatusBadRequest,
+			Status:  "MISSING_FIELDS",
+			Message: err.Error(),
+		}
+	case ErrorEventNotAvailable:
+		return ErrorResponse{
+			Code:    http.StatusBadRequest,
+			Status:  "FORBIDDEN_REGISTRATION",
+			Message: err.Error(),
+		}
+
 	default:
 		return ErrorResponse{
 			Code:    http.StatusInternalServerError,

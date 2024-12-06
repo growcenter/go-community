@@ -116,8 +116,8 @@ func (u *CreateUserResponse) ToCreateUser() *CreateUserResponse {
 type (
 	CreateUserRequest struct {
 		Name           string   `json:"name" validate:"required,min=1,max=50,nospecial" example:"Professionals"`
+		Email          string   `json:"email" validate:"omitempty,emailFormat,emailOrPhoneField" example:"jeremy@gmail.com"`
 		PhoneNumber    string   `json:"phoneNumber" validate:"omitempty,phoneFormat"`
-		Email          string   `json:"email" validate:"omitempty,emailFormat" example:"jeremy@gmail.com"`
 		Password       string   `json:"password" validate:"required,min=6,max=50,noStartEndSpaces" example:"Professionals"`
 		UserTypes      []string `json:"userTypes" validate:"required" example:"volunteer"`
 		CampusCode     string   `json:"campusCode" validate:"omitempty,min=3,max=3" example:"001"`
@@ -388,5 +388,12 @@ type (
 		CampusCode  string   `json:"campusCode"`
 		Roles       []string `json:"roles"`
 		Status      string   `json:"status" example:"active"`
+	}
+)
+
+type (
+	GetNameOnUserDBOutput struct {
+		Name        string
+		CommunityId string
 	}
 )

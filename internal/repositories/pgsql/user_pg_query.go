@@ -16,6 +16,13 @@ var (
 		(email = ? AND ? != '')
 	   OR
 		(phone_number = ? AND ? != '');`
+
+	queryGetUserNameByIdentifier = `SELECT name, community_id
+	FROM users WHERE email = ? OR phone_number = ? LIMIT 1`
+
+	queryGetUserNameByCommunityId = `SELECT name, community_id
+	FROM users WHERE community_id = ? LIMIT 1`
+
 	queryGetOneUserByIdentifier = `SELECT * FROM users WHERE email = ? OR phone_number = ? LIMIT 1`
 )
 

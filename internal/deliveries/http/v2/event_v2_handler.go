@@ -2,7 +2,6 @@ package v2
 
 import (
 	"github.com/labstack/echo/v4"
-	"go-community/internal/common"
 	"go-community/internal/config"
 	"go-community/internal/deliveries/http/common/response"
 	"go-community/internal/deliveries/http/middleware"
@@ -11,7 +10,6 @@ import (
 	"go-community/internal/pkg/validator"
 	"go-community/internal/usecases"
 	"net/http"
-	"strings"
 )
 
 type EventHandler struct {
@@ -74,7 +72,7 @@ func (eh *EventHandler) Create(ctx echo.Context) error {
 // @Failure 422 {object} models.ErrorValidationResponse{errors=validator.ErrorValidateResponse} "Validation error. This can happen if there is an error validation while create account"
 // @Router /v2/events [get]
 func (eh *EventHandler) GetAll(ctx echo.Context) error {
-	events, err := eh.usecase.Event.GetAll(ctx.Request().Context(), ctx.Get("roles").([]string))
+	events, err := eh.usecase.Event.GetAll(ctx.Request().Context(), ctx.Get("roles").([]string), ctx.Get("userTypes").([]string))
 	if err != nil {
 		return response.Error(ctx, err)
 	}
@@ -97,14 +95,14 @@ func (eh *EventHandler) GetAll(ctx echo.Context) error {
 // @Router /v1/events/{code} [get]
 func (eh *EventHandler) GetByCode(ctx echo.Context) error {
 	parameter := models.GetEventByCodeParameter{
-		Code: strings.ToUpper(ctx.Param("code")),
+		Code: ctx.Param("code"),
 	}
 
 	if err := validator.Validate(parameter); err != nil {
 		return response.ErrorValidation(ctx, err)
 	}
 
-	events, err := eh.usecase.Event.GetByCode(ctx.Request().Context(), common.StringTrimSpaceAndUpper(parameter.Code), ctx.Get("roles").([]string))
+	events, err := eh.usecase.Event.GetByCode(ctx.Request().Context(), parameter.Code, ctx.Get("roles").([]string), ctx.Get("userTypes").([]string))
 	if err != nil {
 		return response.Error(ctx, err)
 	}
