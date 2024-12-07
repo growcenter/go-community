@@ -8,7 +8,7 @@ CREATE TABLE "event_registration_records" (
     "event_code" varchar(30) NOT NULL,
     "instance_code" varchar(30) NOT NULL,
     "identifier_origin" varchar(100) NOT NULL,
-    "account_number_origin" varchar(15) NULL,
+    "community_id_origin" varchar(15) NULL,
     "updated_by" varchar(100) NULL,
     "status" varchar(20) NOT NULL,
     "registered_at" timestamptz NOT NULL,

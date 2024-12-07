@@ -34,6 +34,10 @@ var (
 	ErrorMaxPerTrxIsZero             = errors.New("since registration is required, cannot set maxPerTrx to 0")
 	ErrorAttendanceTypeWhenRequired  = errors.New("since registration is required, attendance type cannot be empty")
 	ErrorEventNotAvailable           = errors.New("event is not available")
+	ErrorEventCanOnlyRegisterOnce    = errors.New("your account already registered for this event")
+	ErrorAlreadyRegistered           = errors.New("your main or other register data already registered for this event")
+	ErrorIdentifierCommunityIdEmpty  = errors.New("at least should filled either identifier or community id")
+	ErrorQRForMoreThanOneRegister    = errors.New("your personal QR cannot be used for more than one registration")
 
 	// Google Error
 	ErrorFetchGoogle = errors.New("error while retrieving user from google")
@@ -310,6 +314,18 @@ func ErrorMapping(err error) ErrorResponse {
 		return ErrorResponse{
 			Code:    http.StatusBadRequest,
 			Status:  "FORBIDDEN_REGISTRATION",
+			Message: err.Error(),
+		}
+	case ErrorEventCanOnlyRegisterOnce:
+		return ErrorResponse{
+			Code:    http.StatusConflict,
+			Status:  "ALREADY_REGISTERED",
+			Message: err.Error(),
+		}
+	case ErrorAlreadyRegistered:
+		return ErrorResponse{
+			Code:    http.StatusConflict,
+			Status:  "ALREADY_REGISTERED",
 			Message: err.Error(),
 		}
 

@@ -4,6 +4,7 @@ import (
 	"github.com/labstack/echo/v4"
 	"go-community/internal/config"
 	"go-community/internal/deliveries/http/common/response"
+	"go-community/internal/deliveries/http/middleware"
 	"go-community/internal/models"
 	"go-community/internal/pkg/authorization"
 	"go-community/internal/pkg/validator"
@@ -30,6 +31,10 @@ func NewUserHandler(api *echo.Group, u *usecases.Usecases, c *config.Configurati
 	endpoint.GET("/:communityId", handler.GetByCommunityId)
 	endpoint.PATCH("/:identifier/password", handler.UpdatePassword)
 	endpoint.PUT("/logout", handler.Logout)
+
+	endpointUserAuth := endpoint.Group("")
+	endpointUserAuth.Use(middleware.UserV2Middleware(c))
+	endpointUserAuth.GET("/access-token", handler.GetByAccessToken)
 
 	userTypeEndpoint := endpoint.Group("/types")
 	userTypeEndpoint.POST("", handler.CreateUserType)
@@ -284,6 +289,35 @@ func (uh *UserHandler) GetByCommunityId(ctx echo.Context) error {
 
 	return response.Success(ctx, http.StatusOK, data.ToGetOneByCommunityId())
 
+}
+
+// GetByAccessToken godoc
+// @Summary Get User By Access Token
+// @Description Get all information needed about user by community id
+// @Tags users
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Param X-API-Key header string true "mandatory header to access endpoint"
+// @Success 200 {object} models.GetOneByCommunityIdResponse{roles=[]models.RoleResponse} "Response indicates that the request succeeded and the resources has been fetched and transmitted in the message body"
+// @Failure 400 {object} models.ErrorResponse "Bad Request"
+// @Failure 422 {object} models.ErrorValidationResponse{errors=validator.ErrorValidateResponse} "Validation error. This can happen if there is an error validation while create account"
+// @Router /v1/users/{communityId} [get]
+func (uh *UserHandler) GetByAccessToken(ctx echo.Context) error {
+	parameter := models.GetOneByCommunityIdParameter{
+		CommunityId: strings.ToLower(ctx.Get("communityId").(string)),
+	}
+
+	if err := validator.Validate(parameter); err != nil {
+		return response.ErrorValidation(ctx, err)
+	}
+
+	data, err := uh.usecase.User.GetByCommunityId(ctx.Request().Context(), parameter)
+	if err != nil {
+		return response.Error(ctx, err)
+	}
+
+	return response.Success(ctx, http.StatusOK, data.ToGetOneByCommunityId())
 }
 
 // Logout godoc

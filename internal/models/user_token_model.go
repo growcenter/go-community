@@ -1,6 +1,9 @@
 package models
 
-import "time"
+import (
+	"github.com/labstack/echo/v4"
+	"time"
+)
 
 var (
 	TYPE_REFRESH_TOKEN = "refreshToken"
@@ -68,4 +71,20 @@ type UserTokenResponse struct {
 	Type      string    `json:"type"`
 	Token     string    `json:"token"`
 	ExpiresAt time.Time `json:"expiresAt"`
+}
+
+type TokenValues struct {
+	CommunityId string   `json:"communityId"`
+	UserTypes   []string `json:"userTypes"`
+	Roles       []string `json:"roles"`
+	Status      string   `json:"status"`
+}
+
+func GetValueFromToken(ctx echo.Context) TokenValues {
+	return TokenValues{
+		CommunityId: ctx.Get("communityId").(string),
+		UserTypes:   ctx.Get("userTypes").([]string),
+		Roles:       ctx.Get("roles").([]string),
+		Status:      ctx.Get("status").(string),
+	}
 }

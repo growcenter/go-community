@@ -21,6 +21,73 @@ definitions:
       user:
         type: boolean
     type: object
+  models.CreateEventRegistrationRecordRequest:
+    properties:
+      communityId:
+        type: string
+      eventCode:
+        maxLength: 7
+        minLength: 7
+        type: string
+      identifier:
+        type: string
+      instanceCode:
+        maxLength: 15
+        minLength: 15
+        type: string
+      isUsingQR:
+        type: boolean
+      name:
+        description: IsInheritUser bool                                        `json:"isInheritUser"
+          validate:"required"`
+        example: Professionals
+        maxLength: 50
+        minLength: 1
+        type: string
+      registerAt:
+        type: string
+      registrants:
+        items:
+          $ref: '#/definitions/models.CreateOtherEventRegistrationRecordRequest'
+        type: array
+    required:
+    - eventCode
+    - instanceCode
+    - isUsingQR
+    - registerAt
+    - registrants
+    type: object
+  models.CreateEventRegistrationRecordResponse:
+    properties:
+      communityId:
+        type: string
+      eventCode:
+        type: string
+      eventTitle:
+        type: string
+      identifier:
+        type: string
+      instanceCode:
+        type: string
+      instanceTitle:
+        type: string
+      name:
+        type: string
+      registerAt:
+        type: string
+      registrants:
+        items:
+          $ref: '#/definitions/models.CreateOtherEventRegistrationRecordResponse'
+        type: array
+      registrationId:
+        type: string
+      status:
+        type: string
+      totalRegistrants:
+        type: integer
+      type:
+        type: string
+    type: object
   models.CreateEventRequest:
     properties:
       allowedCampuses:
@@ -156,9 +223,7 @@ definitions:
     type: object
   models.CreateInstanceRequest:
     properties:
-      allowPersonalQr:
-        type: boolean
-      attendanceType:
+      checkType:
         enum:
         - check-in
         - check-out
@@ -175,8 +240,6 @@ definitions:
         type: boolean
       isOnePerTicket:
         type: boolean
-      isRequired:
-        type: boolean
       locationName:
         type: string
       locationType:
@@ -188,6 +251,13 @@ definitions:
       maxPerTransaction:
         type: integer
       registerEndAt:
+        type: string
+      registerFlow:
+        enum:
+        - personal-qr
+        - event-qr
+        - both-qr
+        - none
         type: string
       registerStartAt:
         type: string
@@ -206,9 +276,7 @@ definitions:
     type: object
   models.CreateInstanceResponse:
     properties:
-      allowPersonalQr:
-        type: boolean
-      attendanceType:
+      checkType:
         type: string
       description:
         type: string
@@ -224,8 +292,6 @@ definitions:
         type: boolean
       isOnePerTicket:
         type: boolean
-      isRequired:
-        type: boolean
       locationName:
         type: string
       locationType:
@@ -233,6 +299,8 @@ definitions:
       maxPerTransaction:
         type: integer
       registerEndAt:
+        type: string
+      registerFlow:
         type: string
       registerStartAt:
         type: string
@@ -243,6 +311,24 @@ definitions:
         type: string
       totalSeats:
         type: integer
+      type:
+        type: string
+    type: object
+  models.CreateOtherEventRegistrationRecordRequest:
+    properties:
+      name:
+        type: string
+    required:
+    - name
+    type: object
+  models.CreateOtherEventRegistrationRecordResponse:
+    properties:
+      id:
+        type: string
+      name:
+        type: string
+      status:
+        type: string
       type:
         type: string
     type: object
@@ -686,16 +772,14 @@ definitions:
       LocationName:
         example: PIOT 6 Lt. 6
         type: string
-      allowPersonalQr:
-        type: boolean
-      attendanceType:
-        type: string
       availabilityStatus:
         example: available
         type: string
       bookedSeats:
         example: 0
         type: integer
+      checkType:
+        type: string
       code:
         example: 2024-HOMEBASE
         type: string
@@ -712,8 +796,6 @@ definitions:
         type: boolean
       isOnePerTicket:
         type: boolean
-      isRequired:
-        type: boolean
       locationType:
         example: offline
         type: string
@@ -721,6 +803,8 @@ definitions:
         type: integer
       registerEndAt:
         example: ""
+        type: string
+      registerFlow:
         type: string
       registerStartAt:
         example: ""
@@ -1161,11 +1245,6 @@ paths:
       - application/json
       description: Get all information needed about user by community id
       parameters:
-      - description: object that needs to be added
-        in: path
-        name: communityId
-        required: true
-        type: integer
       - description: mandatory header to access endpoint
         in: header
         name: X-API-Key
@@ -1200,7 +1279,9 @@ paths:
                 errors:
                   $ref: '#/definitions/validator.ErrorValidateResponse'
               type: object
-      summary: Get User By Community ID
+      security:
+      - BearerAuth: []
+      summary: Get User By Access Token
       tags:
       - users
   /v1/users/{identifier}/password:
@@ -1590,6 +1671,55 @@ paths:
       security:
       - BearerAuth: []
       summary: Create Event
+      tags:
+      - events
+  /v2/events/registers:
+    post:
+      consumes:
+      - application/json
+      description: Register user to particular event and instances
+      parameters:
+      - description: User object that needs to be added
+        in: body
+        name: user
+        required: true
+        schema:
+          $ref: '#/definitions/models.CreateEventRegistrationRecordRequest'
+      - description: mandatory header to access endpoint
+        in: header
+        name: X-API-Key
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Response indicates that the request succeeded and the resources
+            has been fetched and transmitted in the message body
+          schema:
+            allOf:
+            - $ref: '#/definitions/models.CreateEventRegistrationRecordResponse'
+            - properties:
+                registrants:
+                  $ref: '#/definitions/models.CreateOtherEventRegistrationRecordRequest'
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+        "422":
+          description: Validation error. This can happen if there is an error validation
+            while create account
+          schema:
+            allOf:
+            - $ref: '#/definitions/models.ErrorValidationResponse'
+            - properties:
+                errors:
+                  $ref: '#/definitions/validator.ErrorValidateResponse'
+              type: object
+      security:
+      - BearerAuth: []
+      summary: Register User to Event
       tags:
       - events
 swagger: "2.0"

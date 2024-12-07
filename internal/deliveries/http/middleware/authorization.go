@@ -263,8 +263,8 @@ func UserV2Middleware(config *config.Configuration) echo.MiddlewareFunc {
 				if err.Error() == "token has invalid claims: token is expired" {
 					return response.Error(ctx, models.ErrorExpiredToken)
 				}
-				//return response.Error(ctx, models.ErrorInvalidToken)
-				return response.Error(ctx, err)
+				return response.Error(ctx, models.ErrorInvalidToken)
+				//return response.Error(ctx, err)
 			}
 
 			claims, ok := token.Claims.(*jwtClaim)

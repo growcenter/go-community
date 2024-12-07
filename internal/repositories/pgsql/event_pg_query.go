@@ -53,7 +53,7 @@ var (
 		COALESCE(SUM(COALESCE(ei.total_seats, 0) - COALESCE(ei.booked_seats, 0)), 0) AS total_remaining_seats,
 		COALESCE(MAX(ei.total_seats), 0) AS instance_total_seats, -- Ensure no duplicates here
 		ARRAY_AGG(
-				ROW(ei.total_seats, ei.booked_seats, ei.is_required)
+				ROW(ei.total_seats, ei.booked_seats, ei.register_flow)
 		) AS instances_data -- Combine all instance data into a JSON array
 	FROM
 		events e
@@ -95,7 +95,7 @@ var (
 			COALESCE(ei.total_seats, 0) AS instance_total_seats,
 			COALESCE(SUM(COALESCE(ei.total_seats, 0) - COALESCE(ei.booked_seats, 0)), 0) AS total_remaining_seats,
 			ARRAY_AGG(
-				ROW(COALESCE(ei.total_seats, 0), COALESCE(ei.booked_seats, 0), ei.is_required)
+				ROW(COALESCE(ei.total_seats, 0), COALESCE(ei.booked_seats, 0), ei.register_flow)
 			) AS instances_data  -- Nullable boolean
 		FROM
 			events e

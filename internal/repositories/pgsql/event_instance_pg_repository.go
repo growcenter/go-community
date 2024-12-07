@@ -14,6 +14,9 @@ type EventInstanceRepository interface {
 	GetAll(ctx context.Context) (campus []models.EventInstance, err error)
 	CountByCode(ctx context.Context, code string) (count int64, err error)
 	GetManyByEventCode(ctx context.Context, eventCode string, status string) (outputs *[]models.GetInstanceByEventCodeDBOutput, err error)
+	GetOneByCode(ctx context.Context, code string, status string) (output *models.GetInstanceByCodeDBOutput, err error)
+	GetSeatsNamesByCode(ctx context.Context, code string) (output *models.GetSeatsAndNamesByInstanceCodeDBOutput, err error)
+	UpdateBookedSeatsByCode(ctx context.Context, code string, event *models.GetSeatsAndNamesByInstanceCodeDBOutput) (err error)
 }
 
 type eventInstanceRepository struct {
@@ -91,4 +94,38 @@ func (eir *eventInstanceRepository) GetManyByEventCode(ctx context.Context, even
 	}
 
 	return outputs, nil
+}
+
+func (eir *eventInstanceRepository) GetOneByCode(ctx context.Context, code string, status string) (output *models.GetInstanceByCodeDBOutput, err error) {
+	defer func() {
+		LogRepository(ctx, err)
+	}()
+
+	err = eir.db.Raw(queryGetSessionByCode, code, status).Scan(&output).Error
+	if err != nil {
+		return nil, err
+	}
+
+	return output, nil
+}
+
+func (eir *eventInstanceRepository) GetSeatsNamesByCode(ctx context.Context, code string) (output *models.GetSeatsAndNamesByInstanceCodeDBOutput, err error) {
+	defer func() {
+		LogRepository(ctx, err)
+	}()
+
+	err = eir.db.Raw(queryGetSeatsByInstanceCode, code).Scan(&output).Error
+	if err != nil {
+		return nil, err
+	}
+
+	return output, nil
+}
+
+func (eir *eventInstanceRepository) UpdateBookedSeatsByCode(ctx context.Context, code string, event *models.GetSeatsAndNamesByInstanceCodeDBOutput) (err error) {
+	defer func() {
+		LogRepository(ctx, err)
+	}()
+
+	return eir.db.Model(&models.EventInstance{}).Where("code = ?", code).Update("booked_seats", event.BookedSeats).Error
 }

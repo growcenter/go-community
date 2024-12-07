@@ -715,6 +715,11 @@ const docTemplate = `{
         },
         "/v1/users/{communityId}": {
             "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
                 "description": "Get all information needed about user by community id",
                 "consumes": [
                     "application/json"
@@ -725,15 +730,8 @@ const docTemplate = `{
                 "tags": [
                     "users"
                 ],
-                "summary": "Get User By Community ID",
+                "summary": "Get User By Access Token",
                 "parameters": [
-                    {
-                        "type": "integer",
-                        "description": "object that needs to be added",
-                        "name": "communityId",
-                        "in": "path",
-                        "required": true
-                    },
                     {
                         "type": "string",
                         "description": "mandatory header to access endpoint",
@@ -1018,6 +1016,88 @@ const docTemplate = `{
                     }
                 }
             }
+        },
+        "/v2/events/registers": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Register user to particular event and instances",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "events"
+                ],
+                "summary": "Register User to Event",
+                "parameters": [
+                    {
+                        "description": "User object that needs to be added",
+                        "name": "user",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/models.CreateEventRegistrationRecordRequest"
+                        }
+                    },
+                    {
+                        "type": "string",
+                        "description": "mandatory header to access endpoint",
+                        "name": "X-API-Key",
+                        "in": "header",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Response indicates that the request succeeded and the resources has been fetched and transmitted in the message body",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/models.CreateEventRegistrationRecordResponse"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "registrants": {
+                                            "$ref": "#/definitions/models.CreateOtherEventRegistrationRecordRequest"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/models.ErrorResponse"
+                        }
+                    },
+                    "422": {
+                        "description": "Validation error. This can happen if there is an error validation while create account",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/models.ErrorValidationResponse"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "errors": {
+                                            "$ref": "#/definitions/validator.ErrorValidateResponse"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                }
+            }
         }
     },
     "definitions": {
@@ -1050,6 +1130,100 @@ const docTemplate = `{
                 },
                 "user": {
                     "type": "boolean"
+                }
+            }
+        },
+        "models.CreateEventRegistrationRecordRequest": {
+            "type": "object",
+            "required": [
+                "eventCode",
+                "instanceCode",
+                "isUsingQR",
+                "registerAt",
+                "registrants"
+            ],
+            "properties": {
+                "communityId": {
+                    "type": "string"
+                },
+                "eventCode": {
+                    "type": "string",
+                    "maxLength": 7,
+                    "minLength": 7
+                },
+                "identifier": {
+                    "type": "string"
+                },
+                "instanceCode": {
+                    "type": "string",
+                    "maxLength": 15,
+                    "minLength": 15
+                },
+                "isUsingQR": {
+                    "type": "boolean"
+                },
+                "name": {
+                    "description": "IsInheritUser bool                                        ` + "`" + `json:\"isInheritUser\" validate:\"required\"` + "`" + `",
+                    "type": "string",
+                    "maxLength": 50,
+                    "minLength": 1,
+                    "example": "Professionals"
+                },
+                "registerAt": {
+                    "type": "string"
+                },
+                "registrants": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/models.CreateOtherEventRegistrationRecordRequest"
+                    }
+                }
+            }
+        },
+        "models.CreateEventRegistrationRecordResponse": {
+            "type": "object",
+            "properties": {
+                "communityId": {
+                    "type": "string"
+                },
+                "eventCode": {
+                    "type": "string"
+                },
+                "eventTitle": {
+                    "type": "string"
+                },
+                "identifier": {
+                    "type": "string"
+                },
+                "instanceCode": {
+                    "type": "string"
+                },
+                "instanceTitle": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "registerAt": {
+                    "type": "string"
+                },
+                "registrants": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/models.CreateOtherEventRegistrationRecordResponse"
+                    }
+                },
+                "registrationId": {
+                    "type": "string"
+                },
+                "status": {
+                    "type": "string"
+                },
+                "totalRegistrants": {
+                    "type": "integer"
+                },
+                "type": {
+                    "type": "string"
                 }
             }
         },
@@ -1253,10 +1427,7 @@ const docTemplate = `{
                 "title"
             ],
             "properties": {
-                "allowPersonalQr": {
-                    "type": "boolean"
-                },
-                "attendanceType": {
+                "checkType": {
                     "type": "string",
                     "enum": [
                         "check-in",
@@ -1280,9 +1451,6 @@ const docTemplate = `{
                 "isOnePerTicket": {
                     "type": "boolean"
                 },
-                "isRequired": {
-                    "type": "boolean"
-                },
                 "locationName": {
                     "type": "string"
                 },
@@ -1300,6 +1468,15 @@ const docTemplate = `{
                 "registerEndAt": {
                     "type": "string"
                 },
+                "registerFlow": {
+                    "type": "string",
+                    "enum": [
+                        "personal-qr",
+                        "event-qr",
+                        "both-qr",
+                        "none"
+                    ]
+                },
                 "registerStartAt": {
                     "type": "string"
                 },
@@ -1314,10 +1491,7 @@ const docTemplate = `{
         "models.CreateInstanceResponse": {
             "type": "object",
             "properties": {
-                "allowPersonalQr": {
-                    "type": "boolean"
-                },
-                "attendanceType": {
+                "checkType": {
                     "type": "string"
                 },
                 "description": {
@@ -1341,9 +1515,6 @@ const docTemplate = `{
                 "isOnePerTicket": {
                     "type": "boolean"
                 },
-                "isRequired": {
-                    "type": "boolean"
-                },
                 "locationName": {
                     "type": "string"
                 },
@@ -1354,6 +1525,9 @@ const docTemplate = `{
                     "type": "integer"
                 },
                 "registerEndAt": {
+                    "type": "string"
+                },
+                "registerFlow": {
                     "type": "string"
                 },
                 "registerStartAt": {
@@ -1368,6 +1542,34 @@ const docTemplate = `{
                 },
                 "totalSeats": {
                     "type": "integer"
+                },
+                "type": {
+                    "type": "string"
+                }
+            }
+        },
+        "models.CreateOtherEventRegistrationRecordRequest": {
+            "type": "object",
+            "required": [
+                "name"
+            ],
+            "properties": {
+                "name": {
+                    "type": "string"
+                }
+            }
+        },
+        "models.CreateOtherEventRegistrationRecordResponse": {
+            "type": "object",
+            "properties": {
+                "id": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "status": {
+                    "type": "string"
                 },
                 "type": {
                     "type": "string"
@@ -1988,12 +2190,6 @@ const docTemplate = `{
                     "type": "string",
                     "example": "PIOT 6 Lt. 6"
                 },
-                "allowPersonalQr": {
-                    "type": "boolean"
-                },
-                "attendanceType": {
-                    "type": "string"
-                },
                 "availabilityStatus": {
                     "type": "string",
                     "example": "available"
@@ -2001,6 +2197,9 @@ const docTemplate = `{
                 "bookedSeats": {
                     "type": "integer",
                     "example": 0
+                },
+                "checkType": {
+                    "type": "string"
                 },
                 "code": {
                     "type": "string",
@@ -2024,9 +2223,6 @@ const docTemplate = `{
                 "isOnePerTicket": {
                     "type": "boolean"
                 },
-                "isRequired": {
-                    "type": "boolean"
-                },
                 "locationType": {
                     "type": "string",
                     "example": "offline"
@@ -2037,6 +2233,9 @@ const docTemplate = `{
                 "registerEndAt": {
                     "type": "string",
                     "example": ""
+                },
+                "registerFlow": {
+                    "type": "string"
                 },
                 "registerStartAt": {
                     "type": "string",

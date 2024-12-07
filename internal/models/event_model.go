@@ -144,7 +144,6 @@ type (
 		EventRegisterEndAt   time.Time `json:"event_register_end_at"`
 		InstanceTotalSeats   int
 		TotalRemainingSeats  int            `json:"total_remaining_seats"`
-		InstanceIsRequired   pq.BoolArray   `gorm:"type:boolean[]"`
 		EventStatus          string         `json:"event_status"`
 		InstancesData        pq.StringArray `gorm:"type:text[]"`
 	}
@@ -217,11 +216,12 @@ type (
 		EventStatus             string
 		InstanceTotalSeats      int
 		TotalRemainingSeats     int            `json:"total_remaining_seats"`
-		InstanceIsRequired      pq.BoolArray   `gorm:"type:boolean[]"`
+		InstanceRegisterFlow    pq.StringArray `gorm:"type:text[]"`
 		InstancesData           pq.StringArray `gorm:"type:text[]"`
 	}
 	GetInstanceByEventCodeDBOutput struct {
 		InstanceCode              string    `json:"instance_code"`
+		InstanceEventCode         string    `json:"instance_event_code"`
 		InstanceTitle             string    `json:"instance_title"`
 		InstanceDescription       string    `json:"instance_description"`
 		InstanceStartAt           time.Time `json:"instance_start_at"`
@@ -231,11 +231,10 @@ type (
 		InstanceLocationType      string    `json:"instance_location"`
 		InstanceLocationName      string    `json:"instance_location_name"`
 		InstanceMaxPerTransaction int       `json:"instance_max_register"`
-		InstanceIsRequired        bool      `json:"instance_is_required"`
 		InstanceIsOnePerAccount   bool      `json:"instance_is_one_per_account"`
 		InstanceIsOnePerTicket    bool      `json:"instance_is_one_per_ticket"`
-		InstanceAllowPersonalQr   bool      `json:"allow_personal_qr"`
-		InstanceAttendanceType    string    `json:"attendance_type"`
+		InstanceRegisterFlow      string    `json:"instance_register_flow"`
+		InstanceCheckType         string    `json:"instance_check_type"`
 		InstanceTotalSeats        int       `json:"instance_total_seats"`
 		InstanceBookedSeats       int       `json:"instance_booked_seats"`
 		InstanceScannedSeats      int       `json:"instance_scanned_seats"`
@@ -280,11 +279,10 @@ type (
 		LocationType        string    `json:"locationType" example:"offline"`
 		LocationName        string    `json:"LocationName" example:"PIOT 6 Lt. 6"`
 		MaxPerTransaction   int       `json:"maxPerTransaction,omitempty"`
-		IsRequired          bool      `json:"isRequired"`
 		IsOnePerAccount     bool      `json:"isOnePerAccount"`
 		IsOnePerTicket      bool      `json:"isOnePerTicket"`
-		AllowPersonalQr     bool      `json:"allowPersonalQr"`
-		AttendanceType      string    `json:"attendanceType"`
+		RegisterFlow        string    `json:"registerFlow"`
+		CheckType           string    `json:"checkType"`
 		TotalSeats          int       `json:"totalSeats" example:"0"`
 		BookedSeats         int       `json:"bookedSeats" example:"0"`
 		TotalRemainingSeats int       `json:"totalRemainingSeats" example:"0"`
@@ -319,46 +317,55 @@ var (
 
 func DefineAvailabilityStatus(event interface{}) (string, error) {
 	var totalRemainingSeats int
-	var countInstanceIsRequired int
+	var countInstanceRegisterFlows int
 	var totalSeats int
-	var eventAllowedFor string
+	//var eventAllowedFor string
 	var eventRegisterStartAt, eventRegisterEndAt time.Time
-	var instanceIsRequired []bool
+	var instanceRegisterFlows []string
 
 	// Type assertion to extract fields from the concrete type
 	switch e := event.(type) {
 	case GetAllEventsDBOutput:
 		totalRemainingSeats = e.TotalRemainingSeats
 		totalSeats = e.InstanceTotalSeats
-		eventAllowedFor = e.EventAllowedFor
+		//eventAllowedFor = e.EventAllowedFor
 		eventRegisterStartAt = e.EventRegisterStartAt
 		eventRegisterEndAt = e.EventRegisterEndAt
-
 	case *GetEventByCodeDBOutput:
 		totalRemainingSeats = e.TotalRemainingSeats
 		totalSeats = e.InstanceTotalSeats
-		instanceIsRequired = common.GetBooleanArrayFromStringArray(e.InstancesData)
-		countInstanceIsRequired = common.CountTrue(instanceIsRequired)
-		eventAllowedFor = e.EventAllowedFor
+		instanceRegisterFlows = GetRegisterFlowsFromStringArray(e.InstancesData)
+		countInstanceRegisterFlows = CountTotalRegisterFlows(instanceRegisterFlows)
+		//eventAllowedFor = e.EventAllowedFor
 		eventRegisterStartAt = e.EventRegisterStartAt
 		eventRegisterEndAt = e.EventRegisterEndAt
 	case GetInstanceByEventCodeDBOutput:
 		totalRemainingSeats = e.TotalRemainingSeats
 		totalSeats = e.InstanceTotalSeats
-		countInstanceIsRequired = common.BoolToInt(e.InstanceIsRequired)
+		countInstanceRegisterFlows = RegisterFlowToCount(e.InstanceRegisterFlow)
 		eventRegisterStartAt = e.InstanceRegisterStartAt
 		eventRegisterEndAt = e.InstanceRegisterEndAt
-		eventAllowedFor = e.EventAllowedFor
-		instanceIsRequired = []bool{e.InstanceIsRequired}
+		//eventAllowedFor = e.EventAllowedFor
+		instanceRegisterFlows = []string{e.InstanceRegisterFlow}
+	case *GetInstanceByCodeDBOutput:
+		totalRemainingSeats = e.TotalRemainingSeats
+		totalSeats = e.InstanceTotalSeats
+		countInstanceRegisterFlows = RegisterFlowToCount(e.InstanceRegisterFlow)
+		eventRegisterStartAt = e.InstanceRegisterStartAt
+		eventRegisterEndAt = e.InstanceRegisterEndAt
+		//eventAllowedFor = "none"
+		instanceRegisterFlows = []string{e.InstanceRegisterFlow}
 	default:
 		// Return a default or error if the type is not recognized
 		return "", ErrorInvalidInput
 	}
 
 	switch {
-	case totalRemainingSeats <= 0 && countInstanceIsRequired < len(instanceIsRequired):
+	case totalRemainingSeats <= 0 && countInstanceRegisterFlows < len(instanceRegisterFlows):
 		return MapAvailabilityStatus[AVAILABILITY_STATUS_AVAILABLE], nil
-	case totalRemainingSeats <= 0 && countInstanceIsRequired == len(instanceIsRequired) && eventAllowedFor != "private" && totalSeats > 0:
+	//case totalRemainingSeats <= 0 && countInstanceRegisterFlows == len(instanceRegisterFlows) && eventAllowedFor != "private" && totalSeats > 0:
+	//	return MapAvailabilityStatus[AVAILABILITY_STATUS_FULL], nil
+	case totalRemainingSeats <= 0 && countInstanceRegisterFlows == len(instanceRegisterFlows) && totalSeats > 0:
 		return MapAvailabilityStatus[AVAILABILITY_STATUS_FULL], nil
 	case common.Now().Before(eventRegisterStartAt.In(common.GetLocation())):
 		return MapAvailabilityStatus[AVAILABILITY_STATUS_SOON], nil

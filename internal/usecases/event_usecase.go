@@ -163,23 +163,23 @@ func (eu *eventUsecase) Create(ctx context.Context, request models.CreateEventRe
 			return nil, models.ErrorStartDateLater
 		}
 
-		if instanceRequest.IsRequired {
+		if instanceRequest.RegisterFlow != models.MapRegisterFlow[models.REGISTER_FLOW_NONE] {
 			if instanceRequest.MaxPerTransaction == 0 {
-				if request.IsRecurring {
+				if request.IsRecurring && instanceRequest.IsOnePerTicket {
 					instanceRequest.MaxPerTransaction = 1
 				}
 				return nil, models.ErrorMaxPerTrxIsZero
 			}
 
-			if instanceRequest.AttendanceType == "" {
+			if instanceRequest.CheckType == "" {
 				return nil, models.ErrorAttendanceTypeWhenRequired
 			}
 		} else {
 			instanceRequest.IsOnePerAccount = false
 			instanceRequest.IsOnePerTicket = false
-			instanceRequest.AllowPersonalQr = false
+			instanceRequest.RegisterFlow = models.MapRegisterFlow[models.REGISTER_FLOW_NONE]
 			instanceRequest.MaxPerTransaction = 0
-			instanceRequest.AttendanceType = "none"
+			instanceRequest.CheckType = "none"
 			instanceRequest.TotalSeats = 0
 		}
 
@@ -195,11 +195,10 @@ func (eu *eventUsecase) Create(ctx context.Context, request models.CreateEventRe
 			LocationType:      instanceRequest.LocationType,
 			LocationName:      instanceRequest.LocationName,
 			MaxPerTransaction: instanceRequest.MaxPerTransaction,
-			IsRequired:        instanceRequest.IsRequired,
 			IsOnePerAccount:   instanceRequest.IsOnePerAccount,
 			IsOnePerTicket:    instanceRequest.IsOnePerTicket,
-			AllowPersonalQr:   instanceRequest.AllowPersonalQr,
-			AttendanceType:    instanceRequest.AttendanceType,
+			RegisterFlow:      instanceRequest.RegisterFlow,
+			CheckType:         instanceRequest.CheckType,
 			TotalSeats:        instanceRequest.TotalSeats,
 			Status:            models.MapStatus[models.STATUS_ACTIVE],
 		}
@@ -230,11 +229,10 @@ func (eu *eventUsecase) Create(ctx context.Context, request models.CreateEventRe
 			LocationType:      p.LocationType,
 			LocationName:      p.LocationName,
 			MaxPerTransaction: p.MaxPerTransaction,
-			IsRequired:        p.IsRequired,
 			IsOnePerTicket:    p.IsOnePerTicket,
 			IsOnePerAccount:   p.IsOnePerAccount,
-			AllowPersonalQr:   p.AllowPersonalQr,
-			AttendanceType:    p.AttendanceType,
+			RegisterFlow:      p.RegisterFlow,
+			CheckType:         p.CheckType,
 			TotalSeats:        p.TotalSeats,
 			Status:            p.Status,
 		}
@@ -340,10 +338,6 @@ func (eu *eventUsecase) GetByCode(ctx context.Context, code string, roles []stri
 	switch {
 	case code != event.EventCode:
 		return nil, models.ErrorEventNotValid
-	case common.Now().Before(event.EventRegisterStartAt.In(common.GetLocation())):
-		return nil, models.ErrorCannotRegisterYet
-	case common.Now().After(event.EventRegisterEndAt.In(common.GetLocation())):
-		return nil, models.ErrorRegistrationTimeDisabled
 	case availableStatus == models.MapAvailabilityStatus[models.AVAILABILITY_STATUS_UNAVAILABLE]:
 		return nil, models.ErrorEventNotAvailable
 	case availableStatus == models.MapAvailabilityStatus[models.AVAILABILITY_STATUS_FULL]:
@@ -380,11 +374,10 @@ func (eu *eventUsecase) GetByCode(ctx context.Context, code string, roles []stri
 			LocationType:        p.InstanceLocationType,
 			LocationName:        p.InstanceLocationName,
 			MaxPerTransaction:   p.InstanceMaxPerTransaction,
-			IsRequired:          p.InstanceIsRequired,
 			IsOnePerTicket:      p.InstanceIsOnePerTicket,
 			IsOnePerAccount:     p.InstanceIsOnePerAccount,
-			AllowPersonalQr:     p.InstanceAllowPersonalQr,
-			AttendanceType:      p.InstanceAttendanceType,
+			RegisterFlow:        p.InstanceRegisterFlow,
+			CheckType:           p.InstanceCheckType,
 			TotalSeats:          p.InstanceTotalSeats,
 			BookedSeats:         p.InstanceBookedSeats,
 			TotalRemainingSeats: p.TotalRemainingSeats,

@@ -26,6 +26,7 @@ func NewEventHandler(api *echo.Group, u *usecases.Usecases, c *config.Configurat
 	endpointUserAuth.Use(middleware.UserV2Middleware(c))
 	endpointUserAuth.GET("", handler.GetAll)
 	endpointUserAuth.GET("/:code", handler.GetByCode)
+	endpointUserAuth.GET("/registers", handler.Register)
 }
 
 // Create godoc
@@ -108,4 +109,37 @@ func (eh *EventHandler) GetByCode(ctx echo.Context) error {
 	}
 
 	return response.Success(ctx, http.StatusOK, events.ToResponse())
+}
+
+// Register godoc
+// @Summary Register User to Event
+// @Description Register user to particular event and instances
+// @Tags events
+// @Accept json
+// @Produce json
+// @Param user body models.CreateEventRegistrationRecordRequest true "User object that needs to be added"
+// @Param X-API-Key header string true "mandatory header to access endpoint"
+// @Security BearerAuth
+// @Success 201 {object} models.CreateEventRegistrationRecordResponse{registrants=models.CreateOtherEventRegistrationRecordRequest} "Response indicates that the request succeeded and the resources has been fetched and transmitted in the message body"
+// @Failure 400 {object} models.ErrorResponse "Bad Request"
+// @Failure 422 {object} models.ErrorValidationResponse{errors=validator.ErrorValidateResponse} "Validation error. This can happen if there is an error validation while create account"
+// @Router /v2/events/registers [post]
+func (eh *EventHandler) Register(ctx echo.Context) error {
+	var request models.CreateEventRegistrationRecordRequest
+	if err := ctx.Bind(&request); err != nil {
+		return response.Error(ctx, err)
+	}
+
+	if err := validator.Validate(request); err != nil {
+		return response.ErrorValidation(ctx, err)
+	}
+
+	value := models.GetValueFromToken(ctx)
+
+	register, err := eh.usecase.EventRegistrationRecord.Create(ctx.Request().Context(), &request, &value)
+	if err != nil {
+		return response.Error(ctx, err)
+	}
+
+	return response.Success(ctx, http.StatusCreated, register.ToResponse())
 }
