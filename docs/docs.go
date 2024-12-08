@@ -1138,7 +1138,6 @@ const docTemplate = `{
             "required": [
                 "eventCode",
                 "instanceCode",
-                "isUsingQR",
                 "registerAt",
                 "registrants"
             ],
@@ -1159,11 +1158,11 @@ const docTemplate = `{
                     "maxLength": 15,
                     "minLength": 15
                 },
-                "isUsingQR": {
+                "isPersonalQR": {
+                    "description": "IsInheritUser bool                                        ` + "`" + `json:\"isInheritUser\" validate:\"required\"` + "`" + `",
                     "type": "boolean"
                 },
                 "name": {
-                    "description": "IsInheritUser bool                                        ` + "`" + `json:\"isInheritUser\" validate:\"required\"` + "`" + `",
                     "type": "string",
                     "maxLength": 50,
                     "minLength": 1,

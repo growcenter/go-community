@@ -35,11 +35,11 @@ definitions:
         maxLength: 15
         minLength: 15
         type: string
-      isUsingQR:
-        type: boolean
-      name:
+      isPersonalQR:
         description: IsInheritUser bool                                        `json:"isInheritUser"
           validate:"required"`
+        type: boolean
+      name:
         example: Professionals
         maxLength: 50
         minLength: 1
@@ -53,7 +53,6 @@ definitions:
     required:
     - eventCode
     - instanceCode
-    - isUsingQR
     - registerAt
     - registrants
     type: object

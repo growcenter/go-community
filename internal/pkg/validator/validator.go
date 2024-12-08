@@ -26,6 +26,7 @@ func init() {
 	registeryyyymmddFormat()
 	registerCommunityId()
 	registerEmailOrPhoneField()
+	registerNameIdentifierCommunityIdFields()
 }
 
 func Validate(request interface{}) error {

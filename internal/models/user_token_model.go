@@ -80,11 +80,31 @@ type TokenValues struct {
 	Status      string   `json:"status"`
 }
 
-func GetValueFromToken(ctx echo.Context) TokenValues {
-	return TokenValues{
-		CommunityId: ctx.Get("communityId").(string),
-		UserTypes:   ctx.Get("userTypes").([]string),
-		Roles:       ctx.Get("roles").([]string),
-		Status:      ctx.Get("status").(string),
+func GetValueFromToken(ctx echo.Context) (TokenValues, error) {
+	communityId, ok := ctx.Get("communityId").(string)
+	if !ok {
+		return TokenValues{}, echo.ErrInternalServerError
 	}
+
+	userTypes, ok := ctx.Get("userTypes").([]string)
+	if !ok {
+		return TokenValues{}, echo.ErrInternalServerError
+	}
+
+	roles, ok := ctx.Get("roles").([]string)
+	if !ok {
+		return TokenValues{}, echo.ErrInternalServerError
+	}
+
+	status, ok := ctx.Get("status").(string)
+	if !ok {
+		return TokenValues{}, echo.ErrInternalServerError
+	}
+
+	return TokenValues{
+		CommunityId: communityId,
+		UserTypes:   userTypes,
+		Roles:       roles,
+		Status:      status,
+	}, nil
 }

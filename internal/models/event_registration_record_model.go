@@ -44,8 +44,8 @@ func (erer *CreateEventRegistrationRecordResponse) ToResponse() *CreateEventRegi
 
 type (
 	CreateEventRegistrationRecordRequest struct {
-		IsUsingQR bool `json:"isUsingQR" validate:"required"`
 		//IsInheritUser bool                                        `json:"isInheritUser" validate:"required"`
+		IsPersonalQR bool                                        `json:"isPersonalQR"`
 		Name         string                                      `json:"name" validate:"omitempty,min=1,max=50,nameIdentifierCommunityIdField" example:"Professionals"`
 		Identifier   string                                      `json:"identifier" validate:"omitempty,emailPhoneFormat"`
 		CommunityId  string                                      `json:"communityId" validate:"omitempty,communityId"`
@@ -70,7 +70,7 @@ type (
 		InstanceTitle    string                                       `json:"instanceTitle"`
 		TotalRegistrants int                                          `json:"totalRegistrants"`
 		RegisterAt       time.Time                                    `json:"registerAt"`
-		Registrants      []CreateOtherEventRegistrationRecordResponse `json:"registrants"`
+		Registrants      []CreateOtherEventRegistrationRecordResponse `json:"registrants,omitempty"`
 	}
 	CreateOtherEventRegistrationRecordResponse struct {
 		Type   string    `json:"type"`

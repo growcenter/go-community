@@ -38,6 +38,7 @@ var (
 	ErrorAlreadyRegistered           = errors.New("your main or other register data already registered for this event")
 	ErrorIdentifierCommunityIdEmpty  = errors.New("at least should filled either identifier or community id")
 	ErrorQRForMoreThanOneRegister    = errors.New("your personal QR cannot be used for more than one registration")
+	ErrorCannotUsePersonalQR         = errors.New("you cannot register this event by your personal qr. To register, please register manually")
 
 	// Google Error
 	ErrorFetchGoogle = errors.New("error while retrieving user from google")
@@ -328,7 +329,12 @@ func ErrorMapping(err error) ErrorResponse {
 			Status:  "ALREADY_REGISTERED",
 			Message: err.Error(),
 		}
-
+	case ErrorCannotUsePersonalQR:
+		return ErrorResponse{
+			Code:    http.StatusForbidden,
+			Status:  "FORBIDDEN_REGISTRATION",
+			Message: err.Error(),
+		}
 	default:
 		return ErrorResponse{
 			Code:    http.StatusInternalServerError,

@@ -26,7 +26,7 @@ func NewEventHandler(api *echo.Group, u *usecases.Usecases, c *config.Configurat
 	endpointUserAuth.Use(middleware.UserV2Middleware(c))
 	endpointUserAuth.GET("", handler.GetAll)
 	endpointUserAuth.GET("/:code", handler.GetByCode)
-	endpointUserAuth.GET("/registers", handler.Register)
+	endpointUserAuth.POST("/registers", handler.Register)
 }
 
 // Create godoc
@@ -134,9 +134,12 @@ func (eh *EventHandler) Register(ctx echo.Context) error {
 		return response.ErrorValidation(ctx, err)
 	}
 
-	value := models.GetValueFromToken(ctx)
+	tokenValue, err := models.GetValueFromToken(ctx)
+	if err != nil {
+		return response.Error(ctx, err)
+	}
 
-	register, err := eh.usecase.EventRegistrationRecord.Create(ctx.Request().Context(), &request, &value)
+	register, err := eh.usecase.EventRegistrationRecord.Create(ctx.Request().Context(), &request, &tokenValue)
 	if err != nil {
 		return response.Error(ctx, err)
 	}

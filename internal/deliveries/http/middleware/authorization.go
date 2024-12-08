@@ -283,6 +283,7 @@ func UserV2Middleware(config *config.Configuration) echo.MiddlewareFunc {
 			ctx.Set("communityId", claims.CommunityId)
 			ctx.Set("userTypes", claims.UserTypes)
 			ctx.Set("roles", claims.Roles)
+			ctx.Set("status", claims.Status)
 			return next(ctx)
 		}
 	}
