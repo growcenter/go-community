@@ -24,6 +24,9 @@ func init() {
 	registerPhoneFormat()
 	registerEmailPhoneFormat()
 	registeryyyymmddFormat()
+	registerCommunityId()
+	registerEmailOrPhoneField()
+	registerNameIdentifierCommunityIdFields()
 }
 
 func Validate(request interface{}) error {
@@ -157,5 +160,50 @@ func registeryyyymmddFormat() {
 
 		_, err := time.Parse(layout, date)
 		return err == nil // Returns true if date is valid
+	})
+}
+
+func registerCommunityId() {
+	valid.RegisterValidation("communityId", func(fl v10.FieldLevel) bool {
+		communityId := fl.Field().String()
+
+		return LuhnAccountNumber(communityId) // Returns true if date is valid
+	})
+}
+
+func registerEmailOrPhoneField() {
+	valid.RegisterValidation("emailOrPhoneField", func(fl v10.FieldLevel) bool {
+		email := fl.Parent().FieldByName("Email").String()
+		phone := fl.Parent().FieldByName("PhoneNumber").String()
+
+		if (email != "" && phone == "") || (email == "" && phone != "") {
+			return true
+		}
+
+		// If neither is filled, it's invalid
+		if email == "" && phone == "" {
+			return false
+		}
+
+		return true
+	})
+}
+
+func registerNameIdentifierCommunityIdFields() {
+	valid.RegisterValidation("nameIdentifierCommunityIdField", func(fl v10.FieldLevel) bool {
+		name := fl.Parent().FieldByName("Name").String()
+		identifier := fl.Parent().FieldByName("Identifier").String()
+		communityId := fl.Parent().FieldByName("CommunityId").String()
+
+		if (communityId != "" && name == "" && identifier == "") || (communityId == "" && name != "" && identifier != "") {
+			return true
+		}
+
+		// If neither is filled, it's invalid
+		if (name == "" && identifier == "" && communityId == "") || (name != "" && identifier == "" && communityId == "") || (name == "" && identifier != "" && communityId == "") {
+			return false
+		}
+
+		return true
 	})
 }
