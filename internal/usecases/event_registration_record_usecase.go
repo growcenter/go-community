@@ -3,7 +3,6 @@ package usecases
 import (
 	"context"
 	"database/sql"
-	"fmt"
 	"github.com/google/uuid"
 	"go-community/internal/common"
 	"go-community/internal/models"
@@ -133,7 +132,7 @@ func (erru *eventRegistrationRecordUsecase) createAtomic(ctx context.Context, re
 		registrantRes := make([]models.CreateOtherEventRegistrationRecordResponse, len(register))
 		for i, p := range register {
 			registrantRes[i] = models.CreateOtherEventRegistrationRecordResponse{
-				Type:   models.TYPE_EVENT_REGISTRATION,
+				Type:   models.TYPE_EVENT_REGISTRATION_RECORD,
 				ID:     p.ID,
 				Name:   p.Name,
 				Status: p.Status,
@@ -141,7 +140,7 @@ func (erru *eventRegistrationRecordUsecase) createAtomic(ctx context.Context, re
 		}
 
 		res = &models.CreateEventRegistrationRecordResponse{
-			Type:             models.TYPE_EVENT_REGISTRATION,
+			Type:             models.TYPE_EVENT_REGISTRATION_RECORD,
 			ID:               main.ID,
 			Status:           registerStatus,
 			Name:             main.Name,
@@ -171,7 +170,6 @@ func (erru *eventRegistrationRecordUsecase) validateCreate(ctx context.Context, 
 	}
 
 	if request.IsPersonalQR {
-		fmt.Println("sini")
 		if request.CommunityId == "" {
 			return models.ErrorInvalidInput
 		}
@@ -203,10 +201,6 @@ func (erru *eventRegistrationRecordUsecase) validateCreate(ctx context.Context, 
 	}
 
 	registerAt, _ := common.ParseStringToDatetime(time.RFC3339, request.RegisterAt, common.GetLocation())
-	fmt.Println("register : ", registerAt)
-	fmt.Println("start : ", event.EventRegisterStartAt.In(common.GetLocation()))
-	fmt.Println("end : ", event.EventRegisterEndAt.In(common.GetLocation()))
-
 	switch {
 	case event.EventCode == "" || event.EventStatus != models.MapStatus[models.STATUS_ACTIVE]:
 		return models.ErrorDataNotFound
@@ -239,7 +233,6 @@ func (erru *eventRegistrationRecordUsecase) validateCreate(ctx context.Context, 
 
 		isAllowedRoles := common.CheckOneDataInList(event.EventAllowedRoles, userExist.Roles)
 		isAllowedUsers := common.CheckOneDataInList(event.EventAllowedUsers, userExist.UserTypes)
-		fmt.Println(isAllowedUsers, isAllowedRoles)
 		if !isAllowedRoles && !isAllowedUsers {
 			return models.ErrorForbiddenRole
 		}
@@ -274,6 +267,8 @@ func (erru *eventRegistrationRecordUsecase) validateCreate(ctx context.Context, 
 	//	return models.ErrorEventNotAvailable
 	case registerAt.After(event.EventRegisterEndAt.In(common.GetLocation())):
 		return models.ErrorRegistrationTimeDisabled
+	case registerAt.After(instance.InstanceRegisterEndAt.In(common.GetLocation())):
+		return models.ErrorRegistrationTimeDisabled
 	case ((instance.TotalRemainingSeats - countTotalRegistrants) <= 0) && instance.InstanceRegisterFlow != models.MapRegisterFlow[models.REGISTER_FLOW_NONE] && event.EventIsRecurring == false && instance.InstanceTotalSeats > 0:
 		return models.ErrorRegisterQuotaNotAvailable
 	case instanceAvailableStatus == models.MapAvailabilityStatus[models.AVAILABILITY_STATUS_FULL]:
@@ -287,7 +282,6 @@ func (erru *eventRegistrationRecordUsecase) validateCreate(ctx context.Context, 
 	case registerAt.Before(event.EventRegisterStartAt.In(common.GetLocation())):
 		return models.ErrorCannotRegisterYet
 	case instance.InstanceMaxPerTransaction > 0 && countTotalRegistrants > instance.InstanceMaxPerTransaction:
-		fmt.Println("eror here")
 		return models.ErrorExceedMaxSeating
 	}
 
@@ -346,6 +340,7 @@ func (erru *eventRegistrationRecordUsecase) validateCreate(ctx context.Context, 
 	if err != nil {
 		return err
 	}
+
 	if instance.InstanceMaxPerTransaction > 0 && ((int(countRegistered) + countTotalRegistrants) > instance.InstanceMaxPerTransaction) {
 		return models.ErrorExceedMaxSeating
 	}

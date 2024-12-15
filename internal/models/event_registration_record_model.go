@@ -6,6 +6,10 @@ import (
 	"time"
 )
 
+var (
+	TYPE_EVENT_REGISTRATION_RECORD = "eventRegistrationRecord"
+)
+
 type EventRegistrationRecord struct {
 	ID                uuid.UUID
 	Name              string
@@ -26,7 +30,7 @@ type EventRegistrationRecord struct {
 
 func (erer *CreateEventRegistrationRecordResponse) ToResponse() *CreateEventRegistrationRecordResponse {
 	return &CreateEventRegistrationRecordResponse{
-		Type:             erer.Type,
+		Type:             TYPE_EVENT_REGISTRATION_RECORD,
 		ID:               erer.ID,
 		Status:           erer.Status,
 		Name:             erer.Name,
@@ -77,5 +81,14 @@ type (
 		ID     uuid.UUID `json:"id"`
 		Status string    `json:"status"`
 		Name   string    `json:"name"`
+	}
+)
+
+type (
+	UpdateEventRegistrationRecordParameter struct {
+		ID uuid.UUID `json:"id" validate:"required,uuid"`
+	}
+	UpdateEventRegistrationRecordRequest struct {
+		Action string `json:"action" validate:"required,oneof=verify cancel" example:"verify"`
 	}
 )

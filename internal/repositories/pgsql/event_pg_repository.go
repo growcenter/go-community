@@ -14,6 +14,7 @@ type EventRepository interface {
 	GetAllByRolesAndUserTypes(ctx context.Context, roles []string, uTypes []string, status string) (output []models.GetAllEventsDBOutput, err error)
 	CheckByCode(ctx context.Context, code string) (dataExist bool, err error)
 	GetOneByCode(ctx context.Context, code string) (output *models.GetEventByCodeDBOutput, err error)
+	GetRegistered(ctx context.Context, communityIdOrigin string) (output []models.GetAllRegisteredUserDBOutput, err error)
 }
 
 type eventRepository struct {
@@ -89,6 +90,19 @@ func (er *eventRepository) GetOneByCode(ctx context.Context, code string) (outpu
 	}()
 
 	err = er.db.Raw(queryGetEventInstancesByEventCode, code).Scan(&output).Error
+	if err != nil {
+		return nil, err
+	}
+
+	return output, nil
+}
+
+func (er *eventRepository) GetRegistered(ctx context.Context, communityIdOrigin string) (output []models.GetAllRegisteredUserDBOutput, err error) {
+	defer func() {
+		LogRepository(ctx, err)
+	}()
+
+	err = er.db.Raw(queryGetRegisteredUserByCommunityIdOrigin, communityIdOrigin).Scan(&output).Error
 	if err != nil {
 		return nil, err
 	}

@@ -2,6 +2,7 @@ package models
 
 import (
 	"database/sql"
+	"github.com/google/uuid"
 	"github.com/lib/pq"
 	"go-community/internal/common"
 	"time"
@@ -287,6 +288,79 @@ type (
 		BookedSeats         int       `json:"bookedSeats" example:"0"`
 		TotalRemainingSeats int       `json:"totalRemainingSeats" example:"0"`
 		AvailabilityStatus  string    `json:"availabilityStatus,omitempty" example:"available"`
+	}
+)
+
+type (
+	GetAllRegisteredUserDBOutput struct {
+		EventCode                      string
+		EventTitle                     string
+		EventDescription               string
+		EventTermsAndConditions        string
+		EventStartAt                   time.Time
+		EventEndAt                     time.Time
+		EventLocationType              string
+		EventLocationName              string
+		EventStatus                    string
+		InstanceCode                   string
+		InstanceTitle                  string
+		InstanceDescription            string
+		InstanceStartAt                time.Time
+		InstanceEndAt                  time.Time
+		InstanceLocationType           string
+		InstanceLocationName           string
+		InstanceStatus                 string
+		RegistrationRecordID           uuid.UUID
+		RegistrationRecordName         string
+		RegistrationRecordIdentifier   string
+		RegistrationRecordCommunityID  string
+		RegistrationRecordUpdatedBy    string
+		RegistrationRecordRegisteredAt time.Time
+		RegistrationRecordVerifiedAt   sql.NullTime
+		RegistrationRecordStatus       string
+	}
+	GetAllRegisteredUserParameter struct {
+		Search      string `query:"search"`
+		CommunityId string `json:"communityId" validate:"required,communityId"`
+	}
+	GetAllRegisteredUserResponse struct {
+		Type               string                                  `json:"type"`
+		Code               string                                  `json:"code"`
+		Title              string                                  `json:"title"`
+		Description        string                                  `json:"description"`
+		TermsAndConditions string                                  `json:"termsAndConditions"`
+		StartAt            time.Time                               `json:"startAt"`
+		EndAt              time.Time                               `json:"endAt"`
+		LocationType       string                                  `json:"locationType"`
+		LocationName       string                                  `json:"locationName"`
+		Status             string                                  `json:"status"`
+		Instances          []InstancesForRegisteredRecordsResponse `json:"instances"`
+	}
+	InstancesForRegisteredRecordsResponse struct {
+		Type            string                          `json:"type"`
+		Code            string                          `json:"code"`
+		Title           string                          `json:"title"`
+		Description     string                          `json:"description"`
+		InstanceStartAt time.Time                       `json:"instanceStartAt"`
+		InstanceEndAt   time.Time                       `json:"instanceEndAt"`
+		LocationType    string                          `json:"locationType"`
+		LocationName    string                          `json:"locationName"`
+		Status          string                          `json:"status"`
+		Registrants     []UserRegisteredRecordsResponse `json:"registrants"`
+	}
+	UserRegisteredRecordsResponse struct {
+		Type               string    `json:"type"`
+		ID                 uuid.UUID `json:"id"`
+		Name               string    `json:"name"`
+		Identifier         string    `json:"identifier,omitempty"`
+		CommunityId        string    `json:"communityId,omitempty"`
+		IdentifierOrigin   string    `json:"identifierOrigin,omitempty"`
+		CommunityIdOrigin  string    `json:"communityIdOrigin,omitempty"`
+		UpdatedBy          string    `json:"updatedBy,omitempty"`
+		RegisteredAt       time.Time `json:"registeredAt"`
+		VerifiedAt         string    `json:"verifiedAt,omitempty"`
+		IsPersonalQr       bool      `json:"isPersonalQr"`
+		RegistrationStatus string    `json:"registrationStatus"`
 	}
 )
 

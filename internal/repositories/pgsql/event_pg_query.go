@@ -107,4 +107,40 @@ var (
 		GROUP BY
 			e.code, e.title, COALESCE(e.topics, ARRAY[]::TEXT[]), COALESCE(e.description, ''), COALESCE(e.terms_and_conditions, ''), e.allowed_for, COALESCE(e.allowed_roles, ARRAY[]::TEXT[]), COALESCE(e.allowed_users, ARRAY[]::TEXT[]), COALESCE(e.allowed_campuses, ARRAY[]::TEXT[]), e.is_recurring, COALESCE(e.recurrence, ''), e.event_start_at, e.event_end_at, e.register_start_at, e.register_end_at, e.location_type, e.location_name, e.status, ei.total_seats
 `
+	queryGetRegisteredUserByCommunityIdOrigin = `
+	SELECT DISTINCT 
+		e.code AS event_code,
+		e.title AS event_title,
+		e.description AS event_description,
+		e.terms_and_conditions AS event_terms_and_conditions,
+		e.event_start_at AS event_start_at,
+		e.event_end_at AS event_end_at,
+		e.location_type AS event_location_type,
+		e.location_name AS event_location_name,
+		e.status AS event_status,
+		ei.code AS instance_code,
+		ei.title AS instance_title,
+		ei.description AS instance_description,
+		ei.instance_start_at AS instance_start_at,
+		ei.instance_end_at AS instance_end_at,
+		ei.location_type AS instance_location_type,
+		ei.location_name AS instance_location_name,
+		ei.status AS instance_status,
+		rr.id AS registration_record_id,
+		rr.name AS registration_record_name,
+		coalesce(rr.identifier, '') AS registration_record_identifier,
+		coalesce(rr.community_id, '') AS registration_record_community_id,
+		coalesce(rr.updated_by, '') AS registration_record_updated_by,
+		rr.registered_at AS registration_record_registered_at,
+		rr.verified_at as registration_record_verified_at,
+		rr.status AS registration_record_status
+	FROM
+		events e
+		JOIN
+			event_instances ei ON e.code = ei.event_code
+		JOIN
+			event_registration_records rr ON rr.instance_code = ei.code
+	WHERE
+		rr.community_id_origin = ?
+`
 )

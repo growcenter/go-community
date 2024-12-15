@@ -19,6 +19,7 @@ type EventUsecase interface {
 	Create(ctx context.Context, request models.CreateEventRequest) (response *models.CreateEventResponse, err error)
 	GetAll(ctx context.Context, roles []string) (responses *[]models.GetAllEventsResponse, err error)
 	GetByCode(ctx context.Context, code string) (response *models.GetEventByCodeResponse, err error)
+	GetRegistered(ctx context.Context, communityIdOrigin string) (eventRegistrations []models.GetAllRegisteredUserResponse, err error)
 }
 
 type eventUsecase struct {
@@ -309,6 +310,7 @@ func (eu *eventUsecase) GetByCode(ctx context.Context, code string, roles []stri
 	defer func() {
 		LogService(ctx, err)
 	}()
+
 	event, err := eu.r.Event.GetOneByCode(ctx, code)
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
@@ -407,4 +409,98 @@ func (eu *eventUsecase) GetByCode(ctx context.Context, code string, roles []stri
 		AvailabilityStatus: availableStatus,
 		Instances:          instancesRes,
 	}, nil
+}
+
+func (eu *eventUsecase) GetRegistered(ctx context.Context, communityIdOrigin string) (eventRegistrations []models.GetAllRegisteredUserResponse, err error) {
+	defer func() {
+		LogService(ctx, err)
+	}()
+
+	output, err := eu.r.Event.GetRegistered(ctx, communityIdOrigin)
+	if err != nil {
+		return nil, err
+	}
+
+	events := []models.GetAllRegisteredUserResponse{}
+	for _, r := range output {
+		e := models.GetAllRegisteredUserResponse{
+			Type:               models.TYPE_EVENT,
+			Code:               r.EventCode,
+			Title:              r.EventTitle,
+			Description:        r.EventDescription,
+			TermsAndConditions: r.EventTermsAndConditions,
+			StartAt:            r.EventStartAt,
+			EndAt:              r.EventEndAt,
+			LocationType:       r.EventLocationType,
+			LocationName:       r.EventLocationName,
+			Status:             r.EventStatus,
+		}
+
+		ei := models.InstancesForRegisteredRecordsResponse{
+			Type:            models.TYPE_EVENT_INSTANCE,
+			Code:            r.InstanceCode,
+			Title:           r.InstanceTitle,
+			Description:     r.InstanceDescription,
+			InstanceStartAt: r.InstanceStartAt,
+			InstanceEndAt:   r.InstanceEndAt,
+			LocationType:    r.InstanceLocationType,
+			LocationName:    r.InstanceLocationName,
+			Status:          r.InstanceStatus,
+		}
+
+		var isPersonalQr bool
+		if r.RegistrationRecordUpdatedBy == "user" {
+			isPersonalQr = true
+		}
+
+		var verifiedAt string
+		if !r.RegistrationRecordVerifiedAt.Time.IsZero() {
+			verifiedAt = common.FormatDatetimeToString(r.RegistrationRecordVerifiedAt.Time, time.RFC3339)
+		}
+
+		rr := models.UserRegisteredRecordsResponse{
+			Type:               models.TYPE_EVENT_REGISTRATION_RECORD,
+			ID:                 r.RegistrationRecordID,
+			Name:               r.RegistrationRecordName,
+			Identifier:         r.RegistrationRecordIdentifier,
+			CommunityId:        r.RegistrationRecordCommunityID,
+			UpdatedBy:          r.RegistrationRecordUpdatedBy,
+			RegisteredAt:       r.RegistrationRecordRegisteredAt,
+			IsPersonalQr:       isPersonalQr,
+			VerifiedAt:         verifiedAt,
+			RegistrationStatus: r.RegistrationRecordStatus,
+		}
+
+		eventExist := false
+		for j := range events {
+			if events[j].Code == e.Code {
+				instanceExist := false
+				for k := range events[j].Instances {
+					if events[j].Instances[k].Code == ei.Code {
+						// Append registration record to the existing instance
+						events[j].Instances[k].Registrants = append(events[j].Instances[k].Registrants, rr)
+						instanceExist = true
+						break
+					}
+				}
+
+				// If instance doesn't exist, add it and include the registration
+				if !instanceExist {
+					ei.Registrants = append(ei.Registrants, rr)
+					events[j].Instances = append(events[j].Instances, ei)
+				}
+
+				eventExist = true
+				break
+			}
+		}
+
+		if !eventExist {
+			ei.Registrants = append(ei.Registrants, rr)
+			e.Instances = append(e.Instances, ei)
+			events = append(events, e)
+		}
+	}
+
+	return events, nil
 }

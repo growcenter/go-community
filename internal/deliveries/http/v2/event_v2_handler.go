@@ -1,6 +1,7 @@
 package v2
 
 import (
+	"fmt"
 	"github.com/labstack/echo/v4"
 	"go-community/internal/config"
 	"go-community/internal/deliveries/http/common/response"
@@ -27,6 +28,8 @@ func NewEventHandler(api *echo.Group, u *usecases.Usecases, c *config.Configurat
 	endpointUserAuth.GET("", handler.GetAll)
 	endpointUserAuth.GET("/:code", handler.GetByCode)
 	endpointUserAuth.POST("/registers", handler.Register)
+	endpointUserAuth.GET("/registers", handler.GetAllRegistered)
+	endpointUserAuth.PATCH("/registers/:id/action", handler.Verify)
 }
 
 // Create godoc
@@ -145,4 +148,26 @@ func (eh *EventHandler) Register(ctx echo.Context) error {
 	}
 
 	return response.Success(ctx, http.StatusCreated, register.ToResponse())
+}
+
+func (eh *EventHandler) GetAllRegistered(ctx echo.Context) error {
+	parameter := models.GetAllRegisteredUserParameter{
+		CommunityId: ctx.Get("communityId").(string),
+	}
+
+	if err := validator.Validate(parameter); err != nil {
+		return response.ErrorValidation(ctx, err)
+	}
+
+	res, err := eh.usecase.Event.GetRegistered(ctx.Request().Context(), parameter.CommunityId)
+	if err != nil {
+		return response.Error(ctx, err)
+	}
+
+	return response.SuccessList(ctx, http.StatusOK, len(res), res)
+}
+
+func (eh *EventHandler) Verify(ctx echo.Context) error {
+	fmt.Println(ctx)
+	return nil
 }
