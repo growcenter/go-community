@@ -17,6 +17,7 @@ type EventRegistrationRecordRepository interface {
 	CheckByIdentifier(ctx context.Context, identifier string) (isExist bool, err error)
 	CheckByName(ctx context.Context, name string) (isExist bool, err error)
 	CheckByCommunityId(ctx context.Context, communityId string) (isExist bool, err error)
+	Update(ctx context.Context, eventRegistrationRecord models.EventRegistrationRecord) (err error)
 }
 
 type eventRegistrationRecordRepository struct {
@@ -131,4 +132,12 @@ func (errr *eventRegistrationRecordRepository) CheckByCommunityId(ctx context.Co
 	}
 
 	return isExist, nil
+}
+
+func (errr *eventRegistrationRecordRepository) Update(ctx context.Context, eventRegistrationRecord models.EventRegistrationRecord) (err error) {
+	defer func() {
+		LogRepository(ctx, err)
+	}()
+
+	return errr.db.Save(&eventRegistrationRecord).Error
 }

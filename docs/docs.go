@@ -15,9 +15,9 @@ const docTemplate = `{
     "host": "{{.Host}}",
     "basePath": "{{.BasePath}}",
     "paths": {
-        "/v1/campuses": {
+        "/v2/campuses": {
             "get": {
-                "description": "Get All Roles",
+                "description": "Get Campuses from Config",
                 "consumes": [
                     "application/json"
                 ],
@@ -25,9 +25,9 @@ const docTemplate = `{
                     "application/json"
                 ],
                 "tags": [
-                    "roles"
+                    "config"
                 ],
-                "summary": "Get All Roles",
+                "summary": "Get Campuses from Config",
                 "parameters": [
                     {
                         "type": "string",
@@ -51,7 +51,7 @@ const docTemplate = `{
                                         "data": {
                                             "type": "array",
                                             "items": {
-                                                "$ref": "#/definitions/models.RoleResponse"
+                                                "$ref": "#/definitions/models.CampusesResponse"
                                             }
                                         }
                                     }
@@ -86,7 +86,7 @@ const docTemplate = `{
                 }
             }
         },
-        "/v1/departments": {
+        "/v2/departments": {
             "get": {
                 "description": "Get Departments from Config",
                 "consumes": [
@@ -128,786 +128,6 @@ const docTemplate = `{
                                     }
                                 }
                             ]
-                        }
-                    },
-                    "400": {
-                        "description": "Bad Request",
-                        "schema": {
-                            "$ref": "#/definitions/models.ErrorResponse"
-                        }
-                    },
-                    "422": {
-                        "description": "Validation error. This can happen if there is an error validation while create account",
-                        "schema": {
-                            "allOf": [
-                                {
-                                    "$ref": "#/definitions/models.ErrorValidationResponse"
-                                },
-                                {
-                                    "type": "object",
-                                    "properties": {
-                                        "errors": {
-                                            "$ref": "#/definitions/validator.ErrorValidateResponse"
-                                        }
-                                    }
-                                }
-                            ]
-                        }
-                    }
-                }
-            }
-        },
-        "/v1/events/registers": {
-            "get": {
-                "security": [
-                    {
-                        "BearerAuth": []
-                    }
-                ],
-                "description": "Get All User's Registered Event",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "events"
-                ],
-                "summary": "Get All User's Registered Event",
-                "parameters": [
-                    {
-                        "type": "string",
-                        "description": "mandatory header to access endpoint",
-                        "name": "X-API-Key",
-                        "in": "header",
-                        "required": true
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "Response indicates that the request succeeded and the resources has been fetched and transmitted in the message body",
-                        "schema": {
-                            "allOf": [
-                                {
-                                    "$ref": "#/definitions/models.GetAllRegisteredUserResponse"
-                                },
-                                {
-                                    "type": "object",
-                                    "properties": {
-                                        "instances": {
-                                            "type": "array",
-                                            "items": {
-                                                "$ref": "#/definitions/models.InstancesForRegisteredRecordsResponse"
-                                            }
-                                        }
-                                    }
-                                }
-                            ]
-                        }
-                    },
-                    "400": {
-                        "description": "Bad Request",
-                        "schema": {
-                            "$ref": "#/definitions/models.ErrorResponse"
-                        }
-                    },
-                    "422": {
-                        "description": "Validation error. This can happen if there is an error validation while create account",
-                        "schema": {
-                            "allOf": [
-                                {
-                                    "$ref": "#/definitions/models.ErrorValidationResponse"
-                                },
-                                {
-                                    "type": "object",
-                                    "properties": {
-                                        "errors": {
-                                            "$ref": "#/definitions/validator.ErrorValidateResponse"
-                                        }
-                                    }
-                                }
-                            ]
-                        }
-                    }
-                }
-            }
-        },
-        "/v1/events/{code}": {
-            "get": {
-                "security": [
-                    {
-                        "BearerAuth": []
-                    }
-                ],
-                "description": "Get Event and Instances by Event Code",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "events"
-                ],
-                "summary": "Get Event by Event Code",
-                "parameters": [
-                    {
-                        "type": "integer",
-                        "description": "object that needs to be added",
-                        "name": "code",
-                        "in": "path",
-                        "required": true
-                    },
-                    {
-                        "type": "string",
-                        "description": "mandatory header to access endpoint",
-                        "name": "X-API-Key",
-                        "in": "header",
-                        "required": true
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "Response indicates that the request succeeded and the resources has been fetched and transmitted in the message body",
-                        "schema": {
-                            "allOf": [
-                                {
-                                    "$ref": "#/definitions/models.GetEventByCodeResponse"
-                                },
-                                {
-                                    "type": "object",
-                                    "properties": {
-                                        "instances": {
-                                            "type": "array",
-                                            "items": {
-                                                "$ref": "#/definitions/models.GetInstancesByEventCodeResponse"
-                                            }
-                                        }
-                                    }
-                                }
-                            ]
-                        }
-                    },
-                    "400": {
-                        "description": "Bad Request",
-                        "schema": {
-                            "$ref": "#/definitions/models.ErrorResponse"
-                        }
-                    },
-                    "422": {
-                        "description": "Validation error. This can happen if there is an error validation while create account",
-                        "schema": {
-                            "allOf": [
-                                {
-                                    "$ref": "#/definitions/models.ErrorValidationResponse"
-                                },
-                                {
-                                    "type": "object",
-                                    "properties": {
-                                        "errors": {
-                                            "$ref": "#/definitions/validator.ErrorValidateResponse"
-                                        }
-                                    }
-                                }
-                            ]
-                        }
-                    }
-                }
-            }
-        },
-        "/v1/tokens": {
-            "get": {
-                "description": "Generate both Access and Refresh Token",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "tokens"
-                ],
-                "summary": "Generate Tokens",
-                "parameters": [
-                    {
-                        "type": "string",
-                        "description": "object that needs to be added",
-                        "name": "Cookie",
-                        "in": "path",
-                        "required": true
-                    },
-                    {
-                        "type": "string",
-                        "description": "mandatory header to access endpoint",
-                        "name": "X-API-Key",
-                        "in": "header",
-                        "required": true
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "Response indicates that the request succeeded and the resources has been fetched and transmitted in the message body",
-                        "schema": {
-                            "allOf": [
-                                {
-                                    "$ref": "#/definitions/models.List"
-                                },
-                                {
-                                    "type": "object",
-                                    "properties": {
-                                        "data": {
-                                            "type": "array",
-                                            "items": {
-                                                "$ref": "#/definitions/models.TokensResponse"
-                                            }
-                                        }
-                                    }
-                                }
-                            ]
-                        }
-                    },
-                    "400": {
-                        "description": "Bad Request",
-                        "schema": {
-                            "$ref": "#/definitions/models.ErrorResponse"
-                        }
-                    },
-                    "422": {
-                        "description": "Validation error. This can happen if there is an error validation while create account",
-                        "schema": {
-                            "allOf": [
-                                {
-                                    "$ref": "#/definitions/models.ErrorValidationResponse"
-                                },
-                                {
-                                    "type": "object",
-                                    "properties": {
-                                        "errors": {
-                                            "$ref": "#/definitions/validator.ErrorValidateResponse"
-                                        }
-                                    }
-                                }
-                            ]
-                        }
-                    }
-                }
-            }
-        },
-        "/v1/users/check/{identifier}": {
-            "get": {
-                "description": "To check whether user is existed or not by email or phone number",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "users"
-                ],
-                "summary": "Check User Exist",
-                "parameters": [
-                    {
-                        "type": "string",
-                        "description": "object that needs to be added",
-                        "name": "identifier",
-                        "in": "path",
-                        "required": true
-                    },
-                    {
-                        "type": "string",
-                        "description": "mandatory header to access endpoint",
-                        "name": "X-API-Key",
-                        "in": "header",
-                        "required": true
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "Response indicates that the request succeeded and the resources has been fetched and transmitted in the message body",
-                        "schema": {
-                            "$ref": "#/definitions/models.CheckUserExistResponse"
-                        }
-                    },
-                    "400": {
-                        "description": "Bad Request",
-                        "schema": {
-                            "$ref": "#/definitions/models.ErrorResponse"
-                        }
-                    },
-                    "422": {
-                        "description": "Validation error. This can happen if there is an error validation while create account",
-                        "schema": {
-                            "allOf": [
-                                {
-                                    "$ref": "#/definitions/models.ErrorValidationResponse"
-                                },
-                                {
-                                    "type": "object",
-                                    "properties": {
-                                        "errors": {
-                                            "$ref": "#/definitions/validator.ErrorValidateResponse"
-                                        }
-                                    }
-                                }
-                            ]
-                        }
-                    }
-                }
-            }
-        },
-        "/v1/users/login": {
-            "post": {
-                "description": "Login for all type of users",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "users"
-                ],
-                "summary": "Login User",
-                "parameters": [
-                    {
-                        "description": "User object that needs to be added",
-                        "name": "user",
-                        "in": "body",
-                        "required": true,
-                        "schema": {
-                            "$ref": "#/definitions/models.LoginUserRequest"
-                        }
-                    },
-                    {
-                        "type": "string",
-                        "description": "mandatory header to access endpoint",
-                        "name": "X-API-Key",
-                        "in": "header",
-                        "required": true
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "Response indicates that the request succeeded and the resources has been fetched and transmitted in the message body",
-                        "schema": {
-                            "allOf": [
-                                {
-                                    "$ref": "#/definitions/models.LoginUserResponse"
-                                },
-                                {
-                                    "type": "object",
-                                    "properties": {
-                                        "tokens": {
-                                            "type": "array",
-                                            "items": {
-                                                "$ref": "#/definitions/models.TokensResponse"
-                                            }
-                                        }
-                                    }
-                                }
-                            ]
-                        }
-                    },
-                    "400": {
-                        "description": "Bad Request",
-                        "schema": {
-                            "$ref": "#/definitions/models.ErrorResponse"
-                        }
-                    },
-                    "422": {
-                        "description": "Validation error. This can happen if there is an error validation while create account",
-                        "schema": {
-                            "allOf": [
-                                {
-                                    "$ref": "#/definitions/models.ErrorValidationResponse"
-                                },
-                                {
-                                    "type": "object",
-                                    "properties": {
-                                        "errors": {
-                                            "$ref": "#/definitions/validator.ErrorValidateResponse"
-                                        }
-                                    }
-                                }
-                            ]
-                        }
-                    }
-                }
-            }
-        },
-        "/v1/users/logout": {
-            "put": {
-                "description": "Logout user for all kinds of user",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "users"
-                ],
-                "summary": "Logout User",
-                "parameters": [
-                    {
-                        "type": "string",
-                        "description": "mandatory header to access endpoint",
-                        "name": "X-API-Key",
-                        "in": "header",
-                        "required": true
-                    }
-                ],
-                "responses": {
-                    "204": {
-                        "description": "No Content"
-                    },
-                    "400": {
-                        "description": "Bad Request",
-                        "schema": {
-                            "$ref": "#/definitions/models.ErrorResponse"
-                        }
-                    },
-                    "422": {
-                        "description": "Validation error. This can happen if there is an error validation while create account",
-                        "schema": {
-                            "allOf": [
-                                {
-                                    "$ref": "#/definitions/models.ErrorValidationResponse"
-                                },
-                                {
-                                    "type": "object",
-                                    "properties": {
-                                        "errors": {
-                                            "$ref": "#/definitions/validator.ErrorValidateResponse"
-                                        }
-                                    }
-                                }
-                            ]
-                        }
-                    }
-                }
-            }
-        },
-        "/v1/users/types": {
-            "get": {
-                "description": "User Type is something like volunteer, lead or etc.",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "users"
-                ],
-                "summary": "Get All User Types",
-                "parameters": [
-                    {
-                        "type": "string",
-                        "description": "mandatory header to access endpoint",
-                        "name": "X-API-Key",
-                        "in": "header",
-                        "required": true
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "Response indicates that the request succeeded and the resources has been fetched and transmitted in the message body",
-                        "schema": {
-                            "allOf": [
-                                {
-                                    "$ref": "#/definitions/models.List"
-                                },
-                                {
-                                    "type": "object",
-                                    "properties": {
-                                        "data": {
-                                            "type": "array",
-                                            "items": {
-                                                "$ref": "#/definitions/models.UserTypeResponse"
-                                            }
-                                        }
-                                    }
-                                }
-                            ]
-                        }
-                    },
-                    "400": {
-                        "description": "Bad Request",
-                        "schema": {
-                            "$ref": "#/definitions/models.ErrorResponse"
-                        }
-                    },
-                    "422": {
-                        "description": "Validation error. This can happen if there is an error validation while create account",
-                        "schema": {
-                            "allOf": [
-                                {
-                                    "$ref": "#/definitions/models.ErrorValidationResponse"
-                                },
-                                {
-                                    "type": "object",
-                                    "properties": {
-                                        "errors": {
-                                            "$ref": "#/definitions/validator.ErrorValidateResponse"
-                                        }
-                                    }
-                                }
-                            ]
-                        }
-                    }
-                }
-            },
-            "post": {
-                "description": "User Type is something like volunteer, lead or etc.",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "users"
-                ],
-                "summary": "Create User Type",
-                "parameters": [
-                    {
-                        "description": "User object that needs to be added",
-                        "name": "user",
-                        "in": "body",
-                        "required": true,
-                        "schema": {
-                            "$ref": "#/definitions/models.CreateUserTypeRequest"
-                        }
-                    },
-                    {
-                        "type": "string",
-                        "description": "mandatory header to access endpoint",
-                        "name": "X-API-Key",
-                        "in": "header",
-                        "required": true
-                    }
-                ],
-                "responses": {
-                    "201": {
-                        "description": "Response indicates that the request succeeded and the resources has been fetched and transmitted in the message body",
-                        "schema": {
-                            "$ref": "#/definitions/models.UserTypeResponse"
-                        }
-                    },
-                    "400": {
-                        "description": "Bad Request",
-                        "schema": {
-                            "$ref": "#/definitions/models.ErrorResponse"
-                        }
-                    },
-                    "422": {
-                        "description": "Validation error. This can happen if there is an error validation while create account",
-                        "schema": {
-                            "allOf": [
-                                {
-                                    "$ref": "#/definitions/models.ErrorValidationResponse"
-                                },
-                                {
-                                    "type": "object",
-                                    "properties": {
-                                        "errors": {
-                                            "$ref": "#/definitions/validator.ErrorValidateResponse"
-                                        }
-                                    }
-                                }
-                            ]
-                        }
-                    }
-                }
-            }
-        },
-        "/v1/users/volunteer": {
-            "post": {
-                "description": "Create user for volunteer",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "users"
-                ],
-                "summary": "Create Volunteer User",
-                "parameters": [
-                    {
-                        "description": "User object that needs to be added",
-                        "name": "user",
-                        "in": "body",
-                        "required": true,
-                        "schema": {
-                            "$ref": "#/definitions/models.CreateVolunteerRequest"
-                        }
-                    },
-                    {
-                        "type": "string",
-                        "description": "mandatory header to access endpoint",
-                        "name": "X-API-Key",
-                        "in": "header",
-                        "required": true
-                    }
-                ],
-                "responses": {
-                    "201": {
-                        "description": "Response indicates that the request succeeded and the resources has been fetched and transmitted in the message body",
-                        "schema": {
-                            "$ref": "#/definitions/models.CreateVolunteerResponse"
-                        }
-                    },
-                    "400": {
-                        "description": "Bad Request",
-                        "schema": {
-                            "$ref": "#/definitions/models.ErrorResponse"
-                        }
-                    },
-                    "422": {
-                        "description": "Validation error. This can happen if there is an error validation while create account",
-                        "schema": {
-                            "allOf": [
-                                {
-                                    "$ref": "#/definitions/models.ErrorValidationResponse"
-                                },
-                                {
-                                    "type": "object",
-                                    "properties": {
-                                        "errors": {
-                                            "$ref": "#/definitions/validator.ErrorValidateResponse"
-                                        }
-                                    }
-                                }
-                            ]
-                        }
-                    }
-                }
-            }
-        },
-        "/v1/users/{communityId}": {
-            "get": {
-                "security": [
-                    {
-                        "BearerAuth": []
-                    }
-                ],
-                "description": "Get all information needed about user by community id",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "users"
-                ],
-                "summary": "Get User By Access Token",
-                "parameters": [
-                    {
-                        "type": "string",
-                        "description": "mandatory header to access endpoint",
-                        "name": "X-API-Key",
-                        "in": "header",
-                        "required": true
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "Response indicates that the request succeeded and the resources has been fetched and transmitted in the message body",
-                        "schema": {
-                            "allOf": [
-                                {
-                                    "$ref": "#/definitions/models.GetOneByCommunityIdResponse"
-                                },
-                                {
-                                    "type": "object",
-                                    "properties": {
-                                        "roles": {
-                                            "type": "array",
-                                            "items": {
-                                                "$ref": "#/definitions/models.RoleResponse"
-                                            }
-                                        }
-                                    }
-                                }
-                            ]
-                        }
-                    },
-                    "400": {
-                        "description": "Bad Request",
-                        "schema": {
-                            "$ref": "#/definitions/models.ErrorResponse"
-                        }
-                    },
-                    "422": {
-                        "description": "Validation error. This can happen if there is an error validation while create account",
-                        "schema": {
-                            "allOf": [
-                                {
-                                    "$ref": "#/definitions/models.ErrorValidationResponse"
-                                },
-                                {
-                                    "type": "object",
-                                    "properties": {
-                                        "errors": {
-                                            "$ref": "#/definitions/validator.ErrorValidateResponse"
-                                        }
-                                    }
-                                }
-                            ]
-                        }
-                    }
-                }
-            }
-        },
-        "/v1/users/{identifier}/password": {
-            "patch": {
-                "description": "Update user Password",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "users"
-                ],
-                "summary": "Update User Password",
-                "parameters": [
-                    {
-                        "type": "string",
-                        "description": "object that needs to be added",
-                        "name": "identifier",
-                        "in": "path",
-                        "required": true
-                    },
-                    {
-                        "description": "User object that needs to be added",
-                        "name": "user",
-                        "in": "body",
-                        "required": true,
-                        "schema": {
-                            "$ref": "#/definitions/models.UpdateUserPasswordRequest"
-                        }
-                    },
-                    {
-                        "type": "string",
-                        "description": "mandatory header to access endpoint",
-                        "name": "X-API-Key",
-                        "in": "header",
-                        "required": true
-                    }
-                ],
-                "responses": {
-                    "201": {
-                        "description": "Response indicates that the request succeeded and the resources has been fetched and transmitted in the message body",
-                        "schema": {
-                            "$ref": "#/definitions/models.UpdateUserPasswordResponse"
                         }
                     },
                     "400": {
@@ -1094,6 +314,80 @@ const docTemplate = `{
             }
         },
         "/v2/events/registers": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Get All User's Registered Event",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "events"
+                ],
+                "summary": "Get All User's Registered Event",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "mandatory header to access endpoint",
+                        "name": "X-API-Key",
+                        "in": "header",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Response indicates that the request succeeded and the resources has been fetched and transmitted in the message body",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/models.GetAllRegisteredUserResponse"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "instances": {
+                                            "type": "array",
+                                            "items": {
+                                                "$ref": "#/definitions/models.InstancesForRegisteredRecordsResponse"
+                                            }
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/models.ErrorResponse"
+                        }
+                    },
+                    "422": {
+                        "description": "Validation error. This can happen if there is an error validation while create account",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/models.ErrorValidationResponse"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "errors": {
+                                            "$ref": "#/definitions/validator.ErrorValidateResponse"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                }
+            },
             "post": {
                 "security": [
                     {
@@ -1146,6 +440,1057 @@ const docTemplate = `{
                                     }
                                 }
                             ]
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/models.ErrorResponse"
+                        }
+                    },
+                    "422": {
+                        "description": "Validation error. This can happen if there is an error validation while create account",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/models.ErrorValidationResponse"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "errors": {
+                                            "$ref": "#/definitions/validator.ErrorValidateResponse"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                }
+            }
+        },
+        "/v2/events/registers/{id}/status": {
+            "patch": {
+                "description": "Update user registration id to success or failed",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "events"
+                ],
+                "summary": "Update Registration Status",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "registration id",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "User object that needs to be added",
+                        "name": "user",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/models.UpdateRegistrationStatusRequest"
+                        }
+                    },
+                    {
+                        "type": "string",
+                        "description": "mandatory header to access endpoint",
+                        "name": "X-API-Key",
+                        "in": "header",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Response indicates that the request succeeded and the resources has been fetched and transmitted in the message body",
+                        "schema": {
+                            "$ref": "#/definitions/models.UpdateRegistrationStatusResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/models.ErrorResponse"
+                        }
+                    },
+                    "422": {
+                        "description": "Validation error. This can happen if there is an error validation while create account",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/models.ErrorValidationResponse"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "errors": {
+                                            "$ref": "#/definitions/validator.ErrorValidateResponse"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                }
+            }
+        },
+        "/v2/events/{code}": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Get Event and Instances by Event Code",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "events"
+                ],
+                "summary": "Get Event by Event Code",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "object that needs to be added",
+                        "name": "code",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "mandatory header to access endpoint",
+                        "name": "X-API-Key",
+                        "in": "header",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Response indicates that the request succeeded and the resources has been fetched and transmitted in the message body",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/models.GetEventByCodeResponse"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "instances": {
+                                            "type": "array",
+                                            "items": {
+                                                "$ref": "#/definitions/models.GetInstancesByEventCodeResponse"
+                                            }
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/models.ErrorResponse"
+                        }
+                    },
+                    "422": {
+                        "description": "Validation error. This can happen if there is an error validation while create account",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/models.ErrorValidationResponse"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "errors": {
+                                            "$ref": "#/definitions/validator.ErrorValidateResponse"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                }
+            }
+        },
+        "/v2/roles": {
+            "get": {
+                "description": "Get All Roles",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "roles"
+                ],
+                "summary": "Get All Roles",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "mandatory header to access endpoint",
+                        "name": "X-API-Key",
+                        "in": "header",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Response indicates that the request succeeded and the resources has been fetched and transmitted in the message body",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/models.List"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "$ref": "#/definitions/models.RoleResponse"
+                                            }
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/models.ErrorResponse"
+                        }
+                    },
+                    "422": {
+                        "description": "Validation error. This can happen if there is an error validation while create account",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/models.ErrorValidationResponse"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "errors": {
+                                            "$ref": "#/definitions/validator.ErrorValidateResponse"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                }
+            },
+            "post": {
+                "description": "Create roles which would be for access",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "roles"
+                ],
+                "summary": "Create Roles",
+                "parameters": [
+                    {
+                        "description": "User object that needs to be added",
+                        "name": "user",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/models.CreateRoleRequest"
+                        }
+                    },
+                    {
+                        "type": "string",
+                        "description": "mandatory header to access endpoint",
+                        "name": "X-API-Key",
+                        "in": "header",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Response indicates that the request succeeded and the resources has been fetched and transmitted in the message body",
+                        "schema": {
+                            "$ref": "#/definitions/models.RoleResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/models.ErrorResponse"
+                        }
+                    },
+                    "422": {
+                        "description": "Validation error. This can happen if there is an error validation while create account",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/models.ErrorValidationResponse"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "errors": {
+                                            "$ref": "#/definitions/validator.ErrorValidateResponse"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                }
+            }
+        },
+        "/v2/tokens": {
+            "get": {
+                "description": "Generate both Access and Refresh Token",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "tokens"
+                ],
+                "summary": "Generate Tokens",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "object that needs to be added",
+                        "name": "Cookie",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "mandatory header to access endpoint",
+                        "name": "X-API-Key",
+                        "in": "header",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Response indicates that the request succeeded and the resources has been fetched and transmitted in the message body",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/models.List"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "$ref": "#/definitions/models.TokensResponse"
+                                            }
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/models.ErrorResponse"
+                        }
+                    },
+                    "422": {
+                        "description": "Validation error. This can happen if there is an error validation while create account",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/models.ErrorValidationResponse"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "errors": {
+                                            "$ref": "#/definitions/validator.ErrorValidateResponse"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                }
+            }
+        },
+        "/v2/users": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Get all information needed about user by community id",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "users"
+                ],
+                "summary": "Get User By Access Token",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "mandatory header to access endpoint",
+                        "name": "X-API-Key",
+                        "in": "header",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Response indicates that the request succeeded and the resources has been fetched and transmitted in the message body",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/models.GetOneByCommunityIdResponse"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "roles": {
+                                            "type": "array",
+                                            "items": {
+                                                "$ref": "#/definitions/models.RoleResponse"
+                                            }
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/models.ErrorResponse"
+                        }
+                    },
+                    "422": {
+                        "description": "Validation error. This can happen if there is an error validation while create account",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/models.ErrorValidationResponse"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "errors": {
+                                            "$ref": "#/definitions/validator.ErrorValidateResponse"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                }
+            },
+            "post": {
+                "description": "Create user for all",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "users"
+                ],
+                "summary": "Create User",
+                "parameters": [
+                    {
+                        "description": "User object that needs to be added",
+                        "name": "user",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/models.CreateUserRequest"
+                        }
+                    },
+                    {
+                        "type": "string",
+                        "description": "mandatory header to access endpoint",
+                        "name": "X-API-Key",
+                        "in": "header",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Response indicates that the request succeeded and the resources has been fetched and transmitted in the message body",
+                        "schema": {
+                            "$ref": "#/definitions/models.CreateUserResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/models.ErrorResponse"
+                        }
+                    },
+                    "422": {
+                        "description": "Validation error. This can happen if there is an error validation while create account",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/models.ErrorValidationResponse"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "errors": {
+                                            "$ref": "#/definitions/validator.ErrorValidateResponse"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                }
+            }
+        },
+        "/v2/users/check/{identifier}": {
+            "get": {
+                "description": "To check whether user is existed or not by email or phone number",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "users"
+                ],
+                "summary": "Check User Exist",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "object that needs to be added",
+                        "name": "identifier",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "mandatory header to access endpoint",
+                        "name": "X-API-Key",
+                        "in": "header",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Response indicates that the request succeeded and the resources has been fetched and transmitted in the message body",
+                        "schema": {
+                            "$ref": "#/definitions/models.CheckUserExistResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/models.ErrorResponse"
+                        }
+                    },
+                    "422": {
+                        "description": "Validation error. This can happen if there is an error validation while create account",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/models.ErrorValidationResponse"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "errors": {
+                                            "$ref": "#/definitions/validator.ErrorValidateResponse"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                }
+            }
+        },
+        "/v2/users/login": {
+            "post": {
+                "description": "Login for all type of users",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "users"
+                ],
+                "summary": "Login User",
+                "parameters": [
+                    {
+                        "description": "User object that needs to be added",
+                        "name": "user",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/models.LoginUserRequest"
+                        }
+                    },
+                    {
+                        "type": "string",
+                        "description": "mandatory header to access endpoint",
+                        "name": "X-API-Key",
+                        "in": "header",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Response indicates that the request succeeded and the resources has been fetched and transmitted in the message body",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/models.LoginUserResponse"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "tokens": {
+                                            "type": "array",
+                                            "items": {
+                                                "$ref": "#/definitions/models.TokensResponse"
+                                            }
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/models.ErrorResponse"
+                        }
+                    },
+                    "422": {
+                        "description": "Validation error. This can happen if there is an error validation while create account",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/models.ErrorValidationResponse"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "errors": {
+                                            "$ref": "#/definitions/validator.ErrorValidateResponse"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                }
+            }
+        },
+        "/v2/users/logout": {
+            "put": {
+                "description": "Logout user for all kinds of user",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "users"
+                ],
+                "summary": "Logout User",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "mandatory header to access endpoint",
+                        "name": "X-API-Key",
+                        "in": "header",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "No Content"
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/models.ErrorResponse"
+                        }
+                    },
+                    "422": {
+                        "description": "Validation error. This can happen if there is an error validation while create account",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/models.ErrorValidationResponse"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "errors": {
+                                            "$ref": "#/definitions/validator.ErrorValidateResponse"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                }
+            }
+        },
+        "/v2/users/types": {
+            "get": {
+                "description": "User Type is something like volunteer, lead or etc.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "users"
+                ],
+                "summary": "Get All User Types",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "mandatory header to access endpoint",
+                        "name": "X-API-Key",
+                        "in": "header",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Response indicates that the request succeeded and the resources has been fetched and transmitted in the message body",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/models.List"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "$ref": "#/definitions/models.UserTypeResponse"
+                                            }
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/models.ErrorResponse"
+                        }
+                    },
+                    "422": {
+                        "description": "Validation error. This can happen if there is an error validation while create account",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/models.ErrorValidationResponse"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "errors": {
+                                            "$ref": "#/definitions/validator.ErrorValidateResponse"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                }
+            },
+            "post": {
+                "description": "User Type is something like volunteer, lead or etc.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "users"
+                ],
+                "summary": "Create User Type",
+                "parameters": [
+                    {
+                        "description": "User object that needs to be added",
+                        "name": "user",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/models.CreateUserTypeRequest"
+                        }
+                    },
+                    {
+                        "type": "string",
+                        "description": "mandatory header to access endpoint",
+                        "name": "X-API-Key",
+                        "in": "header",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Response indicates that the request succeeded and the resources has been fetched and transmitted in the message body",
+                        "schema": {
+                            "$ref": "#/definitions/models.UserTypeResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/models.ErrorResponse"
+                        }
+                    },
+                    "422": {
+                        "description": "Validation error. This can happen if there is an error validation while create account",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/models.ErrorValidationResponse"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "errors": {
+                                            "$ref": "#/definitions/validator.ErrorValidateResponse"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                }
+            }
+        },
+        "/v2/users/volunteer": {
+            "post": {
+                "description": "Create user for volunteer",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "users"
+                ],
+                "summary": "Create Volunteer User",
+                "parameters": [
+                    {
+                        "description": "User object that needs to be added",
+                        "name": "user",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/models.CreateVolunteerRequest"
+                        }
+                    },
+                    {
+                        "type": "string",
+                        "description": "mandatory header to access endpoint",
+                        "name": "X-API-Key",
+                        "in": "header",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Response indicates that the request succeeded and the resources has been fetched and transmitted in the message body",
+                        "schema": {
+                            "$ref": "#/definitions/models.CreateVolunteerResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/models.ErrorResponse"
+                        }
+                    },
+                    "422": {
+                        "description": "Validation error. This can happen if there is an error validation while create account",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/models.ErrorValidationResponse"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "errors": {
+                                            "$ref": "#/definitions/validator.ErrorValidateResponse"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                }
+            }
+        },
+        "/v2/users/{communityId}": {
+            "get": {
+                "description": "Get all information needed about user by community id",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "users"
+                ],
+                "summary": "Get User By Community ID",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "object that needs to be added",
+                        "name": "communityId",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "mandatory header to access endpoint",
+                        "name": "X-API-Key",
+                        "in": "header",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Response indicates that the request succeeded and the resources has been fetched and transmitted in the message body",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/models.GetOneByCommunityIdResponse"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "roles": {
+                                            "type": "array",
+                                            "items": {
+                                                "$ref": "#/definitions/models.RoleResponse"
+                                            }
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/models.ErrorResponse"
+                        }
+                    },
+                    "422": {
+                        "description": "Validation error. This can happen if there is an error validation while create account",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/models.ErrorValidationResponse"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "errors": {
+                                            "$ref": "#/definitions/validator.ErrorValidateResponse"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                }
+            }
+        },
+        "/v2/users/{identifier}/password": {
+            "patch": {
+                "description": "Update user Password",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "users"
+                ],
+                "summary": "Update User Password",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "object that needs to be added",
+                        "name": "identifier",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "User object that needs to be added",
+                        "name": "user",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/models.UpdateUserPasswordRequest"
+                        }
+                    },
+                    {
+                        "type": "string",
+                        "description": "mandatory header to access endpoint",
+                        "name": "X-API-Key",
+                        "in": "header",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Response indicates that the request succeeded and the resources has been fetched and transmitted in the message body",
+                        "schema": {
+                            "$ref": "#/definitions/models.UpdateUserPasswordResponse"
                         }
                     },
                     "400": {
@@ -2633,6 +2978,67 @@ const docTemplate = `{
                 "type": {
                     "type": "string",
                     "example": "accessToken"
+                }
+            }
+        },
+        "models.UpdateRegistrationStatusRequest": {
+            "type": "object",
+            "required": [
+                "status",
+                "updatedAt"
+            ],
+            "properties": {
+                "status": {
+                    "type": "string",
+                    "enum": [
+                        "success",
+                        "cancelled"
+                    ],
+                    "example": "success"
+                },
+                "updatedAt": {
+                    "type": "string"
+                }
+            }
+        },
+        "models.UpdateRegistrationStatusResponse": {
+            "type": "object",
+            "properties": {
+                "communityId": {
+                    "type": "string"
+                },
+                "eventCode": {
+                    "type": "string"
+                },
+                "eventTitle": {
+                    "type": "string"
+                },
+                "identifier": {
+                    "type": "string"
+                },
+                "instanceCode": {
+                    "type": "string"
+                },
+                "instanceTitle": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "registrationId": {
+                    "type": "string"
+                },
+                "status": {
+                    "type": "string"
+                },
+                "type": {
+                    "type": "string"
+                },
+                "updatedBy": {
+                    "type": "string"
+                },
+                "verifiedAt": {
+                    "type": "string"
                 }
             }
         },

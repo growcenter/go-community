@@ -72,12 +72,13 @@ var (
 			ei.code, ei.event_code, ei.title, ei.description, ei.instance_start_at, ei.instance_end_at, ei.register_start_at, ei.register_end_at, ei.location_type, ei.location_name, ei.max_per_transaction, ei.is_one_per_account, ei.is_one_per_ticket, ei.register_flow, ei.check_type, ei.total_seats, ei.booked_seats, ei.scanned_seats, ei.status
 `
 	queryGetSeatsByInstanceCode = `SELECT ei.total_seats as total_seats,
-       ei.booked_seats as booked_seats,
-       ei.title as event_instance_title,
-       e.title as event_title,
-       coalesce(sum(ei.total_seats - ei.booked_seats), 0) as total_remaining_seats
-from event_instances ei
-    left join events e on ei.event_code = e.code
-where ei.code = ?
-group by ei.total_seats, ei.booked_seats, ei.title, e.title`
+		   ei.booked_seats as booked_seats,
+		   ei.scanned_seats as scanned_seats,
+		   ei.title as event_instance_title,
+		   e.title as event_title,
+		   coalesce(sum(ei.total_seats - ei.booked_seats), 0) as total_remaining_seats
+	from event_instances ei
+		left join events e on ei.event_code = e.code
+	where ei.code = ?
+	group by ei.total_seats, ei.booked_seats, ei.scanned_seats, ei.title, e.title`
 )

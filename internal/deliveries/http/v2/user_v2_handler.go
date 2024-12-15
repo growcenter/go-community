@@ -52,7 +52,7 @@ func NewUserHandler(api *echo.Group, u *usecases.Usecases, c *config.Configurati
 // @Success 201 {object} models.CreateUserResponse "Response indicates that the request succeeded and the resources has been fetched and transmitted in the message body"
 // @Failure 400 {object} models.ErrorResponse "Bad Request"
 // @Failure 422 {object} models.ErrorValidationResponse{errors=validator.ErrorValidateResponse} "Validation error. This can happen if there is an error validation while create account"
-// @Router /v1/users/volunteer [post]
+// @Router /v2/users [post]
 func (uh *UserHandler) Create(ctx echo.Context) error {
 	var request models.CreateUserRequest
 	if err := ctx.Bind(&request); err != nil {
@@ -82,7 +82,7 @@ func (uh *UserHandler) Create(ctx echo.Context) error {
 // @Success 201 {object} models.CreateVolunteerResponse "Response indicates that the request succeeded and the resources has been fetched and transmitted in the message body"
 // @Failure 400 {object} models.ErrorResponse "Bad Request"
 // @Failure 422 {object} models.ErrorValidationResponse{errors=validator.ErrorValidateResponse} "Validation error. This can happen if there is an error validation while create account"
-// @Router /v1/users/volunteer [post]
+// @Router /v2/users/volunteer [post]
 func (uh *UserHandler) CreateVolunteer(ctx echo.Context) error {
 	var request models.CreateVolunteerRequest
 	if err := ctx.Bind(&request); err != nil {
@@ -113,7 +113,7 @@ func (uh *UserHandler) CreateVolunteer(ctx echo.Context) error {
 // @Success 200 {object} models.LoginUserResponse{tokens=[]models.TokensResponse} "Response indicates that the request succeeded and the resources has been fetched and transmitted in the message body"
 // @Failure 400 {object} models.ErrorResponse "Bad Request"
 // @Failure 422 {object} models.ErrorValidationResponse{errors=validator.ErrorValidateResponse} "Validation error. This can happen if there is an error validation while create account"
-// @Router /v1/users/login [post]
+// @Router /v2/users/login [post]
 func (uh *UserHandler) Login(ctx echo.Context) error {
 	var request models.LoginUserRequest
 	if err := ctx.Bind(&request); err != nil {
@@ -153,7 +153,7 @@ func (uh *UserHandler) Login(ctx echo.Context) error {
 // @Success 200 {object} models.CheckUserExistResponse "Response indicates that the request succeeded and the resources has been fetched and transmitted in the message body"
 // @Failure 400 {object} models.ErrorResponse "Bad Request"
 // @Failure 422 {object} models.ErrorValidationResponse{errors=validator.ErrorValidateResponse} "Validation error. This can happen if there is an error validation while create account"
-// @Router /v1/users/check/{identifier} [get]
+// @Router /v2/users/check/{identifier} [get]
 func (uh *UserHandler) Check(ctx echo.Context) error {
 
 	isExist, err := uh.usecase.User.Check(ctx.Request().Context(), strings.ToLower(ctx.Param("identifier")))
@@ -176,7 +176,7 @@ func (uh *UserHandler) Check(ctx echo.Context) error {
 // @Success 201 {object} models.UserTypeResponse "Response indicates that the request succeeded and the resources has been fetched and transmitted in the message body"
 // @Failure 400 {object} models.ErrorResponse "Bad Request"
 // @Failure 422 {object} models.ErrorValidationResponse{errors=validator.ErrorValidateResponse} "Validation error. This can happen if there is an error validation while create account"
-// @Router /v1/users/types [post]
+// @Router /v2/users/types [post]
 func (uh *UserHandler) CreateUserType(ctx echo.Context) error {
 	var request models.CreateUserTypeRequest
 	if err := ctx.Bind(&request); err != nil {
@@ -207,7 +207,7 @@ func (uh *UserHandler) CreateUserType(ctx echo.Context) error {
 // @Success 200 {object} models.List{data=[]models.UserTypeResponse} "Response indicates that the request succeeded and the resources has been fetched and transmitted in the message body"
 // @Failure 400 {object} models.ErrorResponse "Bad Request"
 // @Failure 422 {object} models.ErrorValidationResponse{errors=validator.ErrorValidateResponse} "Validation error. This can happen if there is an error validation while create account"
-// @Router /v1/users/types [get]
+// @Router /v2/users/types [get]
 func (uh *UserHandler) GetAllUserTypes(ctx echo.Context) error {
 	data, err := uh.usecase.UserType.GetAll(ctx.Request().Context())
 	if err != nil {
@@ -234,7 +234,7 @@ func (uh *UserHandler) GetAllUserTypes(ctx echo.Context) error {
 // @Success 201 {object} models.UpdateUserPasswordResponse "Response indicates that the request succeeded and the resources has been fetched and transmitted in the message body"
 // @Failure 400 {object} models.ErrorResponse "Bad Request"
 // @Failure 422 {object} models.ErrorValidationResponse{errors=validator.ErrorValidateResponse} "Validation error. This can happen if there is an error validation while create account"
-// @Router /v1/users/{identifier}/password [patch]
+// @Router /v2/users/{identifier}/password [patch]
 func (uh *UserHandler) UpdatePassword(ctx echo.Context) error {
 	var request models.UpdateUserPasswordRequest
 	parameter := models.UpdateUserPasswordParam{
@@ -272,7 +272,7 @@ func (uh *UserHandler) UpdatePassword(ctx echo.Context) error {
 // @Success 200 {object} models.GetOneByCommunityIdResponse{roles=[]models.RoleResponse} "Response indicates that the request succeeded and the resources has been fetched and transmitted in the message body"
 // @Failure 400 {object} models.ErrorResponse "Bad Request"
 // @Failure 422 {object} models.ErrorValidationResponse{errors=validator.ErrorValidateResponse} "Validation error. This can happen if there is an error validation while create account"
-// @Router /v1/users/{communityId} [get]
+// @Router /v2/users/{communityId} [get]
 func (uh *UserHandler) GetByCommunityId(ctx echo.Context) error {
 	parameter := models.GetOneByCommunityIdParameter{
 		CommunityId: strings.ToLower(ctx.Param("communityId")),
@@ -302,7 +302,7 @@ func (uh *UserHandler) GetByCommunityId(ctx echo.Context) error {
 // @Success 200 {object} models.GetOneByCommunityIdResponse{roles=[]models.RoleResponse} "Response indicates that the request succeeded and the resources has been fetched and transmitted in the message body"
 // @Failure 400 {object} models.ErrorResponse "Bad Request"
 // @Failure 422 {object} models.ErrorValidationResponse{errors=validator.ErrorValidateResponse} "Validation error. This can happen if there is an error validation while create account"
-// @Router /v1/users/{communityId} [get]
+// @Router /v2/users [get]
 func (uh *UserHandler) GetByAccessToken(ctx echo.Context) error {
 	parameter := models.GetOneByCommunityIdParameter{
 		CommunityId: strings.ToLower(ctx.Get("communityId").(string)),
@@ -330,7 +330,7 @@ func (uh *UserHandler) GetByAccessToken(ctx echo.Context) error {
 // @Success 204 "No Content"
 // @Failure 400 {object} models.ErrorResponse "Bad Request"
 // @Failure 422 {object} models.ErrorValidationResponse{errors=validator.ErrorValidateResponse} "Validation error. This can happen if there is an error validation while create account"
-// @Router /v1/users/logout [put]
+// @Router /v2/users/logout [put]
 func (uh *UserHandler) Logout(ctx echo.Context) error {
 	ctx.SetCookie(&http.Cookie{
 		Name:     "refresh_token",                // Name of the cookie holding the refresh token

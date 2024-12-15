@@ -84,11 +84,43 @@ type (
 	}
 )
 
-type (
-	UpdateEventRegistrationRecordParameter struct {
-		ID uuid.UUID `json:"id" validate:"required,uuid"`
+func (erer *UpdateRegistrationStatusResponse) ToResponse() *UpdateRegistrationStatusResponse {
+	return &UpdateRegistrationStatusResponse{
+		Type:          TYPE_EVENT_REGISTRATION_RECORD,
+		ID:            erer.ID,
+		Status:        erer.Status,
+		Name:          erer.Name,
+		Identifier:    erer.Identifier,
+		CommunityID:   erer.CommunityID,
+		EventCode:     erer.EventCode,
+		EventTitle:    erer.EventTitle,
+		InstanceCode:  erer.InstanceCode,
+		InstanceTitle: erer.InstanceTitle,
+		UpdatedBy:     erer.UpdatedBy,
+		VerifiedAt:    erer.VerifiedAt,
 	}
-	UpdateEventRegistrationRecordRequest struct {
-		Action string `json:"action" validate:"required,oneof=verify cancel" example:"verify"`
+}
+
+type (
+	UpdateRegistrationStatusParameter struct {
+		ID string `json:"id" validate:"required,uuid"`
+	}
+	UpdateRegistrationStatusRequest struct {
+		Status    string `json:"status" validate:"required,oneof=success cancelled" example:"success"`
+		UpdatedAt string `json:"updatedAt" validate:"required"`
+	}
+	UpdateRegistrationStatusResponse struct {
+		Type          string    `json:"type"`
+		ID            uuid.UUID `json:"registrationId"`
+		Status        string    `json:"status"`
+		Name          string    `json:"name"`
+		Identifier    string    `json:"identifier,omitempty"`
+		CommunityID   string    `json:"communityId,omitempty"`
+		EventCode     string    `json:"eventCode"`
+		EventTitle    string    `json:"eventTitle"`
+		InstanceCode  string    `json:"instanceCode"`
+		InstanceTitle string    `json:"instanceTitle"`
+		UpdatedBy     string    `json:"updatedBy"`
+		VerifiedAt    time.Time `json:"verifiedAt"`
 	}
 )

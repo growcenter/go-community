@@ -1025,6 +1025,47 @@ definitions:
         example: accessToken
         type: string
     type: object
+  models.UpdateRegistrationStatusRequest:
+    properties:
+      status:
+        enum:
+        - success
+        - cancelled
+        example: success
+        type: string
+      updatedAt:
+        type: string
+    required:
+    - status
+    - updatedAt
+    type: object
+  models.UpdateRegistrationStatusResponse:
+    properties:
+      communityId:
+        type: string
+      eventCode:
+        type: string
+      eventTitle:
+        type: string
+      identifier:
+        type: string
+      instanceCode:
+        type: string
+      instanceTitle:
+        type: string
+      name:
+        type: string
+      registrationId:
+        type: string
+      status:
+        type: string
+      type:
+        type: string
+      updatedBy:
+        type: string
+      verifiedAt:
+        type: string
+    type: object
   models.UpdateUserPasswordRequest:
     properties:
       confirmPassword:
@@ -1133,11 +1174,11 @@ definitions:
 info:
   contact: {}
 paths:
-  /v1/campuses:
+  /v2/campuses:
     get:
       consumes:
       - application/json
-      description: Get All Roles
+      description: Get Campuses from Config
       parameters:
       - description: mandatory header to access endpoint
         in: header
@@ -1156,7 +1197,7 @@ paths:
             - properties:
                 data:
                   items:
-                    $ref: '#/definitions/models.RoleResponse'
+                    $ref: '#/definitions/models.CampusesResponse'
                   type: array
               type: object
         "400":
@@ -1173,10 +1214,10 @@ paths:
                 errors:
                   $ref: '#/definitions/validator.ErrorValidateResponse'
               type: object
-      summary: Get All Roles
+      summary: Get Campuses from Config
       tags:
-      - roles
-  /v1/departments:
+      - config
+  /v2/departments:
     get:
       consumes:
       - application/json
@@ -1219,490 +1260,6 @@ paths:
       summary: Get Departments from Config
       tags:
       - config
-  /v1/events/{code}:
-    get:
-      consumes:
-      - application/json
-      description: Get Event and Instances by Event Code
-      parameters:
-      - description: object that needs to be added
-        in: path
-        name: code
-        required: true
-        type: integer
-      - description: mandatory header to access endpoint
-        in: header
-        name: X-API-Key
-        required: true
-        type: string
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: Response indicates that the request succeeded and the resources
-            has been fetched and transmitted in the message body
-          schema:
-            allOf:
-            - $ref: '#/definitions/models.GetEventByCodeResponse'
-            - properties:
-                instances:
-                  items:
-                    $ref: '#/definitions/models.GetInstancesByEventCodeResponse'
-                  type: array
-              type: object
-        "400":
-          description: Bad Request
-          schema:
-            $ref: '#/definitions/models.ErrorResponse'
-        "422":
-          description: Validation error. This can happen if there is an error validation
-            while create account
-          schema:
-            allOf:
-            - $ref: '#/definitions/models.ErrorValidationResponse'
-            - properties:
-                errors:
-                  $ref: '#/definitions/validator.ErrorValidateResponse'
-              type: object
-      security:
-      - BearerAuth: []
-      summary: Get Event by Event Code
-      tags:
-      - events
-  /v1/events/registers:
-    get:
-      consumes:
-      - application/json
-      description: Get All User's Registered Event
-      parameters:
-      - description: mandatory header to access endpoint
-        in: header
-        name: X-API-Key
-        required: true
-        type: string
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: Response indicates that the request succeeded and the resources
-            has been fetched and transmitted in the message body
-          schema:
-            allOf:
-            - $ref: '#/definitions/models.GetAllRegisteredUserResponse'
-            - properties:
-                instances:
-                  items:
-                    $ref: '#/definitions/models.InstancesForRegisteredRecordsResponse'
-                  type: array
-              type: object
-        "400":
-          description: Bad Request
-          schema:
-            $ref: '#/definitions/models.ErrorResponse'
-        "422":
-          description: Validation error. This can happen if there is an error validation
-            while create account
-          schema:
-            allOf:
-            - $ref: '#/definitions/models.ErrorValidationResponse'
-            - properties:
-                errors:
-                  $ref: '#/definitions/validator.ErrorValidateResponse'
-              type: object
-      security:
-      - BearerAuth: []
-      summary: Get All User's Registered Event
-      tags:
-      - events
-  /v1/tokens:
-    get:
-      consumes:
-      - application/json
-      description: Generate both Access and Refresh Token
-      parameters:
-      - description: object that needs to be added
-        in: path
-        name: Cookie
-        required: true
-        type: string
-      - description: mandatory header to access endpoint
-        in: header
-        name: X-API-Key
-        required: true
-        type: string
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: Response indicates that the request succeeded and the resources
-            has been fetched and transmitted in the message body
-          schema:
-            allOf:
-            - $ref: '#/definitions/models.List'
-            - properties:
-                data:
-                  items:
-                    $ref: '#/definitions/models.TokensResponse'
-                  type: array
-              type: object
-        "400":
-          description: Bad Request
-          schema:
-            $ref: '#/definitions/models.ErrorResponse'
-        "422":
-          description: Validation error. This can happen if there is an error validation
-            while create account
-          schema:
-            allOf:
-            - $ref: '#/definitions/models.ErrorValidationResponse'
-            - properties:
-                errors:
-                  $ref: '#/definitions/validator.ErrorValidateResponse'
-              type: object
-      summary: Generate Tokens
-      tags:
-      - tokens
-  /v1/users/{communityId}:
-    get:
-      consumes:
-      - application/json
-      description: Get all information needed about user by community id
-      parameters:
-      - description: mandatory header to access endpoint
-        in: header
-        name: X-API-Key
-        required: true
-        type: string
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: Response indicates that the request succeeded and the resources
-            has been fetched and transmitted in the message body
-          schema:
-            allOf:
-            - $ref: '#/definitions/models.GetOneByCommunityIdResponse'
-            - properties:
-                roles:
-                  items:
-                    $ref: '#/definitions/models.RoleResponse'
-                  type: array
-              type: object
-        "400":
-          description: Bad Request
-          schema:
-            $ref: '#/definitions/models.ErrorResponse'
-        "422":
-          description: Validation error. This can happen if there is an error validation
-            while create account
-          schema:
-            allOf:
-            - $ref: '#/definitions/models.ErrorValidationResponse'
-            - properties:
-                errors:
-                  $ref: '#/definitions/validator.ErrorValidateResponse'
-              type: object
-      security:
-      - BearerAuth: []
-      summary: Get User By Access Token
-      tags:
-      - users
-  /v1/users/{identifier}/password:
-    patch:
-      consumes:
-      - application/json
-      description: Update user Password
-      parameters:
-      - description: object that needs to be added
-        in: path
-        name: identifier
-        required: true
-        type: string
-      - description: User object that needs to be added
-        in: body
-        name: user
-        required: true
-        schema:
-          $ref: '#/definitions/models.UpdateUserPasswordRequest'
-      - description: mandatory header to access endpoint
-        in: header
-        name: X-API-Key
-        required: true
-        type: string
-      produces:
-      - application/json
-      responses:
-        "201":
-          description: Response indicates that the request succeeded and the resources
-            has been fetched and transmitted in the message body
-          schema:
-            $ref: '#/definitions/models.UpdateUserPasswordResponse'
-        "400":
-          description: Bad Request
-          schema:
-            $ref: '#/definitions/models.ErrorResponse'
-        "422":
-          description: Validation error. This can happen if there is an error validation
-            while create account
-          schema:
-            allOf:
-            - $ref: '#/definitions/models.ErrorValidationResponse'
-            - properties:
-                errors:
-                  $ref: '#/definitions/validator.ErrorValidateResponse'
-              type: object
-      summary: Update User Password
-      tags:
-      - users
-  /v1/users/check/{identifier}:
-    get:
-      consumes:
-      - application/json
-      description: To check whether user is existed or not by email or phone number
-      parameters:
-      - description: object that needs to be added
-        in: path
-        name: identifier
-        required: true
-        type: string
-      - description: mandatory header to access endpoint
-        in: header
-        name: X-API-Key
-        required: true
-        type: string
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: Response indicates that the request succeeded and the resources
-            has been fetched and transmitted in the message body
-          schema:
-            $ref: '#/definitions/models.CheckUserExistResponse'
-        "400":
-          description: Bad Request
-          schema:
-            $ref: '#/definitions/models.ErrorResponse'
-        "422":
-          description: Validation error. This can happen if there is an error validation
-            while create account
-          schema:
-            allOf:
-            - $ref: '#/definitions/models.ErrorValidationResponse'
-            - properties:
-                errors:
-                  $ref: '#/definitions/validator.ErrorValidateResponse'
-              type: object
-      summary: Check User Exist
-      tags:
-      - users
-  /v1/users/login:
-    post:
-      consumes:
-      - application/json
-      description: Login for all type of users
-      parameters:
-      - description: User object that needs to be added
-        in: body
-        name: user
-        required: true
-        schema:
-          $ref: '#/definitions/models.LoginUserRequest'
-      - description: mandatory header to access endpoint
-        in: header
-        name: X-API-Key
-        required: true
-        type: string
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: Response indicates that the request succeeded and the resources
-            has been fetched and transmitted in the message body
-          schema:
-            allOf:
-            - $ref: '#/definitions/models.LoginUserResponse'
-            - properties:
-                tokens:
-                  items:
-                    $ref: '#/definitions/models.TokensResponse'
-                  type: array
-              type: object
-        "400":
-          description: Bad Request
-          schema:
-            $ref: '#/definitions/models.ErrorResponse'
-        "422":
-          description: Validation error. This can happen if there is an error validation
-            while create account
-          schema:
-            allOf:
-            - $ref: '#/definitions/models.ErrorValidationResponse'
-            - properties:
-                errors:
-                  $ref: '#/definitions/validator.ErrorValidateResponse'
-              type: object
-      summary: Login User
-      tags:
-      - users
-  /v1/users/logout:
-    put:
-      consumes:
-      - application/json
-      description: Logout user for all kinds of user
-      parameters:
-      - description: mandatory header to access endpoint
-        in: header
-        name: X-API-Key
-        required: true
-        type: string
-      produces:
-      - application/json
-      responses:
-        "204":
-          description: No Content
-        "400":
-          description: Bad Request
-          schema:
-            $ref: '#/definitions/models.ErrorResponse'
-        "422":
-          description: Validation error. This can happen if there is an error validation
-            while create account
-          schema:
-            allOf:
-            - $ref: '#/definitions/models.ErrorValidationResponse'
-            - properties:
-                errors:
-                  $ref: '#/definitions/validator.ErrorValidateResponse'
-              type: object
-      summary: Logout User
-      tags:
-      - users
-  /v1/users/types:
-    get:
-      consumes:
-      - application/json
-      description: User Type is something like volunteer, lead or etc.
-      parameters:
-      - description: mandatory header to access endpoint
-        in: header
-        name: X-API-Key
-        required: true
-        type: string
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: Response indicates that the request succeeded and the resources
-            has been fetched and transmitted in the message body
-          schema:
-            allOf:
-            - $ref: '#/definitions/models.List'
-            - properties:
-                data:
-                  items:
-                    $ref: '#/definitions/models.UserTypeResponse'
-                  type: array
-              type: object
-        "400":
-          description: Bad Request
-          schema:
-            $ref: '#/definitions/models.ErrorResponse'
-        "422":
-          description: Validation error. This can happen if there is an error validation
-            while create account
-          schema:
-            allOf:
-            - $ref: '#/definitions/models.ErrorValidationResponse'
-            - properties:
-                errors:
-                  $ref: '#/definitions/validator.ErrorValidateResponse'
-              type: object
-      summary: Get All User Types
-      tags:
-      - users
-    post:
-      consumes:
-      - application/json
-      description: User Type is something like volunteer, lead or etc.
-      parameters:
-      - description: User object that needs to be added
-        in: body
-        name: user
-        required: true
-        schema:
-          $ref: '#/definitions/models.CreateUserTypeRequest'
-      - description: mandatory header to access endpoint
-        in: header
-        name: X-API-Key
-        required: true
-        type: string
-      produces:
-      - application/json
-      responses:
-        "201":
-          description: Response indicates that the request succeeded and the resources
-            has been fetched and transmitted in the message body
-          schema:
-            $ref: '#/definitions/models.UserTypeResponse'
-        "400":
-          description: Bad Request
-          schema:
-            $ref: '#/definitions/models.ErrorResponse'
-        "422":
-          description: Validation error. This can happen if there is an error validation
-            while create account
-          schema:
-            allOf:
-            - $ref: '#/definitions/models.ErrorValidationResponse'
-            - properties:
-                errors:
-                  $ref: '#/definitions/validator.ErrorValidateResponse'
-              type: object
-      summary: Create User Type
-      tags:
-      - users
-  /v1/users/volunteer:
-    post:
-      consumes:
-      - application/json
-      description: Create user for volunteer
-      parameters:
-      - description: User object that needs to be added
-        in: body
-        name: user
-        required: true
-        schema:
-          $ref: '#/definitions/models.CreateVolunteerRequest'
-      - description: mandatory header to access endpoint
-        in: header
-        name: X-API-Key
-        required: true
-        type: string
-      produces:
-      - application/json
-      responses:
-        "201":
-          description: Response indicates that the request succeeded and the resources
-            has been fetched and transmitted in the message body
-          schema:
-            $ref: '#/definitions/models.CreateVolunteerResponse'
-        "400":
-          description: Bad Request
-          schema:
-            $ref: '#/definitions/models.ErrorResponse'
-        "422":
-          description: Validation error. This can happen if there is an error validation
-            while create account
-          schema:
-            allOf:
-            - $ref: '#/definitions/models.ErrorValidationResponse'
-            - properties:
-                errors:
-                  $ref: '#/definitions/validator.ErrorValidateResponse'
-              type: object
-      summary: Create Volunteer User
-      tags:
-      - users
   /v2/events:
     get:
       consumes:
@@ -1796,7 +1353,101 @@ paths:
       summary: Create Event
       tags:
       - events
+  /v2/events/{code}:
+    get:
+      consumes:
+      - application/json
+      description: Get Event and Instances by Event Code
+      parameters:
+      - description: object that needs to be added
+        in: path
+        name: code
+        required: true
+        type: integer
+      - description: mandatory header to access endpoint
+        in: header
+        name: X-API-Key
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Response indicates that the request succeeded and the resources
+            has been fetched and transmitted in the message body
+          schema:
+            allOf:
+            - $ref: '#/definitions/models.GetEventByCodeResponse'
+            - properties:
+                instances:
+                  items:
+                    $ref: '#/definitions/models.GetInstancesByEventCodeResponse'
+                  type: array
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+        "422":
+          description: Validation error. This can happen if there is an error validation
+            while create account
+          schema:
+            allOf:
+            - $ref: '#/definitions/models.ErrorValidationResponse'
+            - properties:
+                errors:
+                  $ref: '#/definitions/validator.ErrorValidateResponse'
+              type: object
+      security:
+      - BearerAuth: []
+      summary: Get Event by Event Code
+      tags:
+      - events
   /v2/events/registers:
+    get:
+      consumes:
+      - application/json
+      description: Get All User's Registered Event
+      parameters:
+      - description: mandatory header to access endpoint
+        in: header
+        name: X-API-Key
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Response indicates that the request succeeded and the resources
+            has been fetched and transmitted in the message body
+          schema:
+            allOf:
+            - $ref: '#/definitions/models.GetAllRegisteredUserResponse'
+            - properties:
+                instances:
+                  items:
+                    $ref: '#/definitions/models.InstancesForRegisteredRecordsResponse'
+                  type: array
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+        "422":
+          description: Validation error. This can happen if there is an error validation
+            while create account
+          schema:
+            allOf:
+            - $ref: '#/definitions/models.ErrorValidationResponse'
+            - properties:
+                errors:
+                  $ref: '#/definitions/validator.ErrorValidateResponse'
+              type: object
+      security:
+      - BearerAuth: []
+      summary: Get All User's Registered Event
+      tags:
+      - events
     post:
       consumes:
       - application/json
@@ -1845,4 +1496,613 @@ paths:
       summary: Register User to Event
       tags:
       - events
+  /v2/events/registers/{id}/status:
+    patch:
+      consumes:
+      - application/json
+      description: Update user registration id to success or failed
+      parameters:
+      - description: registration id
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: User object that needs to be added
+        in: body
+        name: user
+        required: true
+        schema:
+          $ref: '#/definitions/models.UpdateRegistrationStatusRequest'
+      - description: mandatory header to access endpoint
+        in: header
+        name: X-API-Key
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Response indicates that the request succeeded and the resources
+            has been fetched and transmitted in the message body
+          schema:
+            $ref: '#/definitions/models.UpdateRegistrationStatusResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+        "422":
+          description: Validation error. This can happen if there is an error validation
+            while create account
+          schema:
+            allOf:
+            - $ref: '#/definitions/models.ErrorValidationResponse'
+            - properties:
+                errors:
+                  $ref: '#/definitions/validator.ErrorValidateResponse'
+              type: object
+      summary: Update Registration Status
+      tags:
+      - events
+  /v2/roles:
+    get:
+      consumes:
+      - application/json
+      description: Get All Roles
+      parameters:
+      - description: mandatory header to access endpoint
+        in: header
+        name: X-API-Key
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Response indicates that the request succeeded and the resources
+            has been fetched and transmitted in the message body
+          schema:
+            allOf:
+            - $ref: '#/definitions/models.List'
+            - properties:
+                data:
+                  items:
+                    $ref: '#/definitions/models.RoleResponse'
+                  type: array
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+        "422":
+          description: Validation error. This can happen if there is an error validation
+            while create account
+          schema:
+            allOf:
+            - $ref: '#/definitions/models.ErrorValidationResponse'
+            - properties:
+                errors:
+                  $ref: '#/definitions/validator.ErrorValidateResponse'
+              type: object
+      summary: Get All Roles
+      tags:
+      - roles
+    post:
+      consumes:
+      - application/json
+      description: Create roles which would be for access
+      parameters:
+      - description: User object that needs to be added
+        in: body
+        name: user
+        required: true
+        schema:
+          $ref: '#/definitions/models.CreateRoleRequest'
+      - description: mandatory header to access endpoint
+        in: header
+        name: X-API-Key
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Response indicates that the request succeeded and the resources
+            has been fetched and transmitted in the message body
+          schema:
+            $ref: '#/definitions/models.RoleResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+        "422":
+          description: Validation error. This can happen if there is an error validation
+            while create account
+          schema:
+            allOf:
+            - $ref: '#/definitions/models.ErrorValidationResponse'
+            - properties:
+                errors:
+                  $ref: '#/definitions/validator.ErrorValidateResponse'
+              type: object
+      summary: Create Roles
+      tags:
+      - roles
+  /v2/tokens:
+    get:
+      consumes:
+      - application/json
+      description: Generate both Access and Refresh Token
+      parameters:
+      - description: object that needs to be added
+        in: path
+        name: Cookie
+        required: true
+        type: string
+      - description: mandatory header to access endpoint
+        in: header
+        name: X-API-Key
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Response indicates that the request succeeded and the resources
+            has been fetched and transmitted in the message body
+          schema:
+            allOf:
+            - $ref: '#/definitions/models.List'
+            - properties:
+                data:
+                  items:
+                    $ref: '#/definitions/models.TokensResponse'
+                  type: array
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+        "422":
+          description: Validation error. This can happen if there is an error validation
+            while create account
+          schema:
+            allOf:
+            - $ref: '#/definitions/models.ErrorValidationResponse'
+            - properties:
+                errors:
+                  $ref: '#/definitions/validator.ErrorValidateResponse'
+              type: object
+      summary: Generate Tokens
+      tags:
+      - tokens
+  /v2/users:
+    get:
+      consumes:
+      - application/json
+      description: Get all information needed about user by community id
+      parameters:
+      - description: mandatory header to access endpoint
+        in: header
+        name: X-API-Key
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Response indicates that the request succeeded and the resources
+            has been fetched and transmitted in the message body
+          schema:
+            allOf:
+            - $ref: '#/definitions/models.GetOneByCommunityIdResponse'
+            - properties:
+                roles:
+                  items:
+                    $ref: '#/definitions/models.RoleResponse'
+                  type: array
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+        "422":
+          description: Validation error. This can happen if there is an error validation
+            while create account
+          schema:
+            allOf:
+            - $ref: '#/definitions/models.ErrorValidationResponse'
+            - properties:
+                errors:
+                  $ref: '#/definitions/validator.ErrorValidateResponse'
+              type: object
+      security:
+      - BearerAuth: []
+      summary: Get User By Access Token
+      tags:
+      - users
+    post:
+      consumes:
+      - application/json
+      description: Create user for all
+      parameters:
+      - description: User object that needs to be added
+        in: body
+        name: user
+        required: true
+        schema:
+          $ref: '#/definitions/models.CreateUserRequest'
+      - description: mandatory header to access endpoint
+        in: header
+        name: X-API-Key
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Response indicates that the request succeeded and the resources
+            has been fetched and transmitted in the message body
+          schema:
+            $ref: '#/definitions/models.CreateUserResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+        "422":
+          description: Validation error. This can happen if there is an error validation
+            while create account
+          schema:
+            allOf:
+            - $ref: '#/definitions/models.ErrorValidationResponse'
+            - properties:
+                errors:
+                  $ref: '#/definitions/validator.ErrorValidateResponse'
+              type: object
+      summary: Create User
+      tags:
+      - users
+  /v2/users/{communityId}:
+    get:
+      consumes:
+      - application/json
+      description: Get all information needed about user by community id
+      parameters:
+      - description: object that needs to be added
+        in: path
+        name: communityId
+        required: true
+        type: integer
+      - description: mandatory header to access endpoint
+        in: header
+        name: X-API-Key
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Response indicates that the request succeeded and the resources
+            has been fetched and transmitted in the message body
+          schema:
+            allOf:
+            - $ref: '#/definitions/models.GetOneByCommunityIdResponse'
+            - properties:
+                roles:
+                  items:
+                    $ref: '#/definitions/models.RoleResponse'
+                  type: array
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+        "422":
+          description: Validation error. This can happen if there is an error validation
+            while create account
+          schema:
+            allOf:
+            - $ref: '#/definitions/models.ErrorValidationResponse'
+            - properties:
+                errors:
+                  $ref: '#/definitions/validator.ErrorValidateResponse'
+              type: object
+      summary: Get User By Community ID
+      tags:
+      - users
+  /v2/users/{identifier}/password:
+    patch:
+      consumes:
+      - application/json
+      description: Update user Password
+      parameters:
+      - description: object that needs to be added
+        in: path
+        name: identifier
+        required: true
+        type: string
+      - description: User object that needs to be added
+        in: body
+        name: user
+        required: true
+        schema:
+          $ref: '#/definitions/models.UpdateUserPasswordRequest'
+      - description: mandatory header to access endpoint
+        in: header
+        name: X-API-Key
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Response indicates that the request succeeded and the resources
+            has been fetched and transmitted in the message body
+          schema:
+            $ref: '#/definitions/models.UpdateUserPasswordResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+        "422":
+          description: Validation error. This can happen if there is an error validation
+            while create account
+          schema:
+            allOf:
+            - $ref: '#/definitions/models.ErrorValidationResponse'
+            - properties:
+                errors:
+                  $ref: '#/definitions/validator.ErrorValidateResponse'
+              type: object
+      summary: Update User Password
+      tags:
+      - users
+  /v2/users/check/{identifier}:
+    get:
+      consumes:
+      - application/json
+      description: To check whether user is existed or not by email or phone number
+      parameters:
+      - description: object that needs to be added
+        in: path
+        name: identifier
+        required: true
+        type: string
+      - description: mandatory header to access endpoint
+        in: header
+        name: X-API-Key
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Response indicates that the request succeeded and the resources
+            has been fetched and transmitted in the message body
+          schema:
+            $ref: '#/definitions/models.CheckUserExistResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+        "422":
+          description: Validation error. This can happen if there is an error validation
+            while create account
+          schema:
+            allOf:
+            - $ref: '#/definitions/models.ErrorValidationResponse'
+            - properties:
+                errors:
+                  $ref: '#/definitions/validator.ErrorValidateResponse'
+              type: object
+      summary: Check User Exist
+      tags:
+      - users
+  /v2/users/login:
+    post:
+      consumes:
+      - application/json
+      description: Login for all type of users
+      parameters:
+      - description: User object that needs to be added
+        in: body
+        name: user
+        required: true
+        schema:
+          $ref: '#/definitions/models.LoginUserRequest'
+      - description: mandatory header to access endpoint
+        in: header
+        name: X-API-Key
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Response indicates that the request succeeded and the resources
+            has been fetched and transmitted in the message body
+          schema:
+            allOf:
+            - $ref: '#/definitions/models.LoginUserResponse'
+            - properties:
+                tokens:
+                  items:
+                    $ref: '#/definitions/models.TokensResponse'
+                  type: array
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+        "422":
+          description: Validation error. This can happen if there is an error validation
+            while create account
+          schema:
+            allOf:
+            - $ref: '#/definitions/models.ErrorValidationResponse'
+            - properties:
+                errors:
+                  $ref: '#/definitions/validator.ErrorValidateResponse'
+              type: object
+      summary: Login User
+      tags:
+      - users
+  /v2/users/logout:
+    put:
+      consumes:
+      - application/json
+      description: Logout user for all kinds of user
+      parameters:
+      - description: mandatory header to access endpoint
+        in: header
+        name: X-API-Key
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "204":
+          description: No Content
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+        "422":
+          description: Validation error. This can happen if there is an error validation
+            while create account
+          schema:
+            allOf:
+            - $ref: '#/definitions/models.ErrorValidationResponse'
+            - properties:
+                errors:
+                  $ref: '#/definitions/validator.ErrorValidateResponse'
+              type: object
+      summary: Logout User
+      tags:
+      - users
+  /v2/users/types:
+    get:
+      consumes:
+      - application/json
+      description: User Type is something like volunteer, lead or etc.
+      parameters:
+      - description: mandatory header to access endpoint
+        in: header
+        name: X-API-Key
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Response indicates that the request succeeded and the resources
+            has been fetched and transmitted in the message body
+          schema:
+            allOf:
+            - $ref: '#/definitions/models.List'
+            - properties:
+                data:
+                  items:
+                    $ref: '#/definitions/models.UserTypeResponse'
+                  type: array
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+        "422":
+          description: Validation error. This can happen if there is an error validation
+            while create account
+          schema:
+            allOf:
+            - $ref: '#/definitions/models.ErrorValidationResponse'
+            - properties:
+                errors:
+                  $ref: '#/definitions/validator.ErrorValidateResponse'
+              type: object
+      summary: Get All User Types
+      tags:
+      - users
+    post:
+      consumes:
+      - application/json
+      description: User Type is something like volunteer, lead or etc.
+      parameters:
+      - description: User object that needs to be added
+        in: body
+        name: user
+        required: true
+        schema:
+          $ref: '#/definitions/models.CreateUserTypeRequest'
+      - description: mandatory header to access endpoint
+        in: header
+        name: X-API-Key
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Response indicates that the request succeeded and the resources
+            has been fetched and transmitted in the message body
+          schema:
+            $ref: '#/definitions/models.UserTypeResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+        "422":
+          description: Validation error. This can happen if there is an error validation
+            while create account
+          schema:
+            allOf:
+            - $ref: '#/definitions/models.ErrorValidationResponse'
+            - properties:
+                errors:
+                  $ref: '#/definitions/validator.ErrorValidateResponse'
+              type: object
+      summary: Create User Type
+      tags:
+      - users
+  /v2/users/volunteer:
+    post:
+      consumes:
+      - application/json
+      description: Create user for volunteer
+      parameters:
+      - description: User object that needs to be added
+        in: body
+        name: user
+        required: true
+        schema:
+          $ref: '#/definitions/models.CreateVolunteerRequest'
+      - description: mandatory header to access endpoint
+        in: header
+        name: X-API-Key
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Response indicates that the request succeeded and the resources
+            has been fetched and transmitted in the message body
+          schema:
+            $ref: '#/definitions/models.CreateVolunteerResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+        "422":
+          description: Validation error. This can happen if there is an error validation
+            while create account
+          schema:
+            allOf:
+            - $ref: '#/definitions/models.ErrorValidationResponse'
+            - properties:
+                errors:
+                  $ref: '#/definitions/validator.ErrorValidateResponse'
+              type: object
+      summary: Create Volunteer User
+      tags:
+      - users
 swagger: "2.0"

@@ -13,6 +13,7 @@ import (
 type EventRegistrationRecordUsecase interface {
 	Create(ctx context.Context, request *models.CreateEventRegistrationRecordRequest, value *models.TokenValues) (response *models.CreateEventRegistrationRecordResponse, err error)
 	GetAll(ctx context.Context) (userTypes []models.UserType, err error)
+	UpdateStatus(ctx context.Context, requestParam *models.UpdateRegistrationStatusParameter, requestBody *models.UpdateRegistrationStatusRequest, value *models.TokenValues) (response *models.UpdateRegistrationStatusResponse, err error)
 }
 
 type eventRegistrationRecordUsecase struct {
@@ -346,4 +347,99 @@ func (erru *eventRegistrationRecordUsecase) validateCreate(ctx context.Context, 
 	}
 
 	return nil
+}
+
+func (erru *eventRegistrationRecordUsecase) UpdateStatus(ctx context.Context, requestParam *models.UpdateRegistrationStatusParameter, requestBody *models.UpdateRegistrationStatusRequest, value *models.TokenValues) (response *models.UpdateRegistrationStatusResponse, err error) {
+	defer func() {
+		LogService(ctx, err)
+	}()
+
+	allowedRoles := []string{"event-verify-record"}
+	allowedUsers := []string{"admin", "superadmin", "usher", "volunteer"}
+	switch requestBody.Status {
+	case models.MapRegisterStatus[models.REGISTER_STATUS_SUCCESS]:
+		isAllowedRoles := common.CheckOneDataInList(allowedRoles, value.Roles)
+		isAllowedUsers := common.CheckOneDataInList(allowedUsers, value.UserTypes)
+		if !isAllowedRoles && !isAllowedUsers {
+			return nil, models.ErrorForbiddenRole
+		}
+	case models.MapRegisterStatus[models.REGISTER_STATUS_CANCELLED]:
+	//case models.MapRegisterStatus[models.REGISTER_STATUS_PENDING]:
+	//	return nil, models.ErrorInvalidInput
+	default:
+		return nil, models.ErrorInvalidInput
+	}
+
+	record, err := erru.r.EventRegistrationRecord.GetById(ctx, requestParam.ID)
+	if err != nil {
+		return nil, err
+	}
+
+	if record.ID == uuid.Nil {
+		return nil, models.ErrorDataNotFound
+	}
+
+	switch record.Status {
+	case models.MapRegisterStatus[models.REGISTER_STATUS_SUCCESS]:
+		return nil, models.ErrorAlreadyVerified
+	case models.MapRegisterStatus[models.REGISTER_STATUS_CANCELLED]:
+		return nil, models.ErrorAlreadyCancelled
+	case models.MapRegisterStatus[models.REGISTER_STATUS_PENDING]:
+	default:
+		return nil, models.ErrorInvalidInput
+	}
+
+	res := models.UpdateRegistrationStatusResponse{}
+	err = erru.r.Transaction.Atomic(ctx, func(ctx context.Context, r *pgsql.PostgreRepositories) error {
+		record.Status = requestBody.Status
+		verifiedAt, _ := common.ParseStringToDatetime(time.RFC3339, requestBody.UpdatedAt, common.GetLocation())
+		record.VerifiedAt = sql.NullTime{Valid: true, Time: verifiedAt}
+		record.UpdatedBy = value.CommunityId
+
+		if err := r.EventRegistrationRecord.Update(ctx, record); err != nil {
+			return err
+		}
+
+		instance, err := r.EventInstance.GetSeatsNamesByCode(ctx, record.InstanceCode)
+		if err != nil {
+			return err
+		}
+
+		if instance == nil {
+			return models.ErrorDataNotFound
+		}
+
+		switch requestBody.Status {
+		case models.MapRegisterStatus[models.REGISTER_STATUS_SUCCESS]:
+			instance.ScannedSeats += 1
+			if err = r.EventInstance.UpdateScannedSeatsByCode(ctx, record.InstanceCode, instance); err != nil {
+				return err
+			}
+		case models.MapRegisterStatus[models.REGISTER_STATUS_CANCELLED]:
+			instance.BookedSeats -= 1
+			if err = r.EventInstance.UpdateBookedSeatsByCode(ctx, record.InstanceCode, instance); err != nil {
+				return err
+			}
+		default:
+			return models.ErrorInvalidInput
+		}
+
+		res = models.UpdateRegistrationStatusResponse{
+			Type:          models.TYPE_EVENT_REGISTRATION_RECORD,
+			ID:            record.ID,
+			Status:        requestBody.Status,
+			Name:          record.Name,
+			Identifier:    record.Identifier,
+			CommunityID:   record.CommunityId,
+			EventCode:     record.EventCode,
+			EventTitle:    instance.EventTitle,
+			InstanceCode:  record.InstanceCode,
+			InstanceTitle: instance.EventInstanceTitle,
+			UpdatedBy:     value.CommunityId,
+			VerifiedAt:    verifiedAt,
+		}
+
+		return nil
+	})
+	return &res, err
 }

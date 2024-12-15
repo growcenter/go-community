@@ -98,6 +98,7 @@ type GetInstanceByCodeDBOutput struct {
 type GetSeatsAndNamesByInstanceCodeDBOutput struct {
 	TotalSeats          int    `json:"total_seats"`
 	BookedSeats         int    `json:"booked_seats"`
+	ScannedSeats        int    `json:"scanned_seats"`
 	EventInstanceTitle  string `json:"event_instance_title"`
 	EventTitle          string `json:"event_title"`
 	TotalRemainingSeats int    `json:"total_remaining_seats"`

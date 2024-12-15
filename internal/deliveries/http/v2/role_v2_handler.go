@@ -34,7 +34,7 @@ func NewRoleHandler(api *echo.Group, u *usecases.Usecases) {
 // @Success 201 {object} models.RoleResponse "Response indicates that the request succeeded and the resources has been fetched and transmitted in the message body"
 // @Failure 400 {object} models.ErrorResponse "Bad Request"
 // @Failure 422 {object} models.ErrorValidationResponse{errors=validator.ErrorValidateResponse} "Validation error. This can happen if there is an error validation while create account"
-// @Router /v1/users/types [post]
+// @Router /v2/roles [post]
 func (rh *RoleHandler) Create(ctx echo.Context) error {
 	// Bind the JSON Request in order to get the usecase work
 	var request models.CreateRoleRequest
@@ -67,7 +67,7 @@ func (rh *RoleHandler) Create(ctx echo.Context) error {
 // @Success 200 {object} models.List{data=[]models.RoleResponse} "Response indicates that the request succeeded and the resources has been fetched and transmitted in the message body"
 // @Failure 400 {object} models.ErrorResponse "Bad Request"
 // @Failure 422 {object} models.ErrorValidationResponse{errors=validator.ErrorValidateResponse} "Validation error. This can happen if there is an error validation while create account"
-// @Router /v1/campuses [get]
+// @Router /v2/roles [get]
 func (rh *RoleHandler) GetAllRoles(ctx echo.Context) error {
 	data, err := rh.usecase.Role.GetAll(ctx.Request().Context())
 	if err != nil {

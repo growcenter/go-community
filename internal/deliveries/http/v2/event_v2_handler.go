@@ -1,7 +1,6 @@
 package v2
 
 import (
-	"fmt"
 	"github.com/labstack/echo/v4"
 	"go-community/internal/config"
 	"go-community/internal/deliveries/http/common/response"
@@ -29,7 +28,7 @@ func NewEventHandler(api *echo.Group, u *usecases.Usecases, c *config.Configurat
 	endpointUserAuth.GET("/:code", handler.GetByCode)
 	endpointUserAuth.POST("/registers", handler.Register)
 	endpointUserAuth.GET("/registers", handler.GetAllRegistered)
-	endpointUserAuth.PATCH("/registers/:id/action", handler.Verify)
+	endpointUserAuth.PATCH("/registers/:id/status", handler.UpdateStatus)
 }
 
 // Create godoc
@@ -96,7 +95,7 @@ func (eh *EventHandler) GetAll(ctx echo.Context) error {
 // @Success 200 {object} models.GetEventByCodeResponse{instances=[]models.GetInstancesByEventCodeResponse} "Response indicates that the request succeeded and the resources has been fetched and transmitted in the message body"
 // @Failure 400 {object} models.ErrorResponse "Bad Request"
 // @Failure 422 {object} models.ErrorValidationResponse{errors=validator.ErrorValidateResponse} "Validation error. This can happen if there is an error validation while create account"
-// @Router /v1/events/{code} [get]
+// @Router /v2/events/{code} [get]
 func (eh *EventHandler) GetByCode(ctx echo.Context) error {
 	parameter := models.GetEventByCodeParameter{
 		Code: ctx.Param("code"),
@@ -161,7 +160,7 @@ func (eh *EventHandler) Register(ctx echo.Context) error {
 // @Success 200 {object} models.GetAllRegisteredUserResponse{instances=[]models.InstancesForRegisteredRecordsResponse} "Response indicates that the request succeeded and the resources has been fetched and transmitted in the message body"
 // @Failure 400 {object} models.ErrorResponse "Bad Request"
 // @Failure 422 {object} models.ErrorValidationResponse{errors=validator.ErrorValidateResponse} "Validation error. This can happen if there is an error validation while create account"
-// @Router /v1/events/registers [get]
+// @Router /v2/events/registers [get]
 func (eh *EventHandler) GetAllRegistered(ctx echo.Context) error {
 	parameter := models.GetAllRegisteredUserParameter{
 		CommunityId: ctx.Get("communityId").(string),
@@ -179,7 +178,46 @@ func (eh *EventHandler) GetAllRegistered(ctx echo.Context) error {
 	return response.SuccessList(ctx, http.StatusOK, len(res), res)
 }
 
-func (eh *EventHandler) Verify(ctx echo.Context) error {
-	fmt.Println(ctx)
-	return nil
+// UpdateStatus godoc
+// @Summary Update Registration Status
+// @Description Update user registration id to success or failed
+// @Tags events
+// @Accept json
+// @Produce json
+// @Param id path string true "registration id"
+// @Param user body models.UpdateRegistrationStatusRequest true "User object that needs to be added"
+// @Param X-API-Key header string true "mandatory header to access endpoint"
+// @Success 201 {object} models.UpdateRegistrationStatusResponse "Response indicates that the request succeeded and the resources has been fetched and transmitted in the message body"
+// @Failure 400 {object} models.ErrorResponse "Bad Request"
+// @Failure 422 {object} models.ErrorValidationResponse{errors=validator.ErrorValidateResponse} "Validation error. This can happen if there is an error validation while create account"
+// @Router /v2/events/registers/{id}/status [patch]
+func (eh *EventHandler) UpdateStatus(ctx echo.Context) error {
+	requestParam := models.UpdateRegistrationStatusParameter{
+		ID: ctx.Param("id"),
+	}
+
+	if err := validator.Validate(requestParam); err != nil {
+		return response.ErrorValidation(ctx, err)
+	}
+
+	var requestBody models.UpdateRegistrationStatusRequest
+	if err := ctx.Bind(&requestBody); err != nil {
+		return response.Error(ctx, err)
+	}
+
+	if err := validator.Validate(requestBody); err != nil {
+		return response.ErrorValidation(ctx, err)
+	}
+
+	tokenValue, err := models.GetValueFromToken(ctx)
+	if err != nil {
+		return response.Error(ctx, err)
+	}
+
+	record, err := eh.usecase.EventRegistrationRecord.UpdateStatus(ctx.Request().Context(), &requestParam, &requestBody, &tokenValue)
+	if err != nil {
+		return response.Error(ctx, err)
+	}
+
+	return response.Success(ctx, http.StatusOK, record.ToResponse())
 }
