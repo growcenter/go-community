@@ -150,6 +150,18 @@ func (eh *EventHandler) Register(ctx echo.Context) error {
 	return response.Success(ctx, http.StatusCreated, register.ToResponse())
 }
 
+// GetAllRegistered godoc
+// @Summary Get All User's Registered Event
+// @Description Get All User's Registered Event
+// @Tags events
+// @Accept json
+// @Produce json
+// @Param X-API-Key header string true "mandatory header to access endpoint"
+// @Security BearerAuth
+// @Success 200 {object} models.GetAllRegisteredUserResponse{instances=[]models.InstancesForRegisteredRecordsResponse} "Response indicates that the request succeeded and the resources has been fetched and transmitted in the message body"
+// @Failure 400 {object} models.ErrorResponse "Bad Request"
+// @Failure 422 {object} models.ErrorValidationResponse{errors=validator.ErrorValidateResponse} "Validation error. This can happen if there is an error validation while create account"
+// @Router /v1/events/registers [get]
 func (eh *EventHandler) GetAllRegistered(ctx echo.Context) error {
 	parameter := models.GetAllRegisteredUserParameter{
 		CommunityId: ctx.Get("communityId").(string),

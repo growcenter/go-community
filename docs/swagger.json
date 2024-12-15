@@ -146,6 +146,82 @@
                 }
             }
         },
+        "/v1/events/registers": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Get All User's Registered Event",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "events"
+                ],
+                "summary": "Get All User's Registered Event",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "mandatory header to access endpoint",
+                        "name": "X-API-Key",
+                        "in": "header",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Response indicates that the request succeeded and the resources has been fetched and transmitted in the message body",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/models.GetAllRegisteredUserResponse"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "instances": {
+                                            "type": "array",
+                                            "items": {
+                                                "$ref": "#/definitions/models.InstancesForRegisteredRecordsResponse"
+                                            }
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/models.ErrorResponse"
+                        }
+                    },
+                    "422": {
+                        "description": "Validation error. This can happen if there is an error validation while create account",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/models.ErrorValidationResponse"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "errors": {
+                                            "$ref": "#/definitions/validator.ErrorValidateResponse"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                }
+            }
+        },
         "/v1/events/{code}": {
             "get": {
                 "security": [
@@ -2076,6 +2152,47 @@
                 }
             }
         },
+        "models.GetAllRegisteredUserResponse": {
+            "type": "object",
+            "properties": {
+                "code": {
+                    "type": "string"
+                },
+                "description": {
+                    "type": "string"
+                },
+                "endAt": {
+                    "type": "string"
+                },
+                "instances": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/models.InstancesForRegisteredRecordsResponse"
+                    }
+                },
+                "locationName": {
+                    "type": "string"
+                },
+                "locationType": {
+                    "type": "string"
+                },
+                "startAt": {
+                    "type": "string"
+                },
+                "status": {
+                    "type": "string"
+                },
+                "termsAndConditions": {
+                    "type": "string"
+                },
+                "title": {
+                    "type": "string"
+                },
+                "type": {
+                    "type": "string"
+                }
+            }
+        },
         "models.GetEventByCodeResponse": {
             "type": "object",
             "properties": {
@@ -2331,6 +2448,44 @@
                 }
             }
         },
+        "models.InstancesForRegisteredRecordsResponse": {
+            "type": "object",
+            "properties": {
+                "code": {
+                    "type": "string"
+                },
+                "description": {
+                    "type": "string"
+                },
+                "instanceEndAt": {
+                    "type": "string"
+                },
+                "instanceStartAt": {
+                    "type": "string"
+                },
+                "locationName": {
+                    "type": "string"
+                },
+                "locationType": {
+                    "type": "string"
+                },
+                "registrants": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/models.UserRegisteredRecordsResponse"
+                    }
+                },
+                "status": {
+                    "type": "string"
+                },
+                "title": {
+                    "type": "string"
+                },
+                "type": {
+                    "type": "string"
+                }
+            }
+        },
         "models.List": {
             "type": "object",
             "properties": {
@@ -2527,6 +2682,47 @@
                     "items": {
                         "type": "string"
                     }
+                }
+            }
+        },
+        "models.UserRegisteredRecordsResponse": {
+            "type": "object",
+            "properties": {
+                "communityId": {
+                    "type": "string"
+                },
+                "communityIdOrigin": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "identifier": {
+                    "type": "string"
+                },
+                "identifierOrigin": {
+                    "type": "string"
+                },
+                "isPersonalQr": {
+                    "type": "boolean"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "registeredAt": {
+                    "type": "string"
+                },
+                "registrationStatus": {
+                    "type": "string"
+                },
+                "type": {
+                    "type": "string"
+                },
+                "updatedBy": {
+                    "type": "string"
+                },
+                "verifiedAt": {
+                    "type": "string"
                 }
             }
         },

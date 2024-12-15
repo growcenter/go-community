@@ -698,6 +698,33 @@ definitions:
         example: Event
         type: string
     type: object
+  models.GetAllRegisteredUserResponse:
+    properties:
+      code:
+        type: string
+      description:
+        type: string
+      endAt:
+        type: string
+      instances:
+        items:
+          $ref: '#/definitions/models.InstancesForRegisteredRecordsResponse'
+        type: array
+      locationName:
+        type: string
+      locationType:
+        type: string
+      startAt:
+        type: string
+      status:
+        type: string
+      termsAndConditions:
+        type: string
+      title:
+        type: string
+      type:
+        type: string
+    type: object
   models.GetEventByCodeResponse:
     properties:
       allowedCampuses:
@@ -878,6 +905,31 @@ definitions:
           type: string
         type: array
     type: object
+  models.InstancesForRegisteredRecordsResponse:
+    properties:
+      code:
+        type: string
+      description:
+        type: string
+      instanceEndAt:
+        type: string
+      instanceStartAt:
+        type: string
+      locationName:
+        type: string
+      locationType:
+        type: string
+      registrants:
+        items:
+          $ref: '#/definitions/models.UserRegisteredRecordsResponse'
+        type: array
+      status:
+        type: string
+      title:
+        type: string
+      type:
+        type: string
+    type: object
   models.List:
     properties:
       data: {}
@@ -1014,6 +1066,33 @@ definitions:
         items:
           type: string
         type: array
+    type: object
+  models.UserRegisteredRecordsResponse:
+    properties:
+      communityId:
+        type: string
+      communityIdOrigin:
+        type: string
+      id:
+        type: string
+      identifier:
+        type: string
+      identifierOrigin:
+        type: string
+      isPersonalQr:
+        type: boolean
+      name:
+        type: string
+      registeredAt:
+        type: string
+      registrationStatus:
+        type: string
+      type:
+        type: string
+      updatedBy:
+        type: string
+      verifiedAt:
+        type: string
     type: object
   models.UserTypeResponse:
     properties:
@@ -1188,6 +1267,51 @@ paths:
       security:
       - BearerAuth: []
       summary: Get Event by Event Code
+      tags:
+      - events
+  /v1/events/registers:
+    get:
+      consumes:
+      - application/json
+      description: Get All User's Registered Event
+      parameters:
+      - description: mandatory header to access endpoint
+        in: header
+        name: X-API-Key
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Response indicates that the request succeeded and the resources
+            has been fetched and transmitted in the message body
+          schema:
+            allOf:
+            - $ref: '#/definitions/models.GetAllRegisteredUserResponse'
+            - properties:
+                instances:
+                  items:
+                    $ref: '#/definitions/models.InstancesForRegisteredRecordsResponse'
+                  type: array
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+        "422":
+          description: Validation error. This can happen if there is an error validation
+            while create account
+          schema:
+            allOf:
+            - $ref: '#/definitions/models.ErrorValidationResponse'
+            - properties:
+                errors:
+                  $ref: '#/definitions/validator.ErrorValidateResponse'
+              type: object
+      security:
+      - BearerAuth: []
+      summary: Get All User's Registered Event
       tags:
       - events
   /v1/tokens:
