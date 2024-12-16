@@ -54,7 +54,7 @@ func ErrorValidateResponseMapping(validationError validator.FieldError) ErrorVal
 	switch {
 	default:
 		return ErrorValidateResponse{
-			Code:    validationError.Tag(),
+			Code:    "INVALID_REQUEST",
 			Field:   validationError.Field(),
 			Message: ErrorValidationMapping(validationError),
 		}

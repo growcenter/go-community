@@ -1,6 +1,7 @@
 package v2
 
 import (
+	"fmt"
 	"github.com/labstack/echo/v4"
 	"go-community/internal/config"
 	"go-community/internal/deliveries/http/common/response"
@@ -29,6 +30,12 @@ func NewEventHandler(api *echo.Group, u *usecases.Usecases, c *config.Configurat
 	endpointUserAuth.POST("/registers", handler.Register)
 	endpointUserAuth.GET("/registers", handler.GetAllRegistered)
 	endpointUserAuth.PATCH("/registers/:id/status", handler.UpdateStatus)
+
+	endpointUserInternal := api.Group("/internal/events")
+	endpointUserInternal.Use(middleware.RoleUserMiddleware(c, []string{"event-internal-view", "event-internal-edit"}))
+	endpointUserInternal.GET("", handler.GetTitles)
+	endpointUserInternal.GET("/registers", handler.GetAllRegisteredInternal)
+
 }
 
 // Create godoc
@@ -220,4 +227,18 @@ func (eh *EventHandler) UpdateStatus(ctx echo.Context) error {
 	}
 
 	return response.Success(ctx, http.StatusOK, record.ToResponse())
+}
+
+func (eh *EventHandler) GetTitles(ctx echo.Context) error {
+	res, err := eh.usecase.Event.GetTitles(ctx.Request().Context())
+	if err != nil {
+		return response.Error(ctx, err)
+	}
+
+	return response.SuccessList(ctx, http.StatusOK, len(res), res)
+}
+
+func (eh *EventHandler) GetAllRegisteredInternal(ctx echo.Context) error {
+	fmt.Println(ctx)
+	return nil
 }

@@ -364,6 +364,26 @@ type (
 	}
 )
 
+func (e GetEventTitlesDBOutput) ToResponse() GetEventTitlesResponse {
+	return GetEventTitlesResponse{
+		Type:  TYPE_EVENT,
+		Code:  e.Code,
+		Title: e.Title,
+	}
+}
+
+type (
+	GetEventTitlesDBOutput struct {
+		Code  string
+		Title string
+	}
+	GetEventTitlesResponse struct {
+		Type  string `json:"type" example:"event"`
+		Code  string `json:"code" example:"event-1"`
+		Title string `json:"title" example:"Event 1"`
+	}
+)
+
 type EventAvailabilityStatus int32
 
 const (

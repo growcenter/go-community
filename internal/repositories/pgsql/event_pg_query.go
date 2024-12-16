@@ -143,4 +143,5 @@ var (
 	WHERE
 		rr.community_id_origin = ?
 `
+	queryGetEventTitles = `SELECT code, title FROM events WHERE deleted_at IS NULL`
 )

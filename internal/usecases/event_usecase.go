@@ -20,6 +20,7 @@ type EventUsecase interface {
 	GetAll(ctx context.Context, roles []string) (responses *[]models.GetAllEventsResponse, err error)
 	GetByCode(ctx context.Context, code string) (response *models.GetEventByCodeResponse, err error)
 	GetRegistered(ctx context.Context, communityIdOrigin string) (eventRegistrations []models.GetAllRegisteredUserResponse, err error)
+	GetTitles(ctx context.Context) (eventTitles []models.GetEventTitlesResponse, err error)
 }
 
 type eventUsecase struct {
@@ -503,4 +504,22 @@ func (eu *eventUsecase) GetRegistered(ctx context.Context, communityIdOrigin str
 	}
 
 	return events, nil
+}
+
+func (eu *eventUsecase) GetTitles(ctx context.Context) (eventTitles []models.GetEventTitlesResponse, err error) {
+	defer func() {
+		LogService(ctx, err)
+	}()
+
+	output, err := eu.r.Event.GetTitles(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	var res []models.GetEventTitlesResponse
+	for _, i := range output {
+		res = append(res, i.ToResponse())
+	}
+
+	return res, nil
 }
