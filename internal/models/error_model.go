@@ -90,11 +90,6 @@ type (
 	}
 )
 
-var ValidationErrorMapping = map[string]error{
-	"User_Name_required": ErrorInvalidInput,
-	"User_Email_email":   ErrorEmailInput,
-}
-
 func ErrorMapping(err error) ErrorResponse {
 	switch err {
 	case ErrorUserNotFound:
@@ -349,7 +344,6 @@ func ErrorMapping(err error) ErrorResponse {
 			Status:  "ALREADY_UPDATED",
 			Message: err.Error(),
 		}
-
 	default:
 		return ErrorResponse{
 			Code:    http.StatusInternalServerError,

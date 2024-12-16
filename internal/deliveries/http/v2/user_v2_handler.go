@@ -51,7 +51,7 @@ func NewUserHandler(api *echo.Group, u *usecases.Usecases, c *config.Configurati
 // @Param X-API-Key header string true "mandatory header to access endpoint"
 // @Success 201 {object} models.CreateUserResponse "Response indicates that the request succeeded and the resources has been fetched and transmitted in the message body"
 // @Failure 400 {object} models.ErrorResponse "Bad Request"
-// @Failure 422 {object} models.ErrorValidationResponse{errors=validator.ErrorValidateResponse} "Validation error. This can happen if there is an error validation while create account"
+// @Failure 422 {object} models.ErrorValidationResponse{errors=models.ErrorValidateResponse} "Validation error. This can happen if there is an error validation while create account"
 // @Router /v2/users [post]
 func (uh *UserHandler) Create(ctx echo.Context) error {
 	var request models.CreateUserRequest
@@ -81,7 +81,7 @@ func (uh *UserHandler) Create(ctx echo.Context) error {
 // @Param X-API-Key header string true "mandatory header to access endpoint"
 // @Success 201 {object} models.CreateVolunteerResponse "Response indicates that the request succeeded and the resources has been fetched and transmitted in the message body"
 // @Failure 400 {object} models.ErrorResponse "Bad Request"
-// @Failure 422 {object} models.ErrorValidationResponse{errors=validator.ErrorValidateResponse} "Validation error. This can happen if there is an error validation while create account"
+// @Failure 422 {object} models.ErrorValidationResponse{errors=models.ErrorValidateResponse} "Validation error. This can happen if there is an error validation while create account"
 // @Router /v2/users/volunteer [post]
 func (uh *UserHandler) CreateVolunteer(ctx echo.Context) error {
 	var request models.CreateVolunteerRequest
@@ -112,7 +112,7 @@ func (uh *UserHandler) CreateVolunteer(ctx echo.Context) error {
 // @Param X-API-Key header string true "mandatory header to access endpoint"
 // @Success 200 {object} models.LoginUserResponse{tokens=[]models.TokensResponse} "Response indicates that the request succeeded and the resources has been fetched and transmitted in the message body"
 // @Failure 400 {object} models.ErrorResponse "Bad Request"
-// @Failure 422 {object} models.ErrorValidationResponse{errors=validator.ErrorValidateResponse} "Validation error. This can happen if there is an error validation while create account"
+// @Failure 422 {object} models.ErrorValidationResponse{errors=models.ErrorValidateResponse} "Validation error. This can happen if there is an error validation while create account"
 // @Router /v2/users/login [post]
 func (uh *UserHandler) Login(ctx echo.Context) error {
 	var request models.LoginUserRequest
@@ -152,7 +152,7 @@ func (uh *UserHandler) Login(ctx echo.Context) error {
 // @Param X-API-Key header string true "mandatory header to access endpoint"
 // @Success 200 {object} models.CheckUserExistResponse "Response indicates that the request succeeded and the resources has been fetched and transmitted in the message body"
 // @Failure 400 {object} models.ErrorResponse "Bad Request"
-// @Failure 422 {object} models.ErrorValidationResponse{errors=validator.ErrorValidateResponse} "Validation error. This can happen if there is an error validation while create account"
+// @Failure 422 {object} models.ErrorValidationResponse{errors=models.ErrorValidateResponse} "Validation error. This can happen if there is an error validation while create account"
 // @Router /v2/users/check/{identifier} [get]
 func (uh *UserHandler) Check(ctx echo.Context) error {
 
@@ -175,7 +175,7 @@ func (uh *UserHandler) Check(ctx echo.Context) error {
 // @Param X-API-Key header string true "mandatory header to access endpoint"
 // @Success 201 {object} models.UserTypeResponse "Response indicates that the request succeeded and the resources has been fetched and transmitted in the message body"
 // @Failure 400 {object} models.ErrorResponse "Bad Request"
-// @Failure 422 {object} models.ErrorValidationResponse{errors=validator.ErrorValidateResponse} "Validation error. This can happen if there is an error validation while create account"
+// @Failure 422 {object} models.ErrorValidationResponse{errors=models.ErrorValidateResponse} "Validation error. This can happen if there is an error validation while create account"
 // @Router /v2/users/types [post]
 func (uh *UserHandler) CreateUserType(ctx echo.Context) error {
 	var request models.CreateUserTypeRequest
@@ -206,7 +206,7 @@ func (uh *UserHandler) CreateUserType(ctx echo.Context) error {
 // @Param X-API-Key header string true "mandatory header to access endpoint"
 // @Success 200 {object} models.List{data=[]models.UserTypeResponse} "Response indicates that the request succeeded and the resources has been fetched and transmitted in the message body"
 // @Failure 400 {object} models.ErrorResponse "Bad Request"
-// @Failure 422 {object} models.ErrorValidationResponse{errors=validator.ErrorValidateResponse} "Validation error. This can happen if there is an error validation while create account"
+// @Failure 422 {object} models.ErrorValidationResponse{errors=models.ErrorValidateResponse} "Validation error. This can happen if there is an error validation while create account"
 // @Router /v2/users/types [get]
 func (uh *UserHandler) GetAllUserTypes(ctx echo.Context) error {
 	data, err := uh.usecase.UserType.GetAll(ctx.Request().Context())
@@ -233,7 +233,7 @@ func (uh *UserHandler) GetAllUserTypes(ctx echo.Context) error {
 // @Param X-API-Key header string true "mandatory header to access endpoint"
 // @Success 201 {object} models.UpdateUserPasswordResponse "Response indicates that the request succeeded and the resources has been fetched and transmitted in the message body"
 // @Failure 400 {object} models.ErrorResponse "Bad Request"
-// @Failure 422 {object} models.ErrorValidationResponse{errors=validator.ErrorValidateResponse} "Validation error. This can happen if there is an error validation while create account"
+// @Failure 422 {object} models.ErrorValidationResponse{errors=models.ErrorValidateResponse} "Validation error. This can happen if there is an error validation while create account"
 // @Router /v2/users/{identifier}/password [patch]
 func (uh *UserHandler) UpdatePassword(ctx echo.Context) error {
 	var request models.UpdateUserPasswordRequest
@@ -271,7 +271,7 @@ func (uh *UserHandler) UpdatePassword(ctx echo.Context) error {
 // @Param X-API-Key header string true "mandatory header to access endpoint"
 // @Success 200 {object} models.GetOneByCommunityIdResponse{roles=[]models.RoleResponse} "Response indicates that the request succeeded and the resources has been fetched and transmitted in the message body"
 // @Failure 400 {object} models.ErrorResponse "Bad Request"
-// @Failure 422 {object} models.ErrorValidationResponse{errors=validator.ErrorValidateResponse} "Validation error. This can happen if there is an error validation while create account"
+// @Failure 422 {object} models.ErrorValidationResponse{errors=models.ErrorValidateResponse} "Validation error. This can happen if there is an error validation while create account"
 // @Router /v2/users/{communityId} [get]
 func (uh *UserHandler) GetByCommunityId(ctx echo.Context) error {
 	parameter := models.GetOneByCommunityIdParameter{
@@ -301,7 +301,7 @@ func (uh *UserHandler) GetByCommunityId(ctx echo.Context) error {
 // @Param X-API-Key header string true "mandatory header to access endpoint"
 // @Success 200 {object} models.GetOneByCommunityIdResponse{roles=[]models.RoleResponse} "Response indicates that the request succeeded and the resources has been fetched and transmitted in the message body"
 // @Failure 400 {object} models.ErrorResponse "Bad Request"
-// @Failure 422 {object} models.ErrorValidationResponse{errors=validator.ErrorValidateResponse} "Validation error. This can happen if there is an error validation while create account"
+// @Failure 422 {object} models.ErrorValidationResponse{errors=models.ErrorValidateResponse} "Validation error. This can happen if there is an error validation while create account"
 // @Router /v2/users [get]
 func (uh *UserHandler) GetByAccessToken(ctx echo.Context) error {
 	parameter := models.GetOneByCommunityIdParameter{
@@ -329,7 +329,7 @@ func (uh *UserHandler) GetByAccessToken(ctx echo.Context) error {
 // @Param X-API-Key header string true "mandatory header to access endpoint"
 // @Success 204 "No Content"
 // @Failure 400 {object} models.ErrorResponse "Bad Request"
-// @Failure 422 {object} models.ErrorValidationResponse{errors=validator.ErrorValidateResponse} "Validation error. This can happen if there is an error validation while create account"
+// @Failure 422 {object} models.ErrorValidationResponse{errors=models.ErrorValidateResponse} "Validation error. This can happen if there is an error validation while create account"
 // @Router /v2/users/logout [put]
 func (uh *UserHandler) Logout(ctx echo.Context) error {
 	ctx.SetCookie(&http.Cookie{

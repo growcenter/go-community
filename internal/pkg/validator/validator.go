@@ -2,7 +2,6 @@ package validator
 
 import (
 	"errors"
-	"fmt"
 	"go-community/internal/models"
 	"reflect"
 	"regexp"
@@ -44,7 +43,7 @@ func Validate(request interface{}) error {
 		// an invalid value for validation such as an interface with a nil
 		// value. Most including myself do not usually have code like this.
 		if _, ok := err.(*v10.InvalidValidationError); ok {
-			errs = multierror.Append(errs, ErrorValidateResponse{
+			errs = multierror.Append(errs, models.ErrorValidateResponse{
 				Message: err.Error(),
 			})
 			return errs.ErrorOrNil()
@@ -53,29 +52,7 @@ func Validate(request interface{}) error {
 		var validatorErrs v10.ValidationErrors
 		if errors.As(err, &validatorErrs) {
 			for _, validatorErr := range validatorErrs {
-				// Construct the key for the validation error map
-				key := fmt.Sprintf("%s_%s", validatorErr.Namespace(), validatorErr.Tag())
-
-				// Map the validation error key to a corresponding error
-				mappedError, found := models.ValidationErrorMapping[key]
-				if !found {
-					// If not found, use the field and tag for a less specific key
-					key = fmt.Sprintf("%s_%s", validatorErr.Field(), validatorErr.Tag())
-					mappedError, found = models.ValidationErrorMapping[key]
-					if !found {
-						// If still not found, create a generic error
-						mappedError = fmt.Errorf("%s %s", validatorErr.Tag(), validatorErr.Param())
-					}
-				}
-
-				// Use the ErrorMapping function to get the ErrorResponse
-				errorResponse := models.ErrorMapping(mappedError)
-				validateResponse := ErrorValidateResponse{
-					Code:    errorResponse.Status,
-					Field:   validatorErr.Field(),
-					Message: errorResponse.Message,
-				}
-
+				validateResponse := models.ErrorValidateResponseMapping(validatorErr)
 				errs = multierror.Append(errs, validateResponse)
 			}
 		}

@@ -65,7 +65,7 @@
                                     "type": "object",
                                     "properties": {
                                         "errors": {
-                                            "$ref": "#/definitions/validator.ErrorValidateResponse"
+                                            "$ref": "#/definitions/models.ErrorValidateResponse"
                                         }
                                     }
                                 }
@@ -136,7 +136,7 @@
                                     "type": "object",
                                     "properties": {
                                         "errors": {
-                                            "$ref": "#/definitions/validator.ErrorValidateResponse"
+                                            "$ref": "#/definitions/models.ErrorValidateResponse"
                                         }
                                     }
                                 }
@@ -212,7 +212,7 @@
                                     "type": "object",
                                     "properties": {
                                         "errors": {
-                                            "$ref": "#/definitions/validator.ErrorValidateResponse"
+                                            "$ref": "#/definitions/models.ErrorValidateResponse"
                                         }
                                     }
                                 }
@@ -292,7 +292,7 @@
                                     "type": "object",
                                     "properties": {
                                         "errors": {
-                                            "$ref": "#/definitions/validator.ErrorValidateResponse"
+                                            "$ref": "#/definitions/models.ErrorValidateResponse"
                                         }
                                     }
                                 }
@@ -368,7 +368,7 @@
                                     "type": "object",
                                     "properties": {
                                         "errors": {
-                                            "$ref": "#/definitions/validator.ErrorValidateResponse"
+                                            "$ref": "#/definitions/models.ErrorValidateResponse"
                                         }
                                     }
                                 }
@@ -448,7 +448,7 @@
                                     "type": "object",
                                     "properties": {
                                         "errors": {
-                                            "$ref": "#/definitions/validator.ErrorValidateResponse"
+                                            "$ref": "#/definitions/models.ErrorValidateResponse"
                                         }
                                     }
                                 }
@@ -520,7 +520,7 @@
                                     "type": "object",
                                     "properties": {
                                         "errors": {
-                                            "$ref": "#/definitions/validator.ErrorValidateResponse"
+                                            "$ref": "#/definitions/models.ErrorValidateResponse"
                                         }
                                     }
                                 }
@@ -603,7 +603,7 @@
                                     "type": "object",
                                     "properties": {
                                         "errors": {
-                                            "$ref": "#/definitions/validator.ErrorValidateResponse"
+                                            "$ref": "#/definitions/models.ErrorValidateResponse"
                                         }
                                     }
                                 }
@@ -674,7 +674,7 @@
                                     "type": "object",
                                     "properties": {
                                         "errors": {
-                                            "$ref": "#/definitions/validator.ErrorValidateResponse"
+                                            "$ref": "#/definitions/models.ErrorValidateResponse"
                                         }
                                     }
                                 }
@@ -737,7 +737,7 @@
                                     "type": "object",
                                     "properties": {
                                         "errors": {
-                                            "$ref": "#/definitions/validator.ErrorValidateResponse"
+                                            "$ref": "#/definitions/models.ErrorValidateResponse"
                                         }
                                     }
                                 }
@@ -815,7 +815,7 @@
                                     "type": "object",
                                     "properties": {
                                         "errors": {
-                                            "$ref": "#/definitions/validator.ErrorValidateResponse"
+                                            "$ref": "#/definitions/models.ErrorValidateResponse"
                                         }
                                     }
                                 }
@@ -891,7 +891,7 @@
                                     "type": "object",
                                     "properties": {
                                         "errors": {
-                                            "$ref": "#/definitions/validator.ErrorValidateResponse"
+                                            "$ref": "#/definitions/models.ErrorValidateResponse"
                                         }
                                     }
                                 }
@@ -954,7 +954,7 @@
                                     "type": "object",
                                     "properties": {
                                         "errors": {
-                                            "$ref": "#/definitions/validator.ErrorValidateResponse"
+                                            "$ref": "#/definitions/models.ErrorValidateResponse"
                                         }
                                     }
                                 }
@@ -1017,7 +1017,7 @@
                                     "type": "object",
                                     "properties": {
                                         "errors": {
-                                            "$ref": "#/definitions/validator.ErrorValidateResponse"
+                                            "$ref": "#/definitions/models.ErrorValidateResponse"
                                         }
                                     }
                                 }
@@ -1097,7 +1097,7 @@
                                     "type": "object",
                                     "properties": {
                                         "errors": {
-                                            "$ref": "#/definitions/validator.ErrorValidateResponse"
+                                            "$ref": "#/definitions/models.ErrorValidateResponse"
                                         }
                                     }
                                 }
@@ -1150,7 +1150,7 @@
                                     "type": "object",
                                     "properties": {
                                         "errors": {
-                                            "$ref": "#/definitions/validator.ErrorValidateResponse"
+                                            "$ref": "#/definitions/models.ErrorValidateResponse"
                                         }
                                     }
                                 }
@@ -1221,7 +1221,7 @@
                                     "type": "object",
                                     "properties": {
                                         "errors": {
-                                            "$ref": "#/definitions/validator.ErrorValidateResponse"
+                                            "$ref": "#/definitions/models.ErrorValidateResponse"
                                         }
                                     }
                                 }
@@ -1284,7 +1284,7 @@
                                     "type": "object",
                                     "properties": {
                                         "errors": {
-                                            "$ref": "#/definitions/validator.ErrorValidateResponse"
+                                            "$ref": "#/definitions/models.ErrorValidateResponse"
                                         }
                                     }
                                 }
@@ -1349,7 +1349,7 @@
                                     "type": "object",
                                     "properties": {
                                         "errors": {
-                                            "$ref": "#/definitions/validator.ErrorValidateResponse"
+                                            "$ref": "#/definitions/models.ErrorValidateResponse"
                                         }
                                     }
                                 }
@@ -1427,7 +1427,7 @@
                                     "type": "object",
                                     "properties": {
                                         "errors": {
-                                            "$ref": "#/definitions/validator.ErrorValidateResponse"
+                                            "$ref": "#/definitions/models.ErrorValidateResponse"
                                         }
                                     }
                                 }
@@ -1499,7 +1499,7 @@
                                     "type": "object",
                                     "properties": {
                                         "errors": {
-                                            "$ref": "#/definitions/validator.ErrorValidateResponse"
+                                            "$ref": "#/definitions/models.ErrorValidateResponse"
                                         }
                                     }
                                 }
@@ -2402,6 +2402,23 @@
                 }
             }
         },
+        "models.ErrorValidateResponse": {
+            "type": "object",
+            "properties": {
+                "code": {
+                    "type": "string",
+                    "example": "accountNumber_required"
+                },
+                "field": {
+                    "type": "string",
+                    "example": "MISSING_FIELD"
+                },
+                "message": {
+                    "type": "string",
+                    "example": "field is missing"
+                }
+            }
+        },
         "models.ErrorValidationResponse": {
             "type": "object",
             "properties": {
@@ -3163,23 +3180,6 @@
                 "userType": {
                     "type": "string",
                     "example": "volunteer"
-                }
-            }
-        },
-        "validator.ErrorValidateResponse": {
-            "type": "object",
-            "properties": {
-                "code": {
-                    "type": "string",
-                    "example": "accountNumber_required"
-                },
-                "field": {
-                    "type": "string",
-                    "example": "MISSING_FIELD"
-                },
-                "message": {
-                    "type": "string",
-                    "example": "field is missing"
                 }
             }
         }

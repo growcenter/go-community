@@ -630,6 +630,18 @@ definitions:
         example: INVALID_VALUES
         type: string
     type: object
+  models.ErrorValidateResponse:
+    properties:
+      code:
+        example: accountNumber_required
+        type: string
+      field:
+        example: MISSING_FIELD
+        type: string
+      message:
+        example: field is missing
+        type: string
+    type: object
   models.ErrorValidationResponse:
     properties:
       code:
@@ -1159,18 +1171,6 @@ definitions:
         example: volunteer
         type: string
     type: object
-  validator.ErrorValidateResponse:
-    properties:
-      code:
-        example: accountNumber_required
-        type: string
-      field:
-        example: MISSING_FIELD
-        type: string
-      message:
-        example: field is missing
-        type: string
-    type: object
 info:
   contact: {}
 paths:
@@ -1212,7 +1212,7 @@ paths:
             - $ref: '#/definitions/models.ErrorValidationResponse'
             - properties:
                 errors:
-                  $ref: '#/definitions/validator.ErrorValidateResponse'
+                  $ref: '#/definitions/models.ErrorValidateResponse'
               type: object
       summary: Get Campuses from Config
       tags:
@@ -1255,7 +1255,7 @@ paths:
             - $ref: '#/definitions/models.ErrorValidationResponse'
             - properties:
                 errors:
-                  $ref: '#/definitions/validator.ErrorValidateResponse'
+                  $ref: '#/definitions/models.ErrorValidateResponse'
               type: object
       summary: Get Departments from Config
       tags:
@@ -1298,7 +1298,7 @@ paths:
             - $ref: '#/definitions/models.ErrorValidationResponse'
             - properties:
                 errors:
-                  $ref: '#/definitions/validator.ErrorValidateResponse'
+                  $ref: '#/definitions/models.ErrorValidateResponse'
               type: object
       security:
       - BearerAuth: []
@@ -1346,7 +1346,7 @@ paths:
             - $ref: '#/definitions/models.ErrorValidationResponse'
             - properties:
                 errors:
-                  $ref: '#/definitions/validator.ErrorValidateResponse'
+                  $ref: '#/definitions/models.ErrorValidateResponse'
               type: object
       security:
       - BearerAuth: []
@@ -1396,7 +1396,7 @@ paths:
             - $ref: '#/definitions/models.ErrorValidationResponse'
             - properties:
                 errors:
-                  $ref: '#/definitions/validator.ErrorValidateResponse'
+                  $ref: '#/definitions/models.ErrorValidateResponse'
               type: object
       security:
       - BearerAuth: []
@@ -1441,7 +1441,7 @@ paths:
             - $ref: '#/definitions/models.ErrorValidationResponse'
             - properties:
                 errors:
-                  $ref: '#/definitions/validator.ErrorValidateResponse'
+                  $ref: '#/definitions/models.ErrorValidateResponse'
               type: object
       security:
       - BearerAuth: []
@@ -1489,7 +1489,7 @@ paths:
             - $ref: '#/definitions/models.ErrorValidationResponse'
             - properties:
                 errors:
-                  $ref: '#/definitions/validator.ErrorValidateResponse'
+                  $ref: '#/definitions/models.ErrorValidateResponse'
               type: object
       security:
       - BearerAuth: []
@@ -1538,7 +1538,7 @@ paths:
             - $ref: '#/definitions/models.ErrorValidationResponse'
             - properties:
                 errors:
-                  $ref: '#/definitions/validator.ErrorValidateResponse'
+                  $ref: '#/definitions/models.ErrorValidateResponse'
               type: object
       summary: Update Registration Status
       tags:
@@ -1581,7 +1581,7 @@ paths:
             - $ref: '#/definitions/models.ErrorValidationResponse'
             - properties:
                 errors:
-                  $ref: '#/definitions/validator.ErrorValidateResponse'
+                  $ref: '#/definitions/models.ErrorValidateResponse'
               type: object
       summary: Get All Roles
       tags:
@@ -1622,7 +1622,7 @@ paths:
             - $ref: '#/definitions/models.ErrorValidationResponse'
             - properties:
                 errors:
-                  $ref: '#/definitions/validator.ErrorValidateResponse'
+                  $ref: '#/definitions/models.ErrorValidateResponse'
               type: object
       summary: Create Roles
       tags:
@@ -1670,7 +1670,7 @@ paths:
             - $ref: '#/definitions/models.ErrorValidationResponse'
             - properties:
                 errors:
-                  $ref: '#/definitions/validator.ErrorValidateResponse'
+                  $ref: '#/definitions/models.ErrorValidateResponse'
               type: object
       summary: Generate Tokens
       tags:
@@ -1713,7 +1713,7 @@ paths:
             - $ref: '#/definitions/models.ErrorValidationResponse'
             - properties:
                 errors:
-                  $ref: '#/definitions/validator.ErrorValidateResponse'
+                  $ref: '#/definitions/models.ErrorValidateResponse'
               type: object
       security:
       - BearerAuth: []
@@ -1756,7 +1756,7 @@ paths:
             - $ref: '#/definitions/models.ErrorValidationResponse'
             - properties:
                 errors:
-                  $ref: '#/definitions/validator.ErrorValidateResponse'
+                  $ref: '#/definitions/models.ErrorValidateResponse'
               type: object
       summary: Create User
       tags:
@@ -1804,7 +1804,7 @@ paths:
             - $ref: '#/definitions/models.ErrorValidationResponse'
             - properties:
                 errors:
-                  $ref: '#/definitions/validator.ErrorValidateResponse'
+                  $ref: '#/definitions/models.ErrorValidateResponse'
               type: object
       summary: Get User By Community ID
       tags:
@@ -1851,7 +1851,7 @@ paths:
             - $ref: '#/definitions/models.ErrorValidationResponse'
             - properties:
                 errors:
-                  $ref: '#/definitions/validator.ErrorValidateResponse'
+                  $ref: '#/definitions/models.ErrorValidateResponse'
               type: object
       summary: Update User Password
       tags:
@@ -1892,7 +1892,7 @@ paths:
             - $ref: '#/definitions/models.ErrorValidationResponse'
             - properties:
                 errors:
-                  $ref: '#/definitions/validator.ErrorValidateResponse'
+                  $ref: '#/definitions/models.ErrorValidateResponse'
               type: object
       summary: Check User Exist
       tags:
@@ -1941,7 +1941,7 @@ paths:
             - $ref: '#/definitions/models.ErrorValidationResponse'
             - properties:
                 errors:
-                  $ref: '#/definitions/validator.ErrorValidateResponse'
+                  $ref: '#/definitions/models.ErrorValidateResponse'
               type: object
       summary: Login User
       tags:
@@ -1974,7 +1974,7 @@ paths:
             - $ref: '#/definitions/models.ErrorValidationResponse'
             - properties:
                 errors:
-                  $ref: '#/definitions/validator.ErrorValidateResponse'
+                  $ref: '#/definitions/models.ErrorValidateResponse'
               type: object
       summary: Logout User
       tags:
@@ -2017,7 +2017,7 @@ paths:
             - $ref: '#/definitions/models.ErrorValidationResponse'
             - properties:
                 errors:
-                  $ref: '#/definitions/validator.ErrorValidateResponse'
+                  $ref: '#/definitions/models.ErrorValidateResponse'
               type: object
       summary: Get All User Types
       tags:
@@ -2058,7 +2058,7 @@ paths:
             - $ref: '#/definitions/models.ErrorValidationResponse'
             - properties:
                 errors:
-                  $ref: '#/definitions/validator.ErrorValidateResponse'
+                  $ref: '#/definitions/models.ErrorValidateResponse'
               type: object
       summary: Create User Type
       tags:
@@ -2100,7 +2100,7 @@ paths:
             - $ref: '#/definitions/models.ErrorValidationResponse'
             - properties:
                 errors:
-                  $ref: '#/definitions/validator.ErrorValidateResponse'
+                  $ref: '#/definitions/models.ErrorValidateResponse'
               type: object
       summary: Create Volunteer User
       tags:

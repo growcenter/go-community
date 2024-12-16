@@ -76,7 +76,7 @@ const docTemplate = `{
                                     "type": "object",
                                     "properties": {
                                         "errors": {
-                                            "$ref": "#/definitions/validator.ErrorValidateResponse"
+                                            "$ref": "#/definitions/models.ErrorValidateResponse"
                                         }
                                     }
                                 }
@@ -147,7 +147,7 @@ const docTemplate = `{
                                     "type": "object",
                                     "properties": {
                                         "errors": {
-                                            "$ref": "#/definitions/validator.ErrorValidateResponse"
+                                            "$ref": "#/definitions/models.ErrorValidateResponse"
                                         }
                                     }
                                 }
@@ -223,7 +223,7 @@ const docTemplate = `{
                                     "type": "object",
                                     "properties": {
                                         "errors": {
-                                            "$ref": "#/definitions/validator.ErrorValidateResponse"
+                                            "$ref": "#/definitions/models.ErrorValidateResponse"
                                         }
                                     }
                                 }
@@ -303,7 +303,7 @@ const docTemplate = `{
                                     "type": "object",
                                     "properties": {
                                         "errors": {
-                                            "$ref": "#/definitions/validator.ErrorValidateResponse"
+                                            "$ref": "#/definitions/models.ErrorValidateResponse"
                                         }
                                     }
                                 }
@@ -379,7 +379,7 @@ const docTemplate = `{
                                     "type": "object",
                                     "properties": {
                                         "errors": {
-                                            "$ref": "#/definitions/validator.ErrorValidateResponse"
+                                            "$ref": "#/definitions/models.ErrorValidateResponse"
                                         }
                                     }
                                 }
@@ -459,7 +459,7 @@ const docTemplate = `{
                                     "type": "object",
                                     "properties": {
                                         "errors": {
-                                            "$ref": "#/definitions/validator.ErrorValidateResponse"
+                                            "$ref": "#/definitions/models.ErrorValidateResponse"
                                         }
                                     }
                                 }
@@ -531,7 +531,7 @@ const docTemplate = `{
                                     "type": "object",
                                     "properties": {
                                         "errors": {
-                                            "$ref": "#/definitions/validator.ErrorValidateResponse"
+                                            "$ref": "#/definitions/models.ErrorValidateResponse"
                                         }
                                     }
                                 }
@@ -614,7 +614,7 @@ const docTemplate = `{
                                     "type": "object",
                                     "properties": {
                                         "errors": {
-                                            "$ref": "#/definitions/validator.ErrorValidateResponse"
+                                            "$ref": "#/definitions/models.ErrorValidateResponse"
                                         }
                                     }
                                 }
@@ -685,7 +685,7 @@ const docTemplate = `{
                                     "type": "object",
                                     "properties": {
                                         "errors": {
-                                            "$ref": "#/definitions/validator.ErrorValidateResponse"
+                                            "$ref": "#/definitions/models.ErrorValidateResponse"
                                         }
                                     }
                                 }
@@ -748,7 +748,7 @@ const docTemplate = `{
                                     "type": "object",
                                     "properties": {
                                         "errors": {
-                                            "$ref": "#/definitions/validator.ErrorValidateResponse"
+                                            "$ref": "#/definitions/models.ErrorValidateResponse"
                                         }
                                     }
                                 }
@@ -826,7 +826,7 @@ const docTemplate = `{
                                     "type": "object",
                                     "properties": {
                                         "errors": {
-                                            "$ref": "#/definitions/validator.ErrorValidateResponse"
+                                            "$ref": "#/definitions/models.ErrorValidateResponse"
                                         }
                                     }
                                 }
@@ -902,7 +902,7 @@ const docTemplate = `{
                                     "type": "object",
                                     "properties": {
                                         "errors": {
-                                            "$ref": "#/definitions/validator.ErrorValidateResponse"
+                                            "$ref": "#/definitions/models.ErrorValidateResponse"
                                         }
                                     }
                                 }
@@ -965,7 +965,7 @@ const docTemplate = `{
                                     "type": "object",
                                     "properties": {
                                         "errors": {
-                                            "$ref": "#/definitions/validator.ErrorValidateResponse"
+                                            "$ref": "#/definitions/models.ErrorValidateResponse"
                                         }
                                     }
                                 }
@@ -1028,7 +1028,7 @@ const docTemplate = `{
                                     "type": "object",
                                     "properties": {
                                         "errors": {
-                                            "$ref": "#/definitions/validator.ErrorValidateResponse"
+                                            "$ref": "#/definitions/models.ErrorValidateResponse"
                                         }
                                     }
                                 }
@@ -1108,7 +1108,7 @@ const docTemplate = `{
                                     "type": "object",
                                     "properties": {
                                         "errors": {
-                                            "$ref": "#/definitions/validator.ErrorValidateResponse"
+                                            "$ref": "#/definitions/models.ErrorValidateResponse"
                                         }
                                     }
                                 }
@@ -1161,7 +1161,7 @@ const docTemplate = `{
                                     "type": "object",
                                     "properties": {
                                         "errors": {
-                                            "$ref": "#/definitions/validator.ErrorValidateResponse"
+                                            "$ref": "#/definitions/models.ErrorValidateResponse"
                                         }
                                     }
                                 }
@@ -1232,7 +1232,7 @@ const docTemplate = `{
                                     "type": "object",
                                     "properties": {
                                         "errors": {
-                                            "$ref": "#/definitions/validator.ErrorValidateResponse"
+                                            "$ref": "#/definitions/models.ErrorValidateResponse"
                                         }
                                     }
                                 }
@@ -1295,7 +1295,7 @@ const docTemplate = `{
                                     "type": "object",
                                     "properties": {
                                         "errors": {
-                                            "$ref": "#/definitions/validator.ErrorValidateResponse"
+                                            "$ref": "#/definitions/models.ErrorValidateResponse"
                                         }
                                     }
                                 }
@@ -1360,7 +1360,7 @@ const docTemplate = `{
                                     "type": "object",
                                     "properties": {
                                         "errors": {
-                                            "$ref": "#/definitions/validator.ErrorValidateResponse"
+                                            "$ref": "#/definitions/models.ErrorValidateResponse"
                                         }
                                     }
                                 }
@@ -1438,7 +1438,7 @@ const docTemplate = `{
                                     "type": "object",
                                     "properties": {
                                         "errors": {
-                                            "$ref": "#/definitions/validator.ErrorValidateResponse"
+                                            "$ref": "#/definitions/models.ErrorValidateResponse"
                                         }
                                     }
                                 }
@@ -1510,7 +1510,7 @@ const docTemplate = `{
                                     "type": "object",
                                     "properties": {
                                         "errors": {
-                                            "$ref": "#/definitions/validator.ErrorValidateResponse"
+                                            "$ref": "#/definitions/models.ErrorValidateResponse"
                                         }
                                     }
                                 }
@@ -2413,6 +2413,23 @@ const docTemplate = `{
                 }
             }
         },
+        "models.ErrorValidateResponse": {
+            "type": "object",
+            "properties": {
+                "code": {
+                    "type": "string",
+                    "example": "accountNumber_required"
+                },
+                "field": {
+                    "type": "string",
+                    "example": "MISSING_FIELD"
+                },
+                "message": {
+                    "type": "string",
+                    "example": "field is missing"
+                }
+            }
+        },
         "models.ErrorValidationResponse": {
             "type": "object",
             "properties": {
@@ -3174,23 +3191,6 @@ const docTemplate = `{
                 "userType": {
                     "type": "string",
                     "example": "volunteer"
-                }
-            }
-        },
-        "validator.ErrorValidateResponse": {
-            "type": "object",
-            "properties": {
-                "code": {
-                    "type": "string",
-                    "example": "accountNumber_required"
-                },
-                "field": {
-                    "type": "string",
-                    "example": "MISSING_FIELD"
-                },
-                "message": {
-                    "type": "string",
-                    "example": "field is missing"
                 }
             }
         }
