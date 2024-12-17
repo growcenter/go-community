@@ -36,9 +36,10 @@ func AccountNumber() (accountNumber string, err error) {
 	return fmt.Sprintf("%02d%010d%02d", prefix, number, check), nil
 }
 
+// Generate a random base account number with 10 digits
 func generateBaseAccountNumber() string {
-	randomNumber := rand.NewSource(time.Now().UnixNano())
-	baseAccountNumber := fmt.Sprintf("%010d", randomNumber)
+	randomSource := rand.New(rand.NewSource(time.Now().UnixNano()))
+	baseAccountNumber := fmt.Sprintf("%010d", randomSource.Intn(10000000000)) // Generate a random number with up to 10 digits
 	return baseAccountNumber
 }
 

@@ -4,7 +4,7 @@ import (
 	"time"
 )
 
-var KIND_CAMPUS = "campus"
+var TYPE_CAMPUS = "campus"
 
 type Campus struct {
 	ID        int
@@ -20,7 +20,7 @@ type Campus struct {
 
 func (e *Campus) ToResponse() *CampusResponse {
 	return &CampusResponse{
-		Type:     KIND_CAMPUS,
+		Type:     TYPE_CAMPUS,
 		Code:     e.Code,
 		Region:   e.Region,
 		Name:     e.Name,

@@ -6,12 +6,18 @@ docker-stop:
 	# Delete postgre database server
 	docker-compose down
 
+.PHONY: run
+run: generate-docs run_api
+
 run_api: tidy
 	export ENV="DEV" && go run ./cmd/api/main.go
 
 tidy:
 	go mod tidy
 	go mod download
+
+generate-docs:
+	swag init -g cmd/api/main.go
 
 migration:
 	# Create database migration

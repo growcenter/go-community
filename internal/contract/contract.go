@@ -64,10 +64,11 @@ func New(config *config.Configuration) *Contract {
 		Repository:    postgreRepository,
 		Google:        oauthGoogle,
 		Authorization: auth,
+		Config:        config,
 	})
 
 	// Register Handler
-	handler.New(e, usecase, config)
+	handler.New(e, usecase, config, auth)
 
 	return &Contract{
 		echo: e,

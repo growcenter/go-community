@@ -30,6 +30,17 @@ var (
 	ErrorRegistrationAlreadyCancel   = errors.New("you already cancelled the registration")
 	ErrorRegistrationAlreadyVerified = errors.New("your registration code is already verified")
 	ErrorNoRegistrationNeeded        = errors.New("you do not need to register for this session")
+	ErrorViolateAllowedForPrivate    = errors.New("allowedFor is private but either allowedUsers, allowedRoles, allowedCampuses are empty")
+	ErrorMaxPerTrxIsZero             = errors.New("since registration is required, cannot set maxPerTrx to 0")
+	ErrorAttendanceTypeWhenRequired  = errors.New("since registration is required, attendance type cannot be empty")
+	ErrorEventNotAvailable           = errors.New("event is not available")
+	ErrorEventCanOnlyRegisterOnce    = errors.New("your account already registered for this event")
+	ErrorAlreadyRegistered           = errors.New("your main or other register data already registered for this event")
+	ErrorIdentifierCommunityIdEmpty  = errors.New("at least should filled either identifier or community id")
+	ErrorQRForMoreThanOneRegister    = errors.New("your personal QR cannot be used for more than one registration")
+	ErrorCannotUsePersonalQR         = errors.New("you cannot register this event by your personal qr. To register, please register manually")
+	ErrorAlreadyVerified             = errors.New("your registration is already verified")
+	ErrorAlreadyCancelled            = errors.New("your registration is already cancelled")
 
 	// Google Error
 	ErrorFetchGoogle = errors.New("error while retrieving user from google")
@@ -58,26 +69,26 @@ var (
 	ErrorRateLimiterExceeds = errors.New("too much input, please try again later")
 
 	// User Error
-	ErrorDidNotFillKKJNumber = errors.New("please input the kkj number if you input jemaat id")
+	ErrorDidNotFillKKJNumber   = errors.New("please input the kkj number if you input jemaat id")
+	ErrorMismatchFields        = errors.New("please input the same input on both fields")
+	ErrorMissingDepartmentCool = errors.New("please input department code or cool id")
+
+	// Time error
+	ErrorStartDateLater = errors.New("start time cannot be later than end time")
 )
 
 type (
 	ErrorResponse struct {
-		Code    int    `json:"code"`
-		Status  string `json:"status"`
-		Message string `json:"message"`
+		Code    int    `json:"code" example:"400"`
+		Status  string `json:"status" example:"INVALID_VALUES"`
+		Message string `json:"message" example:"value cannot be blabla"`
 	}
 	ErrorValidationResponse struct {
-		Code    int         `json:"code"`
-		Message string      `json:"message"`
+		Code    int         `json:"code" example:"422"`
+		Message string      `json:"message" example:"Validation failed for one or more fields."`
 		Errors  interface{} `json:"errors"`
 	}
 )
-
-var ValidationErrorMapping = map[string]error{
-	"User_Name_required": ErrorInvalidInput,
-	"User_Email_email":   ErrorEmailInput,
-}
 
 func ErrorMapping(err error) ErrorResponse {
 	switch err {
@@ -261,7 +272,78 @@ func ErrorMapping(err error) ErrorResponse {
 			Status:  "MISSING_FIELD",
 			Message: err.Error(),
 		}
-
+	case ErrorMismatchFields:
+		return ErrorResponse{
+			Code:    http.StatusBadRequest,
+			Status:  "MISMATCH_FIELDS",
+			Message: err.Error(),
+		}
+	case ErrorStartDateLater:
+		return ErrorResponse{
+			Code:    http.StatusBadRequest,
+			Status:  "INVALID_VALUES",
+			Message: err.Error(),
+		}
+	case ErrorMissingDepartmentCool:
+		return ErrorResponse{
+			Code:    http.StatusBadRequest,
+			Status:  "MISSING_FIELDS",
+			Message: err.Error(),
+		}
+	case ErrorViolateAllowedForPrivate:
+		return ErrorResponse{
+			Code:    http.StatusBadRequest,
+			Status:  "MISSING_FIELDS",
+			Message: err.Error(),
+		}
+	case ErrorMaxPerTrxIsZero:
+		return ErrorResponse{
+			Code:    http.StatusBadRequest,
+			Status:  "INVALID_VALUES",
+			Message: err.Error(),
+		}
+	case ErrorAttendanceTypeWhenRequired:
+		return ErrorResponse{
+			Code:    http.StatusBadRequest,
+			Status:  "MISSING_FIELDS",
+			Message: err.Error(),
+		}
+	case ErrorEventNotAvailable:
+		return ErrorResponse{
+			Code:    http.StatusBadRequest,
+			Status:  "FORBIDDEN_REGISTRATION",
+			Message: err.Error(),
+		}
+	case ErrorEventCanOnlyRegisterOnce:
+		return ErrorResponse{
+			Code:    http.StatusConflict,
+			Status:  "ALREADY_REGISTERED",
+			Message: err.Error(),
+		}
+	case ErrorAlreadyRegistered:
+		return ErrorResponse{
+			Code:    http.StatusConflict,
+			Status:  "ALREADY_REGISTERED",
+			Message: err.Error(),
+		}
+	case ErrorCannotUsePersonalQR:
+		return ErrorResponse{
+			Code:    http.StatusForbidden,
+			Status:  "FORBIDDEN_REGISTRATION",
+			Message: err.Error(),
+		}
+	case ErrorAlreadyVerified:
+		return ErrorResponse{
+			Code:    http.StatusConflict,
+			Status:  "ALREADY_UPDATED",
+			Message: err.Error(),
+		}
+	case ErrorAlreadyCancelled:
+		return ErrorResponse{
+			Code:    http.StatusConflict,
+			Status:  "ALREADY_UPDATED",
+			Message: err.Error(),
+		}
 	default:
 		return ErrorResponse{
 			Code:    http.StatusInternalServerError,
