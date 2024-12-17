@@ -81,4 +81,24 @@ var (
 		left join events e on ei.event_code = e.code
 	where ei.code = ?
 	group by ei.total_seats, ei.booked_seats, ei.scanned_seats, ei.title, e.title`
+
+	queryGetInstanceSummary = `SELECT 
+			ei.code AS instance_code, 
+			ei.title AS instance_title, 
+			ei.register_flow AS instance_register_flow, 
+			ei.check_type as instance_check_type, 
+			ei.total_seats AS instance_total_seats, 
+			ei.booked_seats AS instance_booked_seats, 
+			ei.scanned_seats AS instance_scanned_seats, 
+			ei.status AS instance_status, 
+			COALESCE(SUM(ei.total_seats - ei.booked_seats), 0) AS total_remaining_seats
+		FROM 
+			event_instances ei
+				LEFT JOIN events e 
+				ON ei.event_code = e.code
+		WHERE 
+			ei.event_code = ? AND
+			ei.deleted_at IS NULL 
+		GROUP BY 
+			ei.code, ei.title, ei.register_flow, ei.check_type, ei.total_seats, ei.booked_seats, ei.scanned_seats, ei.status`
 )

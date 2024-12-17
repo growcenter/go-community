@@ -34,6 +34,7 @@ func NewEventHandler(api *echo.Group, u *usecases.Usecases, c *config.Configurat
 	endpointUserInternal := api.Group("/internal/events")
 	endpointUserInternal.Use(middleware.RoleUserMiddleware(c, []string{"event-internal-view", "event-internal-edit"}))
 	endpointUserInternal.GET("", handler.GetTitles)
+	endpointUserInternal.GET("/:eventCode/summary", handler.GetSummary)
 	endpointUserInternal.GET("/registers", handler.GetAllRegisteredInternal)
 
 }
@@ -99,7 +100,7 @@ func (eh *EventHandler) GetAll(ctx echo.Context) error {
 // @Param code path int true "object that needs to be added"
 // @Param X-API-Key header string true "mandatory header to access endpoint"
 // @Security BearerAuth
-// @Success 200 {object} models.GetEventByCodeResponse{instances=[]models.GetInstancesByEventCodeResponse} "Response indicates that the request succeeded and the resources has been fetched and transmitted in the message body"
+// @Success 200 {object} models.ListWithDetail{details=models.GetEventByCodeResponse,data=[]models.GetInstancesByEventCodeResponse} "Response indicates that the request succeeded and the resources has been fetched and transmitted in the message body"
 // @Failure 400 {object} models.ErrorResponse "Bad Request"
 // @Failure 422 {object} models.ErrorValidationResponse{errors=models.ErrorValidateResponse} "Validation error. This can happen if there is an error validation while create account"
 // @Router /v2/events/{code} [get]
@@ -112,12 +113,12 @@ func (eh *EventHandler) GetByCode(ctx echo.Context) error {
 		return response.ErrorValidation(ctx, err)
 	}
 
-	events, err := eh.usecase.Event.GetByCode(ctx.Request().Context(), parameter.Code, ctx.Get("roles").([]string), ctx.Get("userTypes").([]string))
+	detail, data, err := eh.usecase.Event.GetByCode(ctx.Request().Context(), parameter.Code, ctx.Get("roles").([]string), ctx.Get("userTypes").([]string))
 	if err != nil {
 		return response.Error(ctx, err)
 	}
 
-	return response.Success(ctx, http.StatusOK, events.ToResponse())
+	return response.SuccessListWithDetail(ctx, http.StatusOK, len(data), detail, data)
 }
 
 // Register godoc
@@ -229,6 +230,18 @@ func (eh *EventHandler) UpdateStatus(ctx echo.Context) error {
 	return response.Success(ctx, http.StatusOK, record.ToResponse())
 }
 
+// GetTitles godoc
+// @Summary Get Events Titles
+// @Description For Internal Purposes Only
+// @Tags events
+// @Accept json
+// @Produce json
+// @Param X-API-Key header string true "mandatory header to access endpoint"
+// @Security BearerAuth
+// @Success 200 {object} models.List{data=[]models.GetEventTitlesResponse} "Response indicates that the request succeeded and the resources has been fetched and transmitted in the message body"
+// @Failure 400 {object} models.ErrorResponse "Bad Request"
+// @Failure 422 {object} models.ErrorValidationResponse{errors=models.ErrorValidateResponse} "Validation error. This can happen if there is an error validation while create account"
+// @Router /v2/events/registers [get]
 func (eh *EventHandler) GetTitles(ctx echo.Context) error {
 	res, err := eh.usecase.Event.GetTitles(ctx.Request().Context())
 	if err != nil {
@@ -236,6 +249,28 @@ func (eh *EventHandler) GetTitles(ctx echo.Context) error {
 	}
 
 	return response.SuccessList(ctx, http.StatusOK, len(res), res)
+}
+
+// GetSummary godoc
+// @Summary Get Event and Sessions by Event Code
+// @Description For Internal Purposes Only
+// @Tags events
+// @Accept json
+// @Produce json
+// @Param code path int true "object that needs to be added"
+// @Param X-API-Key header string true "mandatory header to access endpoint"
+// @Security BearerAuth
+// @Success 200 {object} models.ListWithDetail{details=models.GetEventSummaryResponse,data=[]models.GetInstanceSummaryResponse} "Response indicates that the request succeeded and the resources has been fetched and transmitted in the message body"
+// @Failure 400 {object} models.ErrorResponse "Bad Request"
+// @Failure 422 {object} models.ErrorValidationResponse{errors=models.ErrorValidateResponse} "Validation error. This can happen if there is an error validation while create account"
+// @Router /v2/internal/events/{eventCode}/summary [get]
+func (eh *EventHandler) GetSummary(ctx echo.Context) error {
+	detail, data, err := eh.usecase.Event.GetSummary(ctx.Request().Context(), ctx.Param("eventCode"))
+	if err != nil {
+		return response.Error(ctx, err)
+	}
+
+	return response.SuccessListWithDetail(ctx, http.StatusOK, len(data), detail, data)
 }
 
 func (eh *EventHandler) GetAllRegisteredInternal(ctx echo.Context) error {

@@ -144,4 +144,22 @@ var (
 		rr.community_id_origin = ?
 `
 	queryGetEventTitles = `SELECT code, title FROM events WHERE deleted_at IS NULL`
+
+	queryGetEventSummary = `
+		SELECT
+			e.code AS event_code,
+			e.title AS event_title,
+			e.allowed_for AS event_allowed_for, -- Non-nullable
+			COALESCE(e.allowed_roles, ARRAY[]::TEXT[]) AS event_allowed_roles, -- Default to empty array
+			COALESCE(e.allowed_users, ARRAY[]::TEXT[]) AS event_allowed_users, -- Default to empty array
+			COALESCE(e.allowed_campuses, ARRAY[]::TEXT[]) AS event_allowed_campuses, -- Default to empty array
+			e.status AS event_status
+		FROM
+			events e
+		WHERE
+			e.code = ?
+		  AND e.deleted_at IS NULL
+		GROUP BY
+			e.code, e.title, e.allowed_for, COALESCE(e.allowed_roles, ARRAY[]::TEXT[]), COALESCE(e.allowed_users, ARRAY[]::TEXT[]), COALESCE(e.allowed_campuses, ARRAY[]::TEXT[]), e.status
+`
 )

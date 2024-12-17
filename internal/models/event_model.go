@@ -266,7 +266,7 @@ type (
 		LocationType       string                            `json:"locationType" example:"offline"`
 		LocationName       string                            `json:"locationName" example:"PIOT 6 Lt. 6"`
 		AvailabilityStatus string                            `json:"availabilityStatus,omitempty" example:"available"`
-		Instances          []GetInstancesByEventCodeResponse `json:"instances"`
+		Instances          []GetInstancesByEventCodeResponse `json:"instances,omitempty"`
 	}
 	GetInstancesByEventCodeResponse struct {
 		Type                string    `json:"type" example:"eventInstance"`
@@ -381,6 +381,82 @@ type (
 		Type  string `json:"type" example:"event"`
 		Code  string `json:"code" example:"event-1"`
 		Title string `json:"title" example:"Event 1"`
+	}
+)
+
+func (e GetEventSummaryDBOutput) ToResponse() *GetEventSummaryResponse {
+	return &GetEventSummaryResponse{
+		Type:            TYPE_EVENT,
+		Code:            e.EventCode,
+		Title:           e.EventTitle,
+		AllowedFor:      e.EventAllowedFor,
+		AllowedRoles:    e.EventAllowedRoles,
+		AllowedUsers:    e.EventAllowedUsers,
+		AllowedCampuses: e.EventAllowedCampuses,
+		Status:          e.EventStatus,
+	}
+}
+
+func (e GetInstanceSummaryDBOutput) ToResponse() GetInstanceSummaryResponse {
+	return GetInstanceSummaryResponse{
+		Type:                TYPE_EVENT_INSTANCE,
+		EventCode:           e.InstanceEventCode,
+		Code:                e.InstanceCode,
+		Title:               e.InstanceTitle,
+		RegisterFlow:        e.InstanceRegisterFlow,
+		CheckType:           e.InstanceCheckType,
+		TotalSeats:          e.InstanceTotalSeats,
+		BookedSeats:         e.InstanceBookedSeats,
+		ScannedSeats:        e.InstanceScannedSeats,
+		Status:              e.InstanceStatus,
+		TotalRemainingSeats: e.TotalRemainingSeats,
+	}
+}
+
+type (
+	GetEventSummaryDBOutput struct {
+		EventCode            string
+		EventTitle           string
+		EventAllowedFor      string
+		EventAllowedRoles    pq.StringArray `gorm:"type:text[]"`
+		EventAllowedUsers    pq.StringArray `gorm:"type:text[]"`
+		EventAllowedCampuses pq.StringArray `gorm:"type:text[]"`
+		EventStatus          string
+	}
+	GetInstanceSummaryDBOutput struct {
+		InstanceCode         string `json:"instance_code"`
+		InstanceEventCode    string `json:"instance_event_code"`
+		InstanceTitle        string `json:"instance_title"`
+		InstanceRegisterFlow string `json:"instance_register_flow"`
+		InstanceCheckType    string `json:"instance_check_type"`
+		InstanceTotalSeats   int    `json:"instance_total_seats"`
+		InstanceBookedSeats  int    `json:"instance_booked_seats"`
+		InstanceScannedSeats int    `json:"instance_scanned_seats"`
+		InstanceStatus       string `json:"instance_status"`
+		TotalRemainingSeats  int    `json:"total_remaining_seats"`
+	}
+	GetEventSummaryResponse struct {
+		Type            string   `json:"type" example:"event"`
+		Code            string   `json:"code" example:"event-1"`
+		Title           string   `json:"title" example:"Event 1"`
+		AllowedFor      string   `json:"allowedFor" example:"volunteer"`
+		AllowedRoles    []string `json:"allowedRoles" example:"event-view-volunteer, event-edit-volunteer"`
+		AllowedUsers    []string `json:"allowedUsers" example:"user-1, user-2"`
+		AllowedCampuses []string `json:"allowedCampuses" example:"BKS, BKT"`
+		Status          string   `json:"status" example:"active"`
+	}
+	GetInstanceSummaryResponse struct {
+		Type                string `json:"type" example:"instance"`
+		EventCode           string `json:"eventCode" example:"event-1"`
+		Code                string `json:"code" example:"instance-1"`
+		Title               string `json:"title" example:"Instance 1"`
+		RegisterFlow        string `json:"registerFlow" example:"online"`
+		CheckType           string `json:"checkType" example:"online"`
+		TotalSeats          int    `json:"totalSeats" example:"100"`
+		BookedSeats         int    `json:"bookedSeats" example:"50"`
+		ScannedSeats        int    `json:"scannedSeats" example:"50"`
+		TotalRemainingSeats int    `json:"totalRemainingSeats" example:"50"`
+		Status              string `json:"status" example:"active"`
 	}
 )
 

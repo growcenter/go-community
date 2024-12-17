@@ -805,6 +805,93 @@ definitions:
         example: event
         type: string
     type: object
+  models.GetEventSummaryResponse:
+    properties:
+      allowedCampuses:
+        example:
+        - BKS
+        - ' BKT'
+        items:
+          type: string
+        type: array
+      allowedFor:
+        example: volunteer
+        type: string
+      allowedRoles:
+        example:
+        - event-view-volunteer
+        - ' event-edit-volunteer'
+        items:
+          type: string
+        type: array
+      allowedUsers:
+        example:
+        - user-1
+        - ' user-2'
+        items:
+          type: string
+        type: array
+      code:
+        example: event-1
+        type: string
+      status:
+        example: active
+        type: string
+      title:
+        example: Event 1
+        type: string
+      type:
+        example: event
+        type: string
+    type: object
+  models.GetEventTitlesResponse:
+    properties:
+      code:
+        example: event-1
+        type: string
+      title:
+        example: Event 1
+        type: string
+      type:
+        example: event
+        type: string
+    type: object
+  models.GetInstanceSummaryResponse:
+    properties:
+      bookedSeats:
+        example: 50
+        type: integer
+      checkType:
+        example: online
+        type: string
+      code:
+        example: instance-1
+        type: string
+      eventCode:
+        example: event-1
+        type: string
+      registerFlow:
+        example: online
+        type: string
+      scannedSeats:
+        example: 50
+        type: integer
+      status:
+        example: active
+        type: string
+      title:
+        example: Instance 1
+        type: string
+      totalRemainingSeats:
+        example: 50
+        type: integer
+      totalSeats:
+        example: 100
+        type: integer
+      type:
+        example: instance
+        type: string
+    type: object
   models.GetInstancesByEventCodeResponse:
     properties:
       LocationName:
@@ -945,6 +1032,16 @@ definitions:
   models.List:
     properties:
       data: {}
+      totalRows:
+        type: integer
+      type:
+        example: collection
+        type: string
+    type: object
+  models.ListWithDetail:
+    properties:
+      data: {}
+      details: {}
       totalRows:
         type: integer
       type:
@@ -1377,12 +1474,14 @@ paths:
             has been fetched and transmitted in the message body
           schema:
             allOf:
-            - $ref: '#/definitions/models.GetEventByCodeResponse'
+            - $ref: '#/definitions/models.ListWithDetail'
             - properties:
-                instances:
+                data:
                   items:
                     $ref: '#/definitions/models.GetInstancesByEventCodeResponse'
                   type: array
+                details:
+                  $ref: '#/definitions/models.GetEventByCodeResponse'
               type: object
         "400":
           description: Bad Request
@@ -1407,7 +1506,7 @@ paths:
     get:
       consumes:
       - application/json
-      description: Get All User's Registered Event
+      description: For Internal Purposes Only
       parameters:
       - description: mandatory header to access endpoint
         in: header
@@ -1422,11 +1521,11 @@ paths:
             has been fetched and transmitted in the message body
           schema:
             allOf:
-            - $ref: '#/definitions/models.GetAllRegisteredUserResponse'
+            - $ref: '#/definitions/models.List'
             - properties:
-                instances:
+                data:
                   items:
-                    $ref: '#/definitions/models.InstancesForRegisteredRecordsResponse'
+                    $ref: '#/definitions/models.GetEventTitlesResponse'
                   type: array
               type: object
         "400":
@@ -1445,7 +1544,7 @@ paths:
               type: object
       security:
       - BearerAuth: []
-      summary: Get All User's Registered Event
+      summary: Get Events Titles
       tags:
       - events
     post:
@@ -1541,6 +1640,58 @@ paths:
                   $ref: '#/definitions/models.ErrorValidateResponse'
               type: object
       summary: Update Registration Status
+      tags:
+      - events
+  /v2/internal/events/{eventCode}/summary:
+    get:
+      consumes:
+      - application/json
+      description: For Internal Purposes Only
+      parameters:
+      - description: object that needs to be added
+        in: path
+        name: code
+        required: true
+        type: integer
+      - description: mandatory header to access endpoint
+        in: header
+        name: X-API-Key
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Response indicates that the request succeeded and the resources
+            has been fetched and transmitted in the message body
+          schema:
+            allOf:
+            - $ref: '#/definitions/models.ListWithDetail'
+            - properties:
+                data:
+                  items:
+                    $ref: '#/definitions/models.GetInstanceSummaryResponse'
+                  type: array
+                details:
+                  $ref: '#/definitions/models.GetEventSummaryResponse'
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+        "422":
+          description: Validation error. This can happen if there is an error validation
+            while create account
+          schema:
+            allOf:
+            - $ref: '#/definitions/models.ErrorValidationResponse'
+            - properties:
+                errors:
+                  $ref: '#/definitions/models.ErrorValidateResponse'
+              type: object
+      security:
+      - BearerAuth: []
+      summary: Get Event and Sessions by Event Code
       tags:
       - events
   /v2/roles:

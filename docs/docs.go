@@ -320,7 +320,7 @@ const docTemplate = `{
                         "BearerAuth": []
                     }
                 ],
-                "description": "Get All User's Registered Event",
+                "description": "For Internal Purposes Only",
                 "consumes": [
                     "application/json"
                 ],
@@ -330,7 +330,7 @@ const docTemplate = `{
                 "tags": [
                     "events"
                 ],
-                "summary": "Get All User's Registered Event",
+                "summary": "Get Events Titles",
                 "parameters": [
                     {
                         "type": "string",
@@ -346,15 +346,15 @@ const docTemplate = `{
                         "schema": {
                             "allOf": [
                                 {
-                                    "$ref": "#/definitions/models.GetAllRegisteredUserResponse"
+                                    "$ref": "#/definitions/models.List"
                                 },
                                 {
                                     "type": "object",
                                     "properties": {
-                                        "instances": {
+                                        "data": {
                                             "type": "array",
                                             "items": {
-                                                "$ref": "#/definitions/models.InstancesForRegisteredRecordsResponse"
+                                                "$ref": "#/definitions/models.GetEventTitlesResponse"
                                             }
                                         }
                                     }
@@ -581,16 +581,105 @@ const docTemplate = `{
                         "schema": {
                             "allOf": [
                                 {
-                                    "$ref": "#/definitions/models.GetEventByCodeResponse"
+                                    "$ref": "#/definitions/models.ListWithDetail"
                                 },
                                 {
                                     "type": "object",
                                     "properties": {
-                                        "instances": {
+                                        "data": {
                                             "type": "array",
                                             "items": {
                                                 "$ref": "#/definitions/models.GetInstancesByEventCodeResponse"
                                             }
+                                        },
+                                        "details": {
+                                            "$ref": "#/definitions/models.GetEventByCodeResponse"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/models.ErrorResponse"
+                        }
+                    },
+                    "422": {
+                        "description": "Validation error. This can happen if there is an error validation while create account",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/models.ErrorValidationResponse"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "errors": {
+                                            "$ref": "#/definitions/models.ErrorValidateResponse"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                }
+            }
+        },
+        "/v2/internal/events/{eventCode}/summary": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "For Internal Purposes Only",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "events"
+                ],
+                "summary": "Get Event and Sessions by Event Code",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "object that needs to be added",
+                        "name": "code",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "mandatory header to access endpoint",
+                        "name": "X-API-Key",
+                        "in": "header",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Response indicates that the request succeeded and the resources has been fetched and transmitted in the message body",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/models.ListWithDetail"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "$ref": "#/definitions/models.GetInstanceSummaryResponse"
+                                            }
+                                        },
+                                        "details": {
+                                            "$ref": "#/definitions/models.GetEventSummaryResponse"
                                         }
                                     }
                                 }
@@ -2661,6 +2750,127 @@ const docTemplate = `{
                 }
             }
         },
+        "models.GetEventSummaryResponse": {
+            "type": "object",
+            "properties": {
+                "allowedCampuses": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    },
+                    "example": [
+                        "BKS",
+                        " BKT"
+                    ]
+                },
+                "allowedFor": {
+                    "type": "string",
+                    "example": "volunteer"
+                },
+                "allowedRoles": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    },
+                    "example": [
+                        "event-view-volunteer",
+                        " event-edit-volunteer"
+                    ]
+                },
+                "allowedUsers": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    },
+                    "example": [
+                        "user-1",
+                        " user-2"
+                    ]
+                },
+                "code": {
+                    "type": "string",
+                    "example": "event-1"
+                },
+                "status": {
+                    "type": "string",
+                    "example": "active"
+                },
+                "title": {
+                    "type": "string",
+                    "example": "Event 1"
+                },
+                "type": {
+                    "type": "string",
+                    "example": "event"
+                }
+            }
+        },
+        "models.GetEventTitlesResponse": {
+            "type": "object",
+            "properties": {
+                "code": {
+                    "type": "string",
+                    "example": "event-1"
+                },
+                "title": {
+                    "type": "string",
+                    "example": "Event 1"
+                },
+                "type": {
+                    "type": "string",
+                    "example": "event"
+                }
+            }
+        },
+        "models.GetInstanceSummaryResponse": {
+            "type": "object",
+            "properties": {
+                "bookedSeats": {
+                    "type": "integer",
+                    "example": 50
+                },
+                "checkType": {
+                    "type": "string",
+                    "example": "online"
+                },
+                "code": {
+                    "type": "string",
+                    "example": "instance-1"
+                },
+                "eventCode": {
+                    "type": "string",
+                    "example": "event-1"
+                },
+                "registerFlow": {
+                    "type": "string",
+                    "example": "online"
+                },
+                "scannedSeats": {
+                    "type": "integer",
+                    "example": 50
+                },
+                "status": {
+                    "type": "string",
+                    "example": "active"
+                },
+                "title": {
+                    "type": "string",
+                    "example": "Instance 1"
+                },
+                "totalRemainingSeats": {
+                    "type": "integer",
+                    "example": 50
+                },
+                "totalSeats": {
+                    "type": "integer",
+                    "example": 100
+                },
+                "type": {
+                    "type": "string",
+                    "example": "instance"
+                }
+            }
+        },
         "models.GetInstancesByEventCodeResponse": {
             "type": "object",
             "properties": {
@@ -2863,6 +3073,20 @@ const docTemplate = `{
             "type": "object",
             "properties": {
                 "data": {},
+                "totalRows": {
+                    "type": "integer"
+                },
+                "type": {
+                    "type": "string",
+                    "example": "collection"
+                }
+            }
+        },
+        "models.ListWithDetail": {
+            "type": "object",
+            "properties": {
+                "data": {},
+                "details": {},
                 "totalRows": {
                     "type": "integer"
                 },

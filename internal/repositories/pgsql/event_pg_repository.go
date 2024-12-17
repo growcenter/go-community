@@ -16,6 +16,7 @@ type EventRepository interface {
 	GetOneByCode(ctx context.Context, code string) (output *models.GetEventByCodeDBOutput, err error)
 	GetRegistered(ctx context.Context, communityIdOrigin string) (output []models.GetAllRegisteredUserDBOutput, err error)
 	GetTitles(ctx context.Context) (output []models.GetEventTitlesDBOutput, err error)
+	GetSummary(ctx context.Context, code string) (output *models.GetEventSummaryDBOutput, err error)
 }
 
 type eventRepository struct {
@@ -117,6 +118,19 @@ func (er *eventRepository) GetTitles(ctx context.Context) (output []models.GetEv
 	}()
 
 	err = er.db.Raw(queryGetEventTitles).Scan(&output).Error
+	if err != nil {
+		return nil, err
+	}
+
+	return output, nil
+}
+
+func (er *eventRepository) GetSummary(ctx context.Context, code string) (output *models.GetEventSummaryDBOutput, err error) {
+	defer func() {
+		LogRepository(ctx, err)
+	}()
+
+	err = er.db.Raw(queryGetEventSummary, code).Scan(&output).Error
 	if err != nil {
 		return nil, err
 	}

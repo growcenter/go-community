@@ -18,6 +18,7 @@ type EventInstanceRepository interface {
 	GetSeatsNamesByCode(ctx context.Context, code string) (output *models.GetSeatsAndNamesByInstanceCodeDBOutput, err error)
 	UpdateBookedSeatsByCode(ctx context.Context, code string, event *models.GetSeatsAndNamesByInstanceCodeDBOutput) (err error)
 	UpdateScannedSeatsByCode(ctx context.Context, code string, event *models.GetSeatsAndNamesByInstanceCodeDBOutput) (err error)
+	GetSummary(ctx context.Context, eventCode string) (output []models.GetInstanceSummaryDBOutput, err error)
 }
 
 type eventInstanceRepository struct {
@@ -137,4 +138,17 @@ func (eir *eventInstanceRepository) UpdateScannedSeatsByCode(ctx context.Context
 	}()
 
 	return eir.db.Model(&models.EventInstance{}).Where("code = ?", code).Update("scanned_seats", event.ScannedSeats).Error
+}
+
+func (eir *eventInstanceRepository) GetSummary(ctx context.Context, eventCode string) (output []models.GetInstanceSummaryDBOutput, err error) {
+	defer func() {
+		LogRepository(ctx, err)
+	}()
+
+	err = eir.db.Raw(queryGetInstanceSummary, eventCode).Scan(&output).Error
+	if err != nil {
+		return nil, err
+	}
+
+	return output, nil
 }
