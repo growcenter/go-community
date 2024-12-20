@@ -48,11 +48,11 @@ type (
 		State        string `mapstructure:"state"`
 	}
 	Auth struct {
-		BearerSecret   string `mapstructure:"bearer_secret"`
-		BearerDuration int    `mapstructure:"bearer_duration"`
-		APIKey         string `mapstructure:"api_key"`
-		//AccessTokenExpiry  int    `mapstructure:"access_token_expiry"`
-		//RefreshTokenExpiry int    `mapstructure:"refresh_token_expiry"`
+		BearerSecret    string `mapstructure:"bearer_secret"`
+		BearerDuration  int    `mapstructure:"bearer_duration"`
+		APIKey          string `mapstructure:"api_key"`
+		RefreshSecret   string `mapstructure:"refresh_secret"`
+		RefreshDuration int    `mapstructure:"refresh_duration"`
 	}
 )
 
@@ -64,6 +64,9 @@ func New(ctx context.Context) (*Configuration, error) {
 	configName := fmt.Sprintf("config.%s", environment)
 
 	viper.AddConfigPath("./config")
+	viper.AddConfigPath("./../config")
+	viper.AddConfigPath("./../../config")
+	viper.AddConfigPath("./../../../config")
 	viper.SetConfigName(configName)
 	viper.SetConfigType("yaml")
 
