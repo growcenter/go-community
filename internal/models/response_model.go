@@ -33,3 +33,17 @@ type PaginationInfo struct {
 	Limit       int         `json:"limit"`
 	Parameter   interface{} `json:"parameters,omitempty"`
 }
+
+type Cursor struct {
+	Type           string      `json:"type" example:"collection"`
+	Data           interface{} `json:"data"`
+	PaginationInfo interface{} `json:"pagination"`
+}
+
+type CursorInfo struct {
+	PreviousCursor string      `json:"previous"`
+	NextCursor     string      `json:"next"`
+	TotalData      int         `json:"totalData"`
+	Limit          int         `json:"limit"`
+	Parameter      interface{} `json:"parameters,omitempty"`
+}

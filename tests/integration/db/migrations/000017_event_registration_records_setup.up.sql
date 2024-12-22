@@ -11,6 +11,7 @@ CREATE TABLE "event_registration_records" (
     "community_id_origin" varchar(15) NULL,
     "updated_by" varchar(100) NULL,
     "status" varchar(20) NOT NULL,
+    "reason" text NULL,
     "registered_at" timestamptz NOT NULL,
     "verified_at" timestamptz NULL,
     "created_at" TIMESTAMP NOT NULL DEFAULT now(),

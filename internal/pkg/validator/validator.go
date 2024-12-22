@@ -2,6 +2,7 @@ package validator
 
 import (
 	"errors"
+	"fmt"
 	"go-community/internal/models"
 	"reflect"
 	"regexp"
@@ -52,6 +53,7 @@ func Validate(request interface{}) error {
 		var validatorErrs v10.ValidationErrors
 		if errors.As(err, &validatorErrs) {
 			for _, validatorErr := range validatorErrs {
+				fmt.Println(validatorErr)
 				validateResponse := models.ErrorValidateResponseMapping(validatorErr)
 				errs = multierror.Append(errs, validateResponse)
 			}

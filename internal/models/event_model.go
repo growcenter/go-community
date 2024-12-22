@@ -386,14 +386,16 @@ type (
 
 func (e GetEventSummaryDBOutput) ToResponse() *GetEventSummaryResponse {
 	return &GetEventSummaryResponse{
-		Type:            TYPE_EVENT,
-		Code:            e.EventCode,
-		Title:           e.EventTitle,
-		AllowedFor:      e.EventAllowedFor,
-		AllowedRoles:    e.EventAllowedRoles,
-		AllowedUsers:    e.EventAllowedUsers,
-		AllowedCampuses: e.EventAllowedCampuses,
-		Status:          e.EventStatus,
+		Type:              TYPE_EVENT,
+		Code:              e.EventCode,
+		Title:             e.EventTitle,
+		AllowedFor:        e.EventAllowedFor,
+		AllowedRoles:      e.EventAllowedRoles,
+		AllowedUsers:      e.EventAllowedUsers,
+		AllowedCampuses:   e.EventAllowedCampuses,
+		TotalBookedSeats:  e.TotalBookedSeats,
+		TotalScannedSeats: e.TotalScannedSeats,
+		Status:            e.EventStatus,
 	}
 }
 
@@ -421,6 +423,8 @@ type (
 		EventAllowedRoles    pq.StringArray `gorm:"type:text[]"`
 		EventAllowedUsers    pq.StringArray `gorm:"type:text[]"`
 		EventAllowedCampuses pq.StringArray `gorm:"type:text[]"`
+		TotalBookedSeats     int
+		TotalScannedSeats    int
 		EventStatus          string
 	}
 	GetInstanceSummaryDBOutput struct {
@@ -436,14 +440,16 @@ type (
 		TotalRemainingSeats  int    `json:"total_remaining_seats"`
 	}
 	GetEventSummaryResponse struct {
-		Type            string   `json:"type" example:"event"`
-		Code            string   `json:"code" example:"event-1"`
-		Title           string   `json:"title" example:"Event 1"`
-		AllowedFor      string   `json:"allowedFor" example:"volunteer"`
-		AllowedRoles    []string `json:"allowedRoles" example:"event-view-volunteer, event-edit-volunteer"`
-		AllowedUsers    []string `json:"allowedUsers" example:"user-1, user-2"`
-		AllowedCampuses []string `json:"allowedCampuses" example:"BKS, BKT"`
-		Status          string   `json:"status" example:"active"`
+		Type              string   `json:"type" example:"event"`
+		Code              string   `json:"code" example:"event-1"`
+		Title             string   `json:"title" example:"Event 1"`
+		AllowedFor        string   `json:"allowedFor" example:"volunteer"`
+		AllowedRoles      []string `json:"allowedRoles" example:"event-view-volunteer, event-edit-volunteer"`
+		AllowedUsers      []string `json:"allowedUsers" example:"user-1, user-2"`
+		AllowedCampuses   []string `json:"allowedCampuses" example:"BKS, BKT"`
+		TotalBookedSeats  int      `json:"totalBookedSeats" example:"3003"`
+		TotalScannedSeats int      `json:"totalScannedSeats" example:"309"`
+		Status            string   `json:"status" example:"active"`
 	}
 	GetInstanceSummaryResponse struct {
 		Type                string `json:"type" example:"instance"`

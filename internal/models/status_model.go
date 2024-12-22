@@ -26,6 +26,7 @@ const (
 	REGISTER_STATUS_PENDING
 	REGISTER_STATUS_FAILED
 	REGISTER_STATUS_CANCELLED
+	REGISTER_STATUS_PERMIT
 )
 
 const (
@@ -33,6 +34,7 @@ const (
 	RegisterStatusPending   = "pending"
 	RegisterStatusFailed    = "failed"
 	RegisterStatusCancelled = "cancelled"
+	RegisterStatusPermitted = "permit"
 )
 
 var (
@@ -41,5 +43,6 @@ var (
 		REGISTER_STATUS_PENDING:   RegisterStatusPending,
 		REGISTER_STATUS_FAILED:    RegisterStatusFailed,
 		REGISTER_STATUS_CANCELLED: RegisterStatusCancelled,
+		REGISTER_STATUS_PERMIT:    RegisterStatusPermitted,
 	}
 )

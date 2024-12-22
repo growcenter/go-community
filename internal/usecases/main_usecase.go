@@ -30,6 +30,7 @@ type Usecases struct {
 	UserType                userTypeUsecase
 	Event                   eventUsecase
 	EventRegistrationRecord eventRegistrationRecordUsecase
+	EventInstance           eventInstanceUsecase
 }
 
 func New(d Dependencies) *Usecases {
@@ -48,5 +49,6 @@ func New(d Dependencies) *Usecases {
 		UserType:                *NewUserTypeUsecase(*d.Repository),
 		Event:                   *NewEventUsecase(*d.Config, *d.Authorization, *d.Repository),
 		EventRegistrationRecord: *NewEventRegistrationRecordUsecase(*d.Repository),
+		EventInstance:           *NewEventInstanceUsecase(*d.Config, *d.Authorization, *d.Repository),
 	}
 }

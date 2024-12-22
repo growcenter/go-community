@@ -18,6 +18,7 @@ type UserRepository interface {
 	GetOneByIdentifier(ctx context.Context, identifier string) (user models.User, err error)
 	GetOneByEmailPhoneNumber(ctx context.Context, email string, phoneNumber string) (user models.User, err error)
 	CheckByEmailPhoneNumber(ctx context.Context, email string, phoneNumber string) (dataExist bool, err error)
+	CheckByCommunityId(ctx context.Context, communityId string) (isExist bool, err error)
 	GetUserNameByIdentifier(ctx context.Context, identifier string) (output *models.GetNameOnUserDBOutput, err error)
 	GetUserNameByCommunityId(ctx context.Context, communityId string) (output *models.GetNameOnUserDBOutput, err error)
 }
@@ -139,6 +140,19 @@ func (ur *userRepository) CheckByEmailPhoneNumber(ctx context.Context, email str
 	}
 
 	return dataExist, nil
+}
+
+func (ur *userRepository) CheckByCommunityId(ctx context.Context, communityId string) (isExist bool, err error) {
+	defer func() {
+		LogRepository(ctx, err)
+	}()
+
+	err = ur.db.Raw(queryCheckUserByCommunityId, communityId).Scan(&isExist).Error
+	if err != nil {
+		return false, err
+	}
+
+	return isExist, nil
 }
 
 func (ur *userRepository) GetUserNameByIdentifier(ctx context.Context, identifier string) (output *models.GetNameOnUserDBOutput, err error) {

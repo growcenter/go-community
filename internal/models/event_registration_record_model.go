@@ -21,6 +21,7 @@ type EventRegistrationRecord struct {
 	CommunityIdOrigin string
 	UpdatedBy         string
 	Status            string
+	Reason            string
 	RegisteredAt      time.Time
 	VerifiedAt        sql.NullTime
 	CreatedAt         time.Time
@@ -106,13 +107,15 @@ type (
 		ID string `json:"id" validate:"required,uuid"`
 	}
 	UpdateRegistrationStatusRequest struct {
-		Status    string `json:"status" validate:"required,oneof=success cancelled" example:"success"`
+		Status    string `json:"status" validate:"required,oneof=success cancelled permit" example:"success"`
+		Reason    string `json:"reason"`
 		UpdatedAt string `json:"updatedAt" validate:"required"`
 	}
 	UpdateRegistrationStatusResponse struct {
 		Type          string    `json:"type"`
 		ID            uuid.UUID `json:"registrationId"`
 		Status        string    `json:"status"`
+		Reason        string    `json:"reason,omitempty"`
 		Name          string    `json:"name"`
 		Identifier    string    `json:"identifier,omitempty"`
 		CommunityID   string    `json:"communityId,omitempty"`
@@ -122,5 +125,89 @@ type (
 		InstanceTitle string    `json:"instanceTitle"`
 		UpdatedBy     string    `json:"updatedBy"`
 		VerifiedAt    time.Time `json:"verifiedAt"`
+	}
+)
+
+type (
+	GetEventAttendanceDBOutput struct {
+		CommunityID              string `json:"community_id"`
+		EventCode                string `json:"event_code"`
+		Title                    string `json:"title"`
+		SuccessCount             int    `json:"success_count"`
+		PermitWithReasonCount    int    `json:"permit_with_reason_count"`
+		PermitWithoutReasonCount int    `json:"permit_without_reason_count"`
+		OtherStatusCount         int    `json:"other_status_count"`
+		TotalInstances           int    `json:"total_instances"`
+	}
+	GetEventAttendanceParameter struct {
+		CommunityId string `query:"communityId" validate:"required,communityId"`
+		Year        string `query:"year" validate:"omitempty,numeric,len=4"`
+	}
+	GetEventAttendanceDetailResponse struct {
+		Type           string `json:"type"`
+		CommunityId    string `json:"communityId"`
+		AttendanceYear int    `json:"attendanceYear"`
+	}
+	GetEventAttendanceListResponse struct {
+		Type                 string  `json:"type"`
+		EventCode            string  `json:"eventCode"`
+		EventTitle           string  `json:"eventTitle"`
+		AttendanceCount      int     `json:"attendanceCount"`
+		PermitCount          int     `json:"permitCount"`
+		AbsenceCount         int     `json:"absenceCount"`
+		TotalInstances       int     `json:"totalInstances"`
+		AttendancePercentage float64 `json:"attendancePercentage"`
+	}
+)
+
+type (
+	GetAllRegisteredRecordDBOutput struct {
+		ID                uuid.UUID
+		Name              string
+		Identifier        string
+		CommunityId       string
+		EventCode         string
+		InstanceCode      string
+		IdentifierOrigin  string
+		CommunityIdOrigin string
+		UpdatedBy         string
+		Status            string
+		RegisteredAt      time.Time
+		VerifiedAt        sql.NullTime
+		CreatedAt         time.Time
+		UpdatedAt         time.Time
+		DeletedAt         sql.NullTime
+		EventName         string
+		InstanceName      string
+		RegisteredBy      string
+	}
+	GetAllRegisteredCursorParam struct {
+		Cursor     string `query:"cursor"`
+		Limit      int    `query:"limit"`
+		Direction  string `query:"direction"`
+		EventCode  string `query:"eventCode" validate:"required"`
+		NameSearch string `query:"name"`
+	}
+	GetAllRegisteredCursorResponse struct {
+		Type              string    `json:"type"`
+		ID                uuid.UUID `json:"id"`
+		Name              string    `json:"name"`
+		Identifier        string    `json:"identifier,omitempty"`
+		CommunityId       string    `json:"communityId,omitempty"`
+		EventCode         string    `json:"eventCode"`
+		EventName         string    `json:"eventName"`
+		InstanceCode      string    `json:"instanceCode"`
+		InstanceName      string    `json:"instanceName"`
+		IdentifierOrigin  string    `json:"identifierOrigin,omitempty"`
+		CommunityIdOrigin string    `json:"communityIdOrigin,omitempty"`
+		RegisteredBy      string    `json:"registeredBy"`
+		UpdatedBy         string    `json:"updatedBy,omitempty"`
+		IsPersonalQr      bool      `json:"isPersonalQr,omitempty"`
+		Status            string    `json:"status"`
+		RegisteredAt      time.Time `json:"registeredAt"`
+		VerifiedAt        string    `json:"verifiedAt"`
+		CreatedAt         time.Time `json:"createdAt"`
+		UpdatedAt         time.Time `json:"updatedAt"`
+		DeletedAt         string    `json:"deletedAt"`
 	}
 )
