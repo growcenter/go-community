@@ -220,6 +220,62 @@ definitions:
     required:
     - instances
     type: object
+  models.CreateInstanceExistingEventRequest:
+    properties:
+      checkType:
+        enum:
+        - check-in
+        - check-out
+        - both
+        - none
+        type: string
+      description:
+        type: string
+      eventCode:
+        type: string
+      instanceEndAt:
+        type: string
+      instanceStartAt:
+        type: string
+      isOnePerAccount:
+        type: boolean
+      isOnePerTicket:
+        type: boolean
+      locationName:
+        type: string
+      locationType:
+        enum:
+        - online
+        - onsite
+        - hybrid
+        type: string
+      maxPerTransaction:
+        type: integer
+      registerEndAt:
+        type: string
+      registerFlow:
+        enum:
+        - personal-qr
+        - event-qr
+        - both-qr
+        - none
+        type: string
+      registerStartAt:
+        type: string
+      title:
+        type: string
+      totalSeats:
+        type: integer
+    required:
+    - eventCode
+    - instanceEndAt
+    - instanceStartAt
+    - locationName
+    - locationType
+    - registerEndAt
+    - registerStartAt
+    - title
+    type: object
   models.CreateInstanceRequest:
     properties:
       checkType:
@@ -840,6 +896,12 @@ definitions:
       title:
         example: Event 1
         type: string
+      totalBookedSeats:
+        example: 3003
+        type: integer
+      totalScannedSeats:
+        example: 309
+        type: integer
       type:
         example: event
         type: string
@@ -1136,10 +1198,13 @@ definitions:
     type: object
   models.UpdateRegistrationStatusRequest:
     properties:
+      reason:
+        type: string
       status:
         enum:
         - success
         - cancelled
+        - permit
         example: success
         type: string
       updatedAt:
@@ -1163,6 +1228,8 @@ definitions:
       instanceTitle:
         type: string
       name:
+        type: string
+      reason:
         type: string
       registrationId:
         type: string
@@ -1402,54 +1469,6 @@ paths:
       summary: Get All Events
       tags:
       - events
-    post:
-      consumes:
-      - application/json
-      description: Create event with the instances/sessions
-      parameters:
-      - description: User object that needs to be added
-        in: body
-        name: user
-        required: true
-        schema:
-          $ref: '#/definitions/models.CreateEventRequest'
-      - description: mandatory header to access endpoint
-        in: header
-        name: X-API-Key
-        required: true
-        type: string
-      produces:
-      - application/json
-      responses:
-        "201":
-          description: Response indicates that the request succeeded and the resources
-            has been fetched and transmitted in the message body
-          schema:
-            allOf:
-            - $ref: '#/definitions/models.CreateEventResponse'
-            - properties:
-                instances:
-                  $ref: '#/definitions/models.CreateInstanceResponse'
-              type: object
-        "400":
-          description: Bad Request
-          schema:
-            $ref: '#/definitions/models.ErrorResponse'
-        "422":
-          description: Validation error. This can happen if there is an error validation
-            while create account
-          schema:
-            allOf:
-            - $ref: '#/definitions/models.ErrorValidationResponse'
-            - properties:
-                errors:
-                  $ref: '#/definitions/models.ErrorValidateResponse'
-              type: object
-      security:
-      - BearerAuth: []
-      summary: Create Event
-      tags:
-      - events
   /v2/events/{code}:
     get:
       consumes:
@@ -1642,6 +1661,55 @@ paths:
       summary: Update Registration Status
       tags:
       - events
+  /v2/internal/events:
+    post:
+      consumes:
+      - application/json
+      description: Create event with the instances/sessions
+      parameters:
+      - description: User object that needs to be added
+        in: body
+        name: user
+        required: true
+        schema:
+          $ref: '#/definitions/models.CreateEventRequest'
+      - description: mandatory header to access endpoint
+        in: header
+        name: X-API-Key
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Response indicates that the request succeeded and the resources
+            has been fetched and transmitted in the message body
+          schema:
+            allOf:
+            - $ref: '#/definitions/models.CreateEventResponse'
+            - properties:
+                instances:
+                  $ref: '#/definitions/models.CreateInstanceResponse'
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+        "422":
+          description: Validation error. This can happen if there is an error validation
+            while create account
+          schema:
+            allOf:
+            - $ref: '#/definitions/models.ErrorValidationResponse'
+            - properties:
+                errors:
+                  $ref: '#/definitions/models.ErrorValidateResponse'
+              type: object
+      security:
+      - BearerAuth: []
+      summary: Create Event
+      tags:
+      - events
   /v2/internal/events/{eventCode}/summary:
     get:
       consumes:
@@ -1692,6 +1760,50 @@ paths:
       security:
       - BearerAuth: []
       summary: Get Event and Sessions by Event Code
+      tags:
+      - events
+  /v2/internal/events/instances:
+    post:
+      consumes:
+      - application/json
+      description: Create instance from existing Event
+      parameters:
+      - description: User object that needs to be added
+        in: body
+        name: user
+        required: true
+        schema:
+          $ref: '#/definitions/models.CreateInstanceExistingEventRequest'
+      - description: mandatory header to access endpoint
+        in: header
+        name: X-API-Key
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Response indicates that the request succeeded and the resources
+            has been fetched and transmitted in the message body
+          schema:
+            $ref: '#/definitions/models.CreateInstanceResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+        "422":
+          description: Validation error. This can happen if there is an error validation
+            while create account
+          schema:
+            allOf:
+            - $ref: '#/definitions/models.ErrorValidationResponse'
+            - properties:
+                errors:
+                  $ref: '#/definitions/models.ErrorValidateResponse'
+              type: object
+      security:
+      - BearerAuth: []
+      summary: Create Instance
       tags:
       - events
   /v2/roles:

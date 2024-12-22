@@ -3,6 +3,7 @@ package usecases
 import (
 	"context"
 	"database/sql"
+	"fmt"
 	"github.com/google/uuid"
 	"go-community/internal/common"
 	"go-community/internal/models"
@@ -14,6 +15,8 @@ type EventRegistrationRecordUsecase interface {
 	Create(ctx context.Context, request *models.CreateEventRegistrationRecordRequest, value *models.TokenValues) (response *models.CreateEventRegistrationRecordResponse, err error)
 	GetAll(ctx context.Context) (userTypes []models.UserType, err error)
 	UpdateStatus(ctx context.Context, requestParam *models.UpdateRegistrationStatusParameter, requestBody *models.UpdateRegistrationStatusRequest, value *models.TokenValues) (response *models.UpdateRegistrationStatusResponse, err error)
+	GetAttendance(ctx context.Context, request models.GetEventAttendanceParameter) (detail *models.GetEventAttendanceDetailResponse, list []models.GetEventAttendanceListResponse, err error)
+	GetAllCursor(ctx context.Context, params models.GetAllRegisteredCursorParam) (res []models.GetAllRegisteredCursorResponse, total int, err error)
 }
 
 type eventRegistrationRecordUsecase struct {
@@ -385,6 +388,19 @@ func (erru *eventRegistrationRecordUsecase) UpdateStatus(ctx context.Context, re
 	case models.MapRegisterStatus[models.REGISTER_STATUS_CANCELLED]:
 		return nil, models.ErrorAlreadyCancelled
 	case models.MapRegisterStatus[models.REGISTER_STATUS_PENDING]:
+	case models.MapRegisterStatus[models.REGISTER_STATUS_PERMIT]:
+		event, err := erru.r.Event.GetOneByCode(ctx, record.EventCode)
+		if err != nil {
+			return nil, err
+		}
+
+		if event.EventAllowedFor != "private" {
+			return nil, models.ErrorForbiddenStatus
+		}
+
+		if requestBody.Reason == "" {
+			return nil, models.ErrorReasonEmpty
+		}
 	default:
 		return nil, models.ErrorInvalidInput
 	}
@@ -392,6 +408,7 @@ func (erru *eventRegistrationRecordUsecase) UpdateStatus(ctx context.Context, re
 	res := models.UpdateRegistrationStatusResponse{}
 	err = erru.r.Transaction.Atomic(ctx, func(ctx context.Context, r *pgsql.PostgreRepositories) error {
 		record.Status = requestBody.Status
+		record.Reason = requestBody.Reason
 		verifiedAt, _ := common.ParseStringToDatetime(time.RFC3339, requestBody.UpdatedAt, common.GetLocation())
 		record.VerifiedAt = sql.NullTime{Valid: true, Time: verifiedAt}
 		record.UpdatedBy = value.CommunityId
@@ -442,4 +459,121 @@ func (erru *eventRegistrationRecordUsecase) UpdateStatus(ctx context.Context, re
 		return nil
 	})
 	return &res, err
+}
+
+func (erru *eventRegistrationRecordUsecase) GetAttendance(ctx context.Context, request models.GetEventAttendanceParameter) (detail *models.GetEventAttendanceDetailResponse, list []models.GetEventAttendanceListResponse, err error) {
+	defer func() {
+		LogService(ctx, err)
+	}()
+
+	userExist, err := erru.r.User.CheckByCommunityId(ctx, request.CommunityId)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	if !userExist {
+		return nil, nil, models.ErrorUserNotFound
+	}
+
+	var year int
+	if request.Year == "" {
+		year = common.Now().Year()
+	}
+
+	startDate := fmt.Sprintf("%d-01-01 00:00:00", year)
+	endDate := fmt.Sprintf("%d-12-31 23:59:59", year)
+
+	attendance, err := erru.r.EventRegistrationRecord.GetEventAttendance(ctx, request.CommunityId, startDate, endDate)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	detailRes := models.GetEventAttendanceDetailResponse{
+		Type:           models.TYPE_USER,
+		CommunityId:    request.CommunityId,
+		AttendanceYear: year,
+	}
+
+	var listRes []models.GetEventAttendanceListResponse
+	for _, i := range attendance {
+		var attendancePercentage float64
+		if i.TotalInstances > 0 {
+			attendancePercentage = float64(i.SuccessCount) / float64(i.TotalInstances) * 100
+		} else {
+			attendancePercentage = 0.00
+		}
+
+		listRes = append(listRes, models.GetEventAttendanceListResponse{
+			Type:                 models.TYPE_EVENT_REGISTRATION_RECORD,
+			EventCode:            i.EventCode,
+			EventTitle:           i.Title,
+			AttendanceCount:      i.SuccessCount,
+			PermitCount:          i.PermitWithReasonCount,
+			AbsenceCount:         i.OtherStatusCount + i.PermitWithoutReasonCount,
+			TotalInstances:       i.TotalInstances,
+			AttendancePercentage: attendancePercentage,
+		})
+	}
+
+	return &detailRes, listRes, nil
+}
+
+func (erru *eventRegistrationRecordUsecase) GetAllCursor(ctx context.Context, params models.GetAllRegisteredCursorParam) (res []models.GetAllRegisteredCursorResponse, info *models.CursorInfo, err error) {
+	defer func() {
+		LogService(ctx, err)
+	}()
+
+	output, prev, next, total, err := erru.r.EventRegistrationRecord.GetAllWithCursor(ctx, params)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	var response []models.GetAllRegisteredCursorResponse
+	for _, v := range output {
+		var isPersonalQr bool
+		if v.UpdatedBy == "user" {
+			isPersonalQr = true
+		}
+
+		var verifiedAt string
+		if !v.VerifiedAt.Time.IsZero() {
+			verifiedAt = common.FormatDatetimeToString(v.VerifiedAt.Time, time.RFC3339)
+		}
+
+		var deletedAt string
+		if !v.DeletedAt.Time.IsZero() {
+			deletedAt = common.FormatDatetimeToString(v.DeletedAt.Time, time.RFC3339)
+		}
+
+		response = append(response, models.GetAllRegisteredCursorResponse{
+			Type:              models.TYPE_EVENT_REGISTRATION_RECORD,
+			ID:                v.ID,
+			Name:              v.Name,
+			Identifier:        v.Identifier,
+			CommunityId:       v.CommunityId,
+			EventCode:         v.EventCode,
+			EventName:         v.EventName,
+			InstanceCode:      v.InstanceCode,
+			InstanceName:      v.InstanceName,
+			IdentifierOrigin:  v.IdentifierOrigin,
+			CommunityIdOrigin: v.CommunityIdOrigin,
+			RegisteredBy:      v.RegisteredBy,
+			UpdatedBy:         v.UpdatedBy,
+			IsPersonalQr:      isPersonalQr,
+			Status:            v.Status,
+			RegisteredAt:      v.RegisteredAt,
+			VerifiedAt:        verifiedAt,
+			CreatedAt:         v.CreatedAt,
+			UpdatedAt:         v.UpdatedAt,
+			DeletedAt:         deletedAt,
+		})
+	}
+
+	info = &models.CursorInfo{
+		PreviousCursor: prev,
+		NextCursor:     next,
+		TotalData:      total,
+	}
+
+	return response, info, nil
 }

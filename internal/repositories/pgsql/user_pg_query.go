@@ -10,6 +10,8 @@ var (
 				(phone_number = ? AND ? != '')
 		);`
 
+	queryCheckUserByCommunityId = `SELECT EXISTS (SELECT 1 FROM users WHERE community_id = ?)`
+
 	queryGetOneUserByEmailPhoneNumber = `SELECT *
 	FROM users
 	WHERE

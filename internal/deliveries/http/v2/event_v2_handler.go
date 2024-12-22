@@ -1,7 +1,6 @@
 package v2
 
 import (
-	"fmt"
 	"github.com/labstack/echo/v4"
 	"go-community/internal/config"
 	"go-community/internal/deliveries/http/common/response"
@@ -22,7 +21,6 @@ func NewEventHandler(api *echo.Group, u *usecases.Usecases, c *config.Configurat
 
 	// Define campus routes
 	endpoint := api.Group("/events")
-	endpoint.POST("", handler.Create)
 	endpointUserAuth := endpoint.Group("")
 	endpointUserAuth.Use(middleware.UserV2Middleware(c))
 	endpointUserAuth.GET("", handler.GetAll)
@@ -30,12 +28,15 @@ func NewEventHandler(api *echo.Group, u *usecases.Usecases, c *config.Configurat
 	endpointUserAuth.POST("/registers", handler.Register)
 	endpointUserAuth.GET("/registers", handler.GetAllRegistered)
 	endpointUserAuth.PATCH("/registers/:id/status", handler.UpdateStatus)
+	endpointUserAuth.GET("/attendance", handler.GetEventAttendance)
 
 	endpointUserInternal := api.Group("/internal/events")
 	endpointUserInternal.Use(middleware.RoleUserMiddleware(c, []string{"event-internal-view", "event-internal-edit"}))
+	endpointUserInternal.POST("", handler.Create)
 	endpointUserInternal.GET("", handler.GetTitles)
 	endpointUserInternal.GET("/:eventCode/summary", handler.GetSummary)
 	endpointUserInternal.GET("/registers", handler.GetAllRegisteredInternal)
+	endpointUserInternal.POST("/instances", handler.CreateInstance)
 
 }
 
@@ -51,7 +52,7 @@ func NewEventHandler(api *echo.Group, u *usecases.Usecases, c *config.Configurat
 // @Success 201 {object} models.CreateEventResponse{instances=models.CreateInstanceResponse} "Response indicates that the request succeeded and the resources has been fetched and transmitted in the message body"
 // @Failure 400 {object} models.ErrorResponse "Bad Request"
 // @Failure 422 {object} models.ErrorValidationResponse{errors=models.ErrorValidateResponse} "Validation error. This can happen if there is an error validation while create account"
-// @Router /v2/events [post]
+// @Router /v2/internal/events [post]
 func (eh *EventHandler) Create(ctx echo.Context) error {
 	var request models.CreateEventRequest
 	if err := ctx.Bind(&request); err != nil {
@@ -273,7 +274,69 @@ func (eh *EventHandler) GetSummary(ctx echo.Context) error {
 	return response.SuccessListWithDetail(ctx, http.StatusOK, len(data), detail, data)
 }
 
+// CreateInstance godoc
+// @Summary Create Instance
+// @Description Create instance from existing Event
+// @Tags events
+// @Accept json
+// @Produce json
+// @Param user body models.CreateInstanceExistingEventRequest true "User object that needs to be added"
+// @Param X-API-Key header string true "mandatory header to access endpoint"
+// @Security BearerAuth
+// @Success 201 {object} models.CreateInstanceResponse "Response indicates that the request succeeded and the resources has been fetched and transmitted in the message body"
+// @Failure 400 {object} models.ErrorResponse "Bad Request"
+// @Failure 422 {object} models.ErrorValidationResponse{errors=models.ErrorValidateResponse} "Validation error. This can happen if there is an error validation while create account"
+// @Router /v2/internal/events/instances [post]
+func (eh *EventHandler) CreateInstance(ctx echo.Context) error {
+	var request models.CreateInstanceExistingEventRequest
+	if err := ctx.Bind(&request); err != nil {
+		return response.Error(ctx, err)
+	}
+
+	if err := validator.Validate(request); err != nil {
+		return response.ErrorValidation(ctx, err)
+	}
+
+	instance, err := eh.usecase.EventInstance.Create(ctx.Request().Context(), request)
+	if err != nil {
+		return response.Error(ctx, err)
+	}
+
+	return response.Success(ctx, http.StatusCreated, instance.ToResponse())
+}
+
+func (eh *EventHandler) GetEventAttendance(ctx echo.Context) error {
+	var request models.GetEventAttendanceParameter
+	if err := ctx.Bind(&request); err != nil {
+		return response.Error(ctx, err)
+	}
+
+	if err := validator.Validate(request); err != nil {
+		return response.ErrorValidation(ctx, err)
+	}
+
+	detail, list, err := eh.usecase.EventRegistrationRecord.GetAttendance(ctx.Request().Context(), request)
+	if err != nil {
+		return response.Error(ctx, err)
+	}
+
+	return response.SuccessListWithDetail(ctx, http.StatusOK, len(list), detail, list)
+}
+
 func (eh *EventHandler) GetAllRegisteredInternal(ctx echo.Context) error {
-	fmt.Println(ctx)
-	return nil
+	var param models.GetAllRegisteredCursorParam
+	if err := ctx.Bind(&param); err != nil {
+		return response.Error(ctx, err)
+	}
+
+	if err := validator.Validate(param); err != nil {
+		return response.ErrorValidation(ctx, err)
+	}
+
+	data, info, err := eh.usecase.EventRegistrationRecord.GetAllCursor(ctx.Request().Context(), param)
+	if err != nil {
+		return response.Error(ctx, err)
+	}
+
+	return response.SuccessCursor(ctx, http.StatusOK, info, data)
 }

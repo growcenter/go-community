@@ -231,86 +231,6 @@ const docTemplate = `{
                         }
                     }
                 }
-            },
-            "post": {
-                "security": [
-                    {
-                        "BearerAuth": []
-                    }
-                ],
-                "description": "Create event with the instances/sessions",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "events"
-                ],
-                "summary": "Create Event",
-                "parameters": [
-                    {
-                        "description": "User object that needs to be added",
-                        "name": "user",
-                        "in": "body",
-                        "required": true,
-                        "schema": {
-                            "$ref": "#/definitions/models.CreateEventRequest"
-                        }
-                    },
-                    {
-                        "type": "string",
-                        "description": "mandatory header to access endpoint",
-                        "name": "X-API-Key",
-                        "in": "header",
-                        "required": true
-                    }
-                ],
-                "responses": {
-                    "201": {
-                        "description": "Response indicates that the request succeeded and the resources has been fetched and transmitted in the message body",
-                        "schema": {
-                            "allOf": [
-                                {
-                                    "$ref": "#/definitions/models.CreateEventResponse"
-                                },
-                                {
-                                    "type": "object",
-                                    "properties": {
-                                        "instances": {
-                                            "$ref": "#/definitions/models.CreateInstanceResponse"
-                                        }
-                                    }
-                                }
-                            ]
-                        }
-                    },
-                    "400": {
-                        "description": "Bad Request",
-                        "schema": {
-                            "$ref": "#/definitions/models.ErrorResponse"
-                        }
-                    },
-                    "422": {
-                        "description": "Validation error. This can happen if there is an error validation while create account",
-                        "schema": {
-                            "allOf": [
-                                {
-                                    "$ref": "#/definitions/models.ErrorValidationResponse"
-                                },
-                                {
-                                    "type": "object",
-                                    "properties": {
-                                        "errors": {
-                                            "$ref": "#/definitions/models.ErrorValidateResponse"
-                                        }
-                                    }
-                                }
-                            ]
-                        }
-                    }
-                }
             }
         },
         "/v2/events/registers": {
@@ -598,6 +518,158 @@ const docTemplate = `{
                                     }
                                 }
                             ]
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/models.ErrorResponse"
+                        }
+                    },
+                    "422": {
+                        "description": "Validation error. This can happen if there is an error validation while create account",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/models.ErrorValidationResponse"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "errors": {
+                                            "$ref": "#/definitions/models.ErrorValidateResponse"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                }
+            }
+        },
+        "/v2/internal/events": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Create event with the instances/sessions",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "events"
+                ],
+                "summary": "Create Event",
+                "parameters": [
+                    {
+                        "description": "User object that needs to be added",
+                        "name": "user",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/models.CreateEventRequest"
+                        }
+                    },
+                    {
+                        "type": "string",
+                        "description": "mandatory header to access endpoint",
+                        "name": "X-API-Key",
+                        "in": "header",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Response indicates that the request succeeded and the resources has been fetched and transmitted in the message body",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/models.CreateEventResponse"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "instances": {
+                                            "$ref": "#/definitions/models.CreateInstanceResponse"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/models.ErrorResponse"
+                        }
+                    },
+                    "422": {
+                        "description": "Validation error. This can happen if there is an error validation while create account",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/models.ErrorValidationResponse"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "errors": {
+                                            "$ref": "#/definitions/models.ErrorValidateResponse"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                }
+            }
+        },
+        "/v2/internal/events/instances": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Create instance from existing Event",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "events"
+                ],
+                "summary": "Create Instance",
+                "parameters": [
+                    {
+                        "description": "User object that needs to be added",
+                        "name": "user",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/models.CreateInstanceExistingEventRequest"
+                        }
+                    },
+                    {
+                        "type": "string",
+                        "description": "mandatory header to access endpoint",
+                        "name": "X-API-Key",
+                        "in": "header",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Response indicates that the request succeeded and the resources has been fetched and transmitted in the message body",
+                        "schema": {
+                            "$ref": "#/definitions/models.CreateInstanceResponse"
                         }
                     },
                     "400": {
@@ -1924,6 +1996,83 @@ const docTemplate = `{
                 }
             }
         },
+        "models.CreateInstanceExistingEventRequest": {
+            "type": "object",
+            "required": [
+                "eventCode",
+                "instanceEndAt",
+                "instanceStartAt",
+                "locationName",
+                "locationType",
+                "registerEndAt",
+                "registerStartAt",
+                "title"
+            ],
+            "properties": {
+                "checkType": {
+                    "type": "string",
+                    "enum": [
+                        "check-in",
+                        "check-out",
+                        "both",
+                        "none"
+                    ]
+                },
+                "description": {
+                    "type": "string"
+                },
+                "eventCode": {
+                    "type": "string"
+                },
+                "instanceEndAt": {
+                    "type": "string"
+                },
+                "instanceStartAt": {
+                    "type": "string"
+                },
+                "isOnePerAccount": {
+                    "type": "boolean"
+                },
+                "isOnePerTicket": {
+                    "type": "boolean"
+                },
+                "locationName": {
+                    "type": "string"
+                },
+                "locationType": {
+                    "type": "string",
+                    "enum": [
+                        "online",
+                        "onsite",
+                        "hybrid"
+                    ]
+                },
+                "maxPerTransaction": {
+                    "type": "integer"
+                },
+                "registerEndAt": {
+                    "type": "string"
+                },
+                "registerFlow": {
+                    "type": "string",
+                    "enum": [
+                        "personal-qr",
+                        "event-qr",
+                        "both-qr",
+                        "none"
+                    ]
+                },
+                "registerStartAt": {
+                    "type": "string"
+                },
+                "title": {
+                    "type": "string"
+                },
+                "totalSeats": {
+                    "type": "integer"
+                }
+            }
+        },
         "models.CreateInstanceRequest": {
             "type": "object",
             "required": [
@@ -2799,6 +2948,14 @@ const docTemplate = `{
                     "type": "string",
                     "example": "Event 1"
                 },
+                "totalBookedSeats": {
+                    "type": "integer",
+                    "example": 3003
+                },
+                "totalScannedSeats": {
+                    "type": "integer",
+                    "example": 309
+                },
                 "type": {
                     "type": "string",
                     "example": "event"
@@ -3229,11 +3386,15 @@ const docTemplate = `{
                 "updatedAt"
             ],
             "properties": {
+                "reason": {
+                    "type": "string"
+                },
                 "status": {
                     "type": "string",
                     "enum": [
                         "success",
-                        "cancelled"
+                        "cancelled",
+                        "permit"
                     ],
                     "example": "success"
                 },
@@ -3264,6 +3425,9 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "name": {
+                    "type": "string"
+                },
+                "reason": {
                     "type": "string"
                 },
                 "registrationId": {

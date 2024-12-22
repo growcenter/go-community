@@ -59,3 +59,13 @@ func SuccessPagination(ctx echo.Context, code int, pagination interface{}, data 
 
 	return ctx.JSON(code, response)
 }
+
+func SuccessCursor(ctx echo.Context, code int, cursorInfo interface{}, data interface{}) error {
+	response := models.Pagination{
+		Type:           "collection",
+		PaginationInfo: cursorInfo,
+		Data:           data,
+	}
+
+	return ctx.JSON(code, response)
+}

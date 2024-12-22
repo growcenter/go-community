@@ -153,9 +153,13 @@ var (
 			COALESCE(e.allowed_roles, ARRAY[]::TEXT[]) AS event_allowed_roles, -- Default to empty array
 			COALESCE(e.allowed_users, ARRAY[]::TEXT[]) AS event_allowed_users, -- Default to empty array
 			COALESCE(e.allowed_campuses, ARRAY[]::TEXT[]) AS event_allowed_campuses, -- Default to empty array
+			COALESCE(SUM(ei.booked_seats), 0) AS total_booked_seats,
+			COALESCE(SUM(ei.scanned_seats), 0) AS total_scanned_seats,
 			e.status AS event_status
 		FROM
 			events e
+		LEFT JOIN
+			event_instances ei ON e.code = ei.event_code
 		WHERE
 			e.code = ?
 		  AND e.deleted_at IS NULL

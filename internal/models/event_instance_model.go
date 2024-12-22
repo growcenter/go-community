@@ -33,6 +33,29 @@ type EventInstance struct {
 	DeletedAt         sql.NullTime
 }
 
+func (ir *CreateInstanceResponse) ToResponse() *CreateInstanceResponse {
+	return &CreateInstanceResponse{
+		Type:              ir.Type,
+		InstanceCode:      ir.InstanceCode,
+		EventCode:         ir.EventCode,
+		Title:             ir.Title,
+		Description:       ir.Description,
+		InstanceStartAt:   ir.InstanceStartAt,
+		InstanceEndAt:     ir.InstanceEndAt,
+		RegisterStartAt:   ir.RegisterStartAt,
+		RegisterEndAt:     ir.RegisterEndAt,
+		LocationType:      ir.LocationType,
+		LocationName:      ir.LocationName,
+		MaxPerTransaction: ir.MaxPerTransaction,
+		IsOnePerAccount:   ir.IsOnePerAccount,
+		IsOnePerTicket:    ir.IsOnePerTicket,
+		RegisterFlow:      ir.RegisterFlow,
+		CheckType:         ir.CheckType,
+		TotalSeats:        ir.TotalSeats,
+		Status:            ir.Status,
+	}
+}
+
 type (
 	CreateInstanceRequest struct {
 		Title             string `json:"title" validate:"required"`
@@ -103,3 +126,23 @@ type GetSeatsAndNamesByInstanceCodeDBOutput struct {
 	EventTitle          string `json:"event_title"`
 	TotalRemainingSeats int    `json:"total_remaining_seats"`
 }
+
+type (
+	CreateInstanceExistingEventRequest struct {
+		Title             string `json:"title" validate:"required"`
+		Description       string `json:"description"`
+		EventCode         string `json:"eventCode" validate:"required"`
+		InstanceStartAt   string `json:"instanceStartAt" validate:"required"`
+		InstanceEndAt     string `json:"instanceEndAt" validate:"required"`
+		RegisterStartAt   string `json:"registerStartAt" validate:"required"`
+		RegisterEndAt     string `json:"registerEndAt" validate:"required"`
+		LocationType      string `json:"locationType" validate:"required,oneof=online onsite hybrid"`
+		LocationName      string `json:"locationName" validate:"required"`
+		MaxPerTransaction int    `json:"maxPerTransaction"`
+		IsOnePerAccount   bool   `json:"isOnePerAccount"`
+		IsOnePerTicket    bool   `json:"isOnePerTicket"`
+		RegisterFlow      string `json:"registerFlow" validate:"oneof=personal-qr event-qr both-qr none"`
+		CheckType         string `json:"checkType" validate:"omitempty,oneof=check-in check-out both none"`
+		TotalSeats        int    `json:"totalSeats"`
+	}
+)

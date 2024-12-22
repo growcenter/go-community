@@ -41,6 +41,8 @@ var (
 	ErrorCannotUsePersonalQR         = errors.New("you cannot register this event by your personal qr. To register, please register manually")
 	ErrorAlreadyVerified             = errors.New("your registration is already verified")
 	ErrorAlreadyCancelled            = errors.New("your registration is already cancelled")
+	ErrorForbiddenStatus             = errors.New("you are not allowed to use this status on this event")
+	ErrorReasonEmpty                 = errors.New("reason cannot be empty when you entered for permission")
 
 	// Google Error
 	ErrorFetchGoogle = errors.New("error while retrieving user from google")
@@ -342,6 +344,18 @@ func ErrorMapping(err error) ErrorResponse {
 		return ErrorResponse{
 			Code:    http.StatusConflict,
 			Status:  "ALREADY_UPDATED",
+			Message: err.Error(),
+		}
+	case ErrorForbiddenStatus:
+		return ErrorResponse{
+			Code:    http.StatusBadRequest,
+			Status:  "FORBIDDEN_STATUS",
+			Message: err.Error(),
+		}
+	case ErrorReasonEmpty:
+		return ErrorResponse{
+			Code:    http.StatusUnprocessableEntity,
+			Status:  "MISSING_FIELDS",
 			Message: err.Error(),
 		}
 	default:
