@@ -56,18 +56,18 @@ type (
 		SessionCode string                                `json:"sessionCode" validate:"required,min=1,max=30,noStartEndSpaces" example:"Professionals"`
 		Others      []CreateOtherEventRegistrationRequest `json:"otherRegister" validate:"dive,required"`
 	}
-		CreateHomebaseRegistrationRequest struct {
-		Name        string                                `json:"name" validate:"required,min=1,max=50" example:"Professionals"`
-		Identifier  string                                `json:"identifier" validate:"required,noStartEndSpaces,emailPhoneFormat"`
-		AccountNumber string							  `json:"accountNumber" validate:"required,noStartEndSpaces"`
-		Address     string                                `json:"address,omitempty"`
-		EventCode   string                                `json:"eventCode" validate:"required,min=1,max=30,noStartEndSpaces" example:"Professionals"`
-		SessionCode string                                `json:"sessionCode" validate:"required,min=1,max=30,noStartEndSpaces" example:"Professionals"`
-		Others      []CreateOtherEventRegistrationRequest `json:"otherRegister" validate:"dive,required"`
+	CreateHomebaseRegistrationRequest struct {
+		Name          string                                `json:"name" validate:"required,min=1,max=50" example:"Professionals"`
+		Identifier    string                                `json:"identifier" validate:"required,noStartEndSpaces,emailPhoneFormat"`
+		AccountNumber string                                `json:"accountNumber" validate:"required,noStartEndSpaces"`
+		Address       string                                `json:"address,omitempty"`
+		EventCode     string                                `json:"eventCode" validate:"required,min=1,max=30,noStartEndSpaces" example:"Professionals"`
+		SessionCode   string                                `json:"sessionCode" validate:"required,min=1,max=30,noStartEndSpaces" example:"Professionals"`
+		Others        []CreateOtherEventRegistrationRequest `json:"otherRegister" validate:"dive,required"`
 	}
 	CreateOtherEventRegistrationRequest struct {
 		Name    string `json:"name" validate:"required"`
-		Address string `json:"address" validate:"required,min=15,noStartEndSpaces"`
+		Address string `json:"address,omitempty"`
 	}
 	CreateEventRegistrationResponse struct {
 		Type          string                                 `json:"type"`
