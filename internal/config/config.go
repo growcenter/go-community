@@ -61,7 +61,7 @@ func New(ctx context.Context) (*Configuration, error) {
 
 	viper.AutomaticEnv()
 	environment := strings.ToLower(viper.GetString("env"))
-	configName := fmt.Sprintf("config.%s", environment)
+	configName := fmt.Sprintf("config.%s.yaml", environment)
 
 	viper.AddConfigPath("./config")
 	viper.AddConfigPath("./../config")
