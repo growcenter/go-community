@@ -51,6 +51,9 @@ COPY --from=build /etc/group /etc/group
 # Copy executable
 COPY --from=build /go/bin/app /
 
+EXPOSE 8080
+
+ENV PORT 8080
 
 # Entrypoint
 CMD ["/app"]
