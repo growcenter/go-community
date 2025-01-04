@@ -129,8 +129,8 @@ type (
 		CoolID         int      `json:"coolId" example:"1"`
 		KKJNumber      string   `json:"kkjNumber,omitempty"`
 		JemaatId       string   `json:"jemaatId,omitempty"`
-		IsKOM100       bool     `json:"isKom100" validate:"required"`
-		IsBaptized     bool     `json:"isBaptized,omitempty" validate:"required"`
+		IsKOM100       bool     `json:"isKom100"`
+		IsBaptized     bool     `json:"isBaptized"`
 		MaritalStatus  string   `json:"maritalStatus" validate:"omitempty,oneof=single married others" example:"active"`
 	}
 	CreateUserResponse struct {
