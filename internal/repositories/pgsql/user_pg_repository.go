@@ -2,7 +2,6 @@ package pgsql
 
 import (
 	"context"
-	"fmt"
 	"go-community/internal/models"
 	"go-community/internal/pkg/cursor"
 	"gorm.io/gorm"
@@ -211,12 +210,6 @@ func (ur *userRepository) GetAllWithCursor(ctx context.Context, param models.Get
 	if err != nil {
 		return nil, "", "", 0, err
 	}
-
-	fmt.Println("query: ", query)
-	fmt.Println("param: ", query)
-
-	// Apply limit (fetch `limit + 1` to check for extra entries)
-	//params[len(params)-1] = limit + 1
 
 	// Execute query
 	var records []models.GetAllUserDBOutput
