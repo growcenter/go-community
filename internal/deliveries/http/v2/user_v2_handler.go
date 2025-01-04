@@ -39,6 +39,10 @@ func NewUserHandler(api *echo.Group, u *usecases.Usecases, c *config.Configurati
 	userTypeEndpoint := endpoint.Group("/types")
 	userTypeEndpoint.POST("", handler.CreateUserType)
 	userTypeEndpoint.GET("", handler.GetAllUserTypes)
+
+	userInternalEndpoint := api.Group("/internal/users")
+	userInternalEndpoint.Use(middleware.RoleUserMiddleware(c, []string{"event-internal-view", "event-internal-edit"}))
+	userInternalEndpoint.GET("", handler.GetAllUserInternal)
 }
 
 // Create godoc
@@ -342,4 +346,22 @@ func (uh *UserHandler) Logout(ctx echo.Context) error {
 	})
 
 	return ctx.NoContent(http.StatusNoContent)
+}
+
+func (uh *UserHandler) GetAllUserInternal(ctx echo.Context) error {
+	var param models.GetAllUserCursorParam
+	if err := ctx.Bind(&param); err != nil {
+		return response.Error(ctx, err)
+	}
+
+	if err := validator.Validate(param); err != nil {
+		return response.ErrorValidation(ctx, err)
+	}
+
+	data, info, err := uh.usecase.User.GetAllCursor(ctx.Request().Context(), param)
+	if err != nil {
+		return response.Error(ctx, err)
+	}
+
+	return response.SuccessCursor(ctx, http.StatusOK, info, data)
 }

@@ -397,3 +397,70 @@ type (
 		CommunityId string
 	}
 )
+
+type (
+	GetAllUserDBOutput struct {
+		ID            int
+		CommunityID   string
+		Name          string
+		PhoneNumber   string
+		Email         string
+		UserTypes     pq.StringArray `gorm:"type:text[]"`
+		Roles         pq.StringArray `gorm:"type:text[]"`
+		Status        string
+		Gender        string
+		Address       string
+		CampusCode    string
+		CoolID        int
+		CoolName      string
+		Department    string
+		DateOfBirth   *time.Time
+		PlaceOfBirth  string
+		MaritalStatus string
+		KKJNumber     string
+		JemaatID      string
+		IsBaptized    bool
+		IsKom100      bool
+		CreatedAt     *time.Time
+		UpdatedAt     *time.Time
+		DeletedAt     sql.NullTime
+	}
+	GetAllUserCursorParam struct {
+		Direction  string `query:"direction"`
+		Cursor     string `query:"cursor"`
+		Limit      int    `query:"limit"`
+		Search     string `query:"search"`
+		SearchBy   string `query:"searchBy" validate:"omitempty,oneof=communityId name phoneNumber email"`
+		CampusCode string `query:"campusCode"`
+		CoolId     int    `query:"coolId"`
+		Department string `query:"department"`
+	}
+	GetAllUserCursorResponse struct {
+		Type           string     `json:"type"`
+		Name           string     `json:"name"`
+		CommunityID    string     `json:"communityId"`
+		PhoneNumber    string     `json:"phoneNumber"`
+		Email          string     `json:"email"`
+		UserTypes      []string   `json:"userTypes"`
+		Roles          []string   `json:"roles"`
+		Status         string     `json:"status"`
+		Gender         string     `json:"gender"`
+		Address        string     `json:"address"`
+		CampusCode     string     `json:"campusCode"`
+		CampusName     string     `json:"campusName"`
+		CoolID         int        `json:"coolId"`
+		CoolName       string     `json:"coolName"`
+		DepartmentCode string     `json:"departmentCode"`
+		DepartmentName string     `json:"departmentName"`
+		DateOfBirth    *time.Time `json:"dateOfBirth"`
+		PlaceOfBirth   string     `json:"placeOfBirth"`
+		MaritalStatus  string     `json:"maritalStatus"`
+		KKJNumber      string     `json:"kkjNumber"`
+		JemaatID       string     `json:"jemaatId"`
+		IsBaptized     bool       `json:"isBaptized"`
+		IsKom100       bool       `json:"isKom100"`
+		CreatedAt      time.Time  `json:"createdAt"`
+		UpdatedAt      time.Time  `json:"updatedAt"`
+		DeletedAt      string     `json:"deletedAt"`
+	}
+)

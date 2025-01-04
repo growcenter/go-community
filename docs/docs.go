@@ -2254,8 +2254,6 @@ const docTemplate = `{
             "type": "object",
             "required": [
                 "dateOfBirth",
-                "isBaptized",
-                "isKom100",
                 "name",
                 "password",
                 "placeOfBirth",

@@ -20,6 +20,7 @@ type UserUsecase interface {
 	GetByCommunityId(ctx context.Context, request models.GetOneByCommunityIdParameter) (response *models.GetOneByCommunityIdResponse, err error)
 	Check(ctx context.Context, identifier string) (isExist bool, err error)
 	UpdatePassword(ctx context.Context, param *models.UpdateUserPasswordParam, request *models.UpdateUserPasswordRequest) (user *models.User, err error)
+	GetAll()
 }
 
 type userUsecase struct {
@@ -571,4 +572,77 @@ func (uu *userUsecase) UpdatePassword(ctx context.Context, param *models.UpdateU
 	}
 
 	return &data, nil
+}
+
+func (uu *userUsecase) GetAllCursor(ctx context.Context, params models.GetAllUserCursorParam) (res []models.GetAllUserCursorResponse, info *models.CursorInfo, err error) {
+	defer func() {
+		LogService(ctx, err)
+	}()
+
+	output, prev, next, total, err := uu.ur.GetAllWithCursor(ctx, params)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	var response []models.GetAllUserCursorResponse
+	for _, v := range output {
+		var deletedAt string
+		if !v.DeletedAt.Time.IsZero() {
+			deletedAt = common.FormatDatetimeToString(v.DeletedAt.Time, time.RFC3339)
+		}
+
+		var departmentName string
+		if v.Department != "" {
+			value, department := uu.cfg.Department[strings.ToLower(v.Department)]
+			if !department {
+				return nil, nil, models.ErrorDataNotFound
+			}
+			departmentName = value
+		}
+
+		var campusName string
+		if v.CampusCode != "" {
+			value, department := uu.cfg.Campus[strings.ToLower(v.CampusCode)]
+			if !department {
+				return nil, nil, models.ErrorDataNotFound
+			}
+			campusName = value
+		}
+
+		response = append(response, models.GetAllUserCursorResponse{
+			Type:           models.TYPE_USER,
+			Name:           v.Name,
+			CommunityID:    v.CommunityID,
+			PhoneNumber:    v.PhoneNumber,
+			Email:          v.Email,
+			UserTypes:      v.UserTypes,
+			Roles:          v.Roles,
+			Status:         v.Status,
+			Gender:         v.Gender,
+			Address:        v.Address,
+			CampusCode:     v.CampusCode,
+			CampusName:     campusName,
+			CoolID:         v.CoolID,
+			CoolName:       v.CoolName,
+			DepartmentCode: v.Department,
+			DepartmentName: departmentName,
+			DateOfBirth:    v.DateOfBirth,
+			PlaceOfBirth:   v.PlaceOfBirth,
+			MaritalStatus:  v.MaritalStatus,
+			KKJNumber:      v.KKJNumber,
+			JemaatID:       v.JemaatID,
+			IsBaptized:     v.IsBaptized,
+			IsKom100:       v.IsKom100,
+			CreatedAt:      *v.CreatedAt,
+			UpdatedAt:      *v.UpdatedAt,
+			DeletedAt:      deletedAt,
+		})
+	}
+	info = &models.CursorInfo{
+		PreviousCursor: prev,
+		NextCursor:     next,
+		TotalData:      total,
+	}
+
+	return response, info, nil
 }

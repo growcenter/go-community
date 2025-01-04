@@ -3,6 +3,7 @@ package cursor
 import (
 	"encoding/base64"
 	"fmt"
+	"strconv"
 	"time"
 )
 
@@ -28,4 +29,21 @@ func DecryptCursor(cursor string) (time.Time, error) {
 	}
 
 	return t, nil
+}
+
+func DecryptCursorFromInteger(cursor string) (int64, error) {
+	// Decode from Base64
+	decoded, err := base64.StdEncoding.DecodeString(cursor)
+	if err != nil {
+		return 0, fmt.Errorf("failed to decode cursor: %w", err)
+	}
+
+	// Convert the decoded byte slice back to an integer
+	idStr := string(decoded)
+	id, err := strconv.ParseInt(idStr, 10, 64)
+	if err != nil {
+		return 0, fmt.Errorf("failed to parse cursor as integer: %v", err)
+	}
+
+	return id, nil
 }

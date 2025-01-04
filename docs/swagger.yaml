@@ -460,8 +460,6 @@ definitions:
         type: array
     required:
     - dateOfBirth
-    - isBaptized
-    - isKom100
     - name
     - password
     - placeOfBirth

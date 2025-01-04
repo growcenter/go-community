@@ -35,7 +35,7 @@ func NewTokenHandler(api *echo.Group, a *authorization.Auth, c *config.Configura
 // @Failure 422 {object} models.ErrorValidationResponse{errors=models.ErrorValidateResponse} "Validation error. This can happen if there is an error validation while create account"
 // @Router /v2/tokens [get]
 func (th *TokenHandler) Refresh(ctx echo.Context) error {
-	tokens, err := th.auth.GenerateTokens(ctx.Get("communityId").(string), ctx.Get("userType").([]string), ctx.Get("roles").([]string), "active")
+	tokens, err := th.auth.GenerateTokens(ctx.Get("communityId").(string), ctx.Get("userTypes").([]string), ctx.Get("roles").([]string), "active")
 	if err != nil {
 		response.Error(ctx, err)
 	}

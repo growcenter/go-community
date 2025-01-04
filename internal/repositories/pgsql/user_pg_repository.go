@@ -2,9 +2,11 @@ package pgsql
 
 import (
 	"context"
+	"fmt"
 	"go-community/internal/models"
-
+	"go-community/internal/pkg/cursor"
 	"gorm.io/gorm"
+	"strconv"
 )
 
 type UserRepository interface {
@@ -21,6 +23,7 @@ type UserRepository interface {
 	CheckByCommunityId(ctx context.Context, communityId string) (isExist bool, err error)
 	GetUserNameByIdentifier(ctx context.Context, identifier string) (output *models.GetNameOnUserDBOutput, err error)
 	GetUserNameByCommunityId(ctx context.Context, communityId string) (output *models.GetNameOnUserDBOutput, err error)
+	GetAllWithCursor(ctx context.Context, param models.GetAllUserCursorParam) (output []models.GetAllUserDBOutput, prev string, next string, total int, err error)
 }
 
 type userRepository struct {
@@ -179,4 +182,81 @@ func (ur *userRepository) GetUserNameByCommunityId(ctx context.Context, communit
 	}
 
 	return output, nil
+}
+
+func (ur *userRepository) GetAllWithCursor(ctx context.Context, param models.GetAllUserCursorParam) (output []models.GetAllUserDBOutput, prev string, next string, total int, err error) {
+	defer func() {
+		LogRepository(ctx, err)
+	}()
+
+	var decryptedId int64
+	var totalEntries int
+
+	// Decrypt cursor if provided (based on updated_at)
+	if param.Cursor != "" {
+		decryptedId, err = cursor.DecryptCursorFromInteger(param.Cursor)
+		if err != nil {
+			return nil, "", "", 0, err
+		}
+	}
+
+	// Set default limit if none provided
+	limit := param.Limit
+	if limit <= 0 {
+		limit = 10 // Default limit
+	}
+
+	// Build the query
+	query, params, err := BuildQueryGetAllUser(baseQueryGetAllUser, param.SearchBy, param.Search, param.CampusCode, param.CoolId, param.Department, decryptedId, param.Direction, limit)
+	if err != nil {
+		return nil, "", "", 0, err
+	}
+
+	fmt.Println("query: ", query)
+	fmt.Println("param: ", query)
+
+	// Apply limit (fetch `limit + 1` to check for extra entries)
+	//params[len(params)-1] = limit + 1
+
+	// Execute query
+	var records []models.GetAllUserDBOutput
+	err = ur.db.Raw(query, params...).Scan(&records).Error
+	if err != nil {
+		return nil, "", "", 0, err
+	}
+
+	// Get total count for pagination info
+	countQuery, countParams, _ := BuildQueryGetAllUser(queryCountAllUser, param.SearchBy, param.Search, param.CampusCode, param.CoolId, param.Department, decryptedId, param.Direction, limit)
+	err = ur.db.Raw(countQuery, countParams...).Scan(&totalEntries).Error
+	if err != nil {
+		return nil, "", "", 0, err
+	}
+
+	// Handle pagination logic
+	hasMore := len(records) == limit && len(records) < totalEntries
+	if hasMore {
+		records = records[:limit] // Trim to the limit
+	}
+
+	// Generate cursors
+	if len(records) > 0 {
+		// Generate a `prev` cursor for non-first pages
+		if param.Cursor != "" {
+			prev, err = cursor.EncryptCursor(strconv.Itoa(records[0].ID))
+			if err != nil {
+				return nil, "", "", 0, err
+			}
+		}
+
+		// Generate a `next` cursor if there are more entries
+		if hasMore {
+			next, err = cursor.EncryptCursor(strconv.Itoa(records[len(records)-1].ID))
+			if err != nil {
+				return nil, "", "", 0, err
+			}
+		}
+	}
+
+	// Return results
+	return records, prev, next, totalEntries, nil
 }
