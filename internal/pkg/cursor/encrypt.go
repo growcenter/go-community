@@ -19,7 +19,7 @@ func DecryptCursor(cursor string) (time.Time, error) {
 	// Decode from Base64
 	decoded, err := base64.StdEncoding.DecodeString(cursor)
 	if err != nil {
-		return time.Time{}, fmt.Errorf("failed to decode cursor: %w", err)
+		return time.Time{}, fmt.Errorf("failed to decode cursor properly: %w", err)
 	}
 
 	// Parse the decoded string as a time
