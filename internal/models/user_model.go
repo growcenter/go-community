@@ -433,7 +433,7 @@ type (
 		SearchBy   string `query:"searchBy" validate:"omitempty,oneof=communityId name phoneNumber email"`
 		CampusCode string `query:"campusCode"`
 		CoolId     int    `query:"coolId"`
-		Department string `query:"department"`
+		Department string `query:"departmentCode"`
 	}
 	GetAllUserCursorResponse struct {
 		Type           string     `json:"type"`
@@ -462,5 +462,28 @@ type (
 		CreatedAt      time.Time  `json:"createdAt"`
 		UpdatedAt      time.Time  `json:"updatedAt"`
 		DeletedAt      string     `json:"deletedAt"`
+	}
+)
+
+func (u *UpdateRolesOrUserTypesResponse) ToResponse() UpdateRolesOrUserTypesResponse {
+	return UpdateRolesOrUserTypesResponse{
+		Type:         TYPE_USER,
+		Field:        u.Field,
+		CommunityIds: u.CommunityIds,
+		Changes:      u.Changes,
+	}
+}
+
+type (
+	UpdateRolesOrUserTypesRequest struct {
+		Field        string   `json:"field" validate:"required,oneof=role userType"`
+		CommunityIds []string `json:"communityIds" validate:"required"`
+		Changes      []string `json:"changes" validate:"required"`
+	}
+	UpdateRolesOrUserTypesResponse struct {
+		Type         string   `json:"type" example:"user"`
+		Field        string   `json:"field"`
+		CommunityIds []string `json:"communityIds"`
+		Changes      []string `json:"changes"`
 	}
 )

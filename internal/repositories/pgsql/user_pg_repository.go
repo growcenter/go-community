@@ -2,6 +2,8 @@ package pgsql
 
 import (
 	"context"
+	"fmt"
+	"github.com/lib/pq"
 	"go-community/internal/models"
 	"go-community/internal/pkg/cursor"
 	"gorm.io/gorm"
@@ -23,6 +25,9 @@ type UserRepository interface {
 	GetUserNameByIdentifier(ctx context.Context, identifier string) (output *models.GetNameOnUserDBOutput, err error)
 	GetUserNameByCommunityId(ctx context.Context, communityId string) (output *models.GetNameOnUserDBOutput, err error)
 	GetAllWithCursor(ctx context.Context, param models.GetAllUserCursorParam) (output []models.GetAllUserDBOutput, prev string, next string, total int, err error)
+	BulkUpdateRolesByCommunityIds(ctx context.Context, communityIds []string, roles []string) (err error)
+	BulkUpdateUserTypesByCommunityIds(ctx context.Context, communityIds []string, userTypes []string) (err error)
+	CheckMultiple(ctx context.Context, communityIds []string) (count int64, err error)
 }
 
 type userRepository struct {
@@ -183,73 +188,81 @@ func (ur *userRepository) GetUserNameByCommunityId(ctx context.Context, communit
 	return output, nil
 }
 
-func (ur *userRepository) GetAllWithCursor(ctx context.Context, param models.GetAllUserCursorParam) (output []models.GetAllUserDBOutput, prev string, next string, total int, err error) {
+func (ur *userRepository) GetAllWithCursor(ctx context.Context, param models.GetAllUserCursorParam) (output []models.GetAllUserDBOutput, prev, next string, total int, err error) {
 	defer func() {
 		LogRepository(ctx, err)
 	}()
 
-	var decryptedId int64
-	var totalEntries int
-
-	// Decrypt cursor if provided (based on updated_at)
+	var decryptedCommunityId string
 	if param.Cursor != "" {
-		decryptedId, err = cursor.DecryptCursorFromInteger(param.Cursor)
+		decryptedCommunityId, err = cursor.DecryptCursorFromString(param.Cursor)
 		if err != nil {
-			return nil, "", "", 0, err
+			return nil, "", "", 0, fmt.Errorf("invalid cursor: %w", err)
 		}
 	}
 
-	// Set default limit if none provided
 	limit := param.Limit
 	if limit <= 0 {
-		limit = 10 // Default limit
+		limit = 10
 	}
 
-	// Build the query
-	query, params, err := BuildQueryGetAllUser(baseQueryGetAllUser, param.SearchBy, param.Search, param.CampusCode, param.CoolId, param.Department, decryptedId, param.Direction, limit)
+	query, params, err := BuildQueryGetAllUser(baseQueryGetAllUser, param.SearchBy, param.Search, param.CampusCode, param.CoolId, param.Department, decryptedCommunityId, param.Direction, limit+1)
 	if err != nil {
-		return nil, "", "", 0, err
+		return nil, "", "", 0, fmt.Errorf("failed to build query: %w", err)
 	}
 
-	// Execute query
 	var records []models.GetAllUserDBOutput
-	err = ur.db.Raw(query, params...).Scan(&records).Error
-	if err != nil {
-		return nil, "", "", 0, err
+	if err := ur.db.Raw(query, params...).Scan(&records).Error; err != nil {
+		return nil, "", "", 0, fmt.Errorf("query execution failed: %w", err)
 	}
 
-	// Get total count for pagination info
-	countQuery, countParams, _ := BuildQueryGetAllUser(queryCountAllUser, param.SearchBy, param.Search, param.CampusCode, param.CoolId, param.Department, decryptedId, param.Direction, limit)
-	err = ur.db.Raw(countQuery, countParams...).Scan(&totalEntries).Error
-	if err != nil {
-		return nil, "", "", 0, err
+	if err := ur.db.Raw(queryCountAllUser).Scan(&total).Error; err != nil {
+		return nil, "", "", 0, fmt.Errorf("count query execution failed: %w", err)
 	}
 
-	// Handle pagination logic
-	hasMore := len(records) == limit && len(records) < totalEntries
-	if hasMore {
-		records = records[:limit] // Trim to the limit
+	if len(records) > limit {
+		records = records[:limit]
 	}
 
-	// Generate cursors
 	if len(records) > 0 {
-		// Generate a `prev` cursor for non-first pages
 		if param.Cursor != "" {
-			prev, err = cursor.EncryptCursor(strconv.Itoa(records[0].ID))
-			if err != nil {
-				return nil, "", "", 0, err
-			}
+			prev, _ = cursor.EncryptCursor(strconv.Itoa(records[0].ID))
 		}
-
-		// Generate a `next` cursor if there are more entries
-		if hasMore {
-			next, err = cursor.EncryptCursor(strconv.Itoa(records[len(records)-1].ID))
-			if err != nil {
-				return nil, "", "", 0, err
-			}
+		if len(records) == limit {
+			next, _ = cursor.EncryptCursor(strconv.Itoa(records[len(records)-1].ID))
 		}
 	}
 
-	// Return results
-	return records, prev, next, totalEntries, nil
+	return records, prev, next, total, nil
+}
+
+func (ur *userRepository) BulkUpdateRolesByCommunityIds(ctx context.Context, communityIds []string, roles []string) (err error) {
+	defer func() {
+		LogRepository(ctx, err)
+	}()
+
+	user := models.User{}
+	return ur.db.Model(user).Where("community_id IN ?", communityIds).Update("roles", pq.Array(roles)).Error
+}
+
+func (ur *userRepository) BulkUpdateUserTypesByCommunityIds(ctx context.Context, communityIds []string, userTypes []string) (err error) {
+	defer func() {
+		LogRepository(ctx, err)
+	}()
+
+	user := models.User{}
+	return ur.db.Model(user).Where("community_id IN ?", communityIds).Update("user_types", pq.Array(userTypes)).Error
+}
+
+func (ur *userRepository) CheckMultiple(ctx context.Context, communityIds []string) (count int64, err error) {
+	defer func() {
+		LogRepository(ctx, err)
+	}()
+
+	err = ur.db.Raw(queryMultipleCheckUser, pq.Array(communityIds)).Scan(&count).Error
+	if err != nil {
+		return 0, err
+	}
+
+	return count, nil
 }

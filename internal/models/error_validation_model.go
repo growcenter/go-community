@@ -21,6 +21,8 @@ func ErrorValidationMapping(validationError validator.FieldError) string {
 	switch {
 	case validationError.Tag() == "required":
 		return fmt.Sprintf("%s is required", validationError.Field())
+	case validationError.Tag() == "oneof":
+		return fmt.Sprintf("%s should be inputted either %s", validationError.Field(), validationError.Param())
 	case validationError.Tag() == "min":
 		return fmt.Sprintf("%s must be at least %s characters", validationError.Field(), validationError.Param())
 	case validationError.Tag() == "max":
