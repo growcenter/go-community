@@ -660,6 +660,18 @@ definitions:
           type: string
         type: array
     type: object
+  models.CursorInfo:
+    properties:
+      limit:
+        type: integer
+      next:
+        type: string
+      parameters: {}
+      previous:
+        type: string
+      totalData:
+        type: integer
+    type: object
   models.DepartmentsResponse:
     properties:
       departmentCode:
@@ -790,6 +802,65 @@ definitions:
         type: string
       type:
         type: string
+    type: object
+  models.GetAllUserCursorResponse:
+    properties:
+      address:
+        type: string
+      campusCode:
+        type: string
+      campusName:
+        type: string
+      communityId:
+        type: string
+      coolId:
+        type: integer
+      coolName:
+        type: string
+      createdAt:
+        type: string
+      dateOfBirth:
+        type: string
+      deletedAt:
+        type: string
+      departmentCode:
+        type: string
+      departmentName:
+        type: string
+      email:
+        type: string
+      gender:
+        type: string
+      isBaptized:
+        type: boolean
+      isKom100:
+        type: boolean
+      jemaatId:
+        type: string
+      kkjNumber:
+        type: string
+      maritalStatus:
+        type: string
+      name:
+        type: string
+      phoneNumber:
+        type: string
+      placeOfBirth:
+        type: string
+      roles:
+        items:
+          type: string
+        type: array
+      status:
+        type: string
+      type:
+        type: string
+      updatedAt:
+        type: string
+      userTypes:
+        items:
+          type: string
+        type: array
     type: object
   models.GetEventByCodeResponse:
     properties:
@@ -1172,6 +1243,14 @@ definitions:
           type: string
         type: array
     type: object
+  models.Pagination:
+    properties:
+      data: {}
+      pagination: {}
+      type:
+        example: collection
+        type: string
+    type: object
   models.RoleResponse:
     properties:
       description:
@@ -1238,6 +1317,22 @@ definitions:
       updatedBy:
         type: string
       verifiedAt:
+        type: string
+    type: object
+  models.UpdateRolesOrUserTypesResponse:
+    properties:
+      changes:
+        items:
+          type: string
+        type: array
+      communityIds:
+        items:
+          type: string
+        type: array
+      field:
+        type: string
+      type:
+        example: user
         type: string
     type: object
   models.UpdateUserPasswordRequest:
@@ -1422,6 +1517,133 @@ paths:
       summary: Get Departments from Config
       tags:
       - config
+  /api/v2/internal/users:
+    get:
+      consumes:
+      - application/json
+      description: Get all information needed about user in list
+      parameters:
+      - description: 'can only be: communityId, name, email, phoneNumber'
+        in: path
+        name: searchBy
+        required: true
+        type: string
+      - description: inputted search based on searchBy
+        in: path
+        name: search
+        required: true
+        type: string
+      - description: Pagination
+        in: path
+        name: cursor
+        required: true
+        type: string
+      - description: pagination direction - prev or next
+        in: path
+        name: direction
+        required: true
+        type: string
+      - description: how many data that user want to load
+        in: path
+        name: limit
+        required: true
+        type: integer
+      - description: filter by campus
+        in: path
+        name: campusCode
+        required: true
+        type: integer
+      - description: filter by cool
+        in: path
+        name: coolId
+        required: true
+        type: integer
+      - description: filter by department
+        in: path
+        name: departmentCode
+        required: true
+        type: integer
+      - description: mandatory header to access endpoint
+        in: header
+        name: X-API-Key
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Response indicates that the request succeeded and the resources
+            has been fetched and transmitted in the message body
+          schema:
+            allOf:
+            - $ref: '#/definitions/models.Pagination'
+            - properties:
+                data:
+                  items:
+                    $ref: '#/definitions/models.GetAllUserCursorResponse'
+                  type: array
+                pagination:
+                  $ref: '#/definitions/models.CursorInfo'
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+        "422":
+          description: Validation error. This can happen if there is an error validation
+            while create account
+          schema:
+            allOf:
+            - $ref: '#/definitions/models.ErrorValidationResponse'
+            - properties:
+                errors:
+                  $ref: '#/definitions/models.ErrorValidateResponse'
+              type: object
+      summary: Get All Users
+      tags:
+      - users-internal
+  /api/v2/users/roles-types/update:
+    put:
+      consumes:
+      - application/json
+      description: Update Role or user Type
+      parameters:
+      - description: User object that needs to be added
+        in: body
+        name: user
+        required: true
+        schema:
+          $ref: '#/definitions/models.UpdateUserPasswordRequest'
+      - description: mandatory header to access endpoint
+        in: header
+        name: X-API-Key
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Response indicates that the request succeeded and the resources
+            has been fetched and transmitted in the message body
+          schema:
+            $ref: '#/definitions/models.UpdateRolesOrUserTypesResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+        "422":
+          description: Validation error. This can happen if there is an error validation
+            while create account
+          schema:
+            allOf:
+            - $ref: '#/definitions/models.ErrorValidationResponse'
+            - properties:
+                errors:
+                  $ref: '#/definitions/models.ErrorValidateResponse'
+              type: object
+      summary: Update User Role or User Type
+      tags:
+      - users
   /v2/events:
     get:
       consumes:

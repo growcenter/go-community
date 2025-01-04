@@ -47,3 +47,13 @@ func DecryptCursorFromInteger(cursor string) (int64, error) {
 
 	return id, nil
 }
+
+func DecryptCursorFromString(cursor string) (string, error) {
+	// Decode from Base64
+	decoded, err := base64.StdEncoding.DecodeString(cursor)
+	if err != nil {
+		return "", fmt.Errorf("failed to decode cursor: %w", err)
+	}
+
+	return string(decoded), nil
+}

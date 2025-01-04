@@ -146,6 +146,201 @@
                 }
             }
         },
+        "/api/v2/internal/users": {
+            "get": {
+                "description": "Get all information needed about user in list",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "users-internal"
+                ],
+                "summary": "Get All Users",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "can only be: communityId, name, email, phoneNumber",
+                        "name": "searchBy",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "inputted search based on searchBy",
+                        "name": "search",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Pagination",
+                        "name": "cursor",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "pagination direction - prev or next",
+                        "name": "direction",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "description": "how many data that user want to load",
+                        "name": "limit",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "description": "filter by campus",
+                        "name": "campusCode",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "description": "filter by cool",
+                        "name": "coolId",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "description": "filter by department",
+                        "name": "departmentCode",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "mandatory header to access endpoint",
+                        "name": "X-API-Key",
+                        "in": "header",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Response indicates that the request succeeded and the resources has been fetched and transmitted in the message body",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/models.Pagination"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "$ref": "#/definitions/models.GetAllUserCursorResponse"
+                                            }
+                                        },
+                                        "pagination": {
+                                            "$ref": "#/definitions/models.CursorInfo"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/models.ErrorResponse"
+                        }
+                    },
+                    "422": {
+                        "description": "Validation error. This can happen if there is an error validation while create account",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/models.ErrorValidationResponse"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "errors": {
+                                            "$ref": "#/definitions/models.ErrorValidateResponse"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v2/users/roles-types/update": {
+            "put": {
+                "description": "Update Role or user Type",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "users"
+                ],
+                "summary": "Update User Role or User Type",
+                "parameters": [
+                    {
+                        "description": "User object that needs to be added",
+                        "name": "user",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/models.UpdateUserPasswordRequest"
+                        }
+                    },
+                    {
+                        "type": "string",
+                        "description": "mandatory header to access endpoint",
+                        "name": "X-API-Key",
+                        "in": "header",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Response indicates that the request succeeded and the resources has been fetched and transmitted in the message body",
+                        "schema": {
+                            "$ref": "#/definitions/models.UpdateRolesOrUserTypesResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/models.ErrorResponse"
+                        }
+                    },
+                    "422": {
+                        "description": "Validation error. This can happen if there is an error validation while create account",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/models.ErrorValidationResponse"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "errors": {
+                                            "$ref": "#/definitions/models.ErrorValidateResponse"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                }
+            }
+        },
         "/v2/events": {
             "get": {
                 "security": [
@@ -2604,6 +2799,24 @@
                 }
             }
         },
+        "models.CursorInfo": {
+            "type": "object",
+            "properties": {
+                "limit": {
+                    "type": "integer"
+                },
+                "next": {
+                    "type": "string"
+                },
+                "parameters": {},
+                "previous": {
+                    "type": "string"
+                },
+                "totalData": {
+                    "type": "integer"
+                }
+            }
+        },
         "models.DepartmentsResponse": {
             "type": "object",
             "properties": {
@@ -2788,6 +3001,95 @@
                 },
                 "type": {
                     "type": "string"
+                }
+            }
+        },
+        "models.GetAllUserCursorResponse": {
+            "type": "object",
+            "properties": {
+                "address": {
+                    "type": "string"
+                },
+                "campusCode": {
+                    "type": "string"
+                },
+                "campusName": {
+                    "type": "string"
+                },
+                "communityId": {
+                    "type": "string"
+                },
+                "coolId": {
+                    "type": "integer"
+                },
+                "coolName": {
+                    "type": "string"
+                },
+                "createdAt": {
+                    "type": "string"
+                },
+                "dateOfBirth": {
+                    "type": "string"
+                },
+                "deletedAt": {
+                    "type": "string"
+                },
+                "departmentCode": {
+                    "type": "string"
+                },
+                "departmentName": {
+                    "type": "string"
+                },
+                "email": {
+                    "type": "string"
+                },
+                "gender": {
+                    "type": "string"
+                },
+                "isBaptized": {
+                    "type": "boolean"
+                },
+                "isKom100": {
+                    "type": "boolean"
+                },
+                "jemaatId": {
+                    "type": "string"
+                },
+                "kkjNumber": {
+                    "type": "string"
+                },
+                "maritalStatus": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "phoneNumber": {
+                    "type": "string"
+                },
+                "placeOfBirth": {
+                    "type": "string"
+                },
+                "roles": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "status": {
+                    "type": "string"
+                },
+                "type": {
+                    "type": "string"
+                },
+                "updatedAt": {
+                    "type": "string"
+                },
+                "userTypes": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
                 }
             }
         },
@@ -3334,6 +3636,17 @@
                 }
             }
         },
+        "models.Pagination": {
+            "type": "object",
+            "properties": {
+                "data": {},
+                "pagination": {},
+                "type": {
+                    "type": "string",
+                    "example": "collection"
+                }
+            }
+        },
         "models.RoleResponse": {
             "type": "object",
             "properties": {
@@ -3431,6 +3744,30 @@
                 },
                 "verifiedAt": {
                     "type": "string"
+                }
+            }
+        },
+        "models.UpdateRolesOrUserTypesResponse": {
+            "type": "object",
+            "properties": {
+                "changes": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "communityIds": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "field": {
+                    "type": "string"
+                },
+                "type": {
+                    "type": "string",
+                    "example": "user"
                 }
             }
         },

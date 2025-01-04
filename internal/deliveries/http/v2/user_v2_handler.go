@@ -31,6 +31,7 @@ func NewUserHandler(api *echo.Group, u *usecases.Usecases, c *config.Configurati
 	endpoint.GET("/:communityId", handler.GetByCommunityId)
 	endpoint.PATCH("/:identifier/password", handler.UpdatePassword)
 	endpoint.PUT("/logout", handler.Logout)
+	endpoint.PUT("/roles-types/update", handler.UpdateRolesOrUserType)
 
 	endpointUserAuth := endpoint.Group("")
 	endpointUserAuth.Use(middleware.UserV2Middleware(c))
@@ -348,6 +349,25 @@ func (uh *UserHandler) Logout(ctx echo.Context) error {
 	return ctx.NoContent(http.StatusNoContent)
 }
 
+// GetAllUserInternal godoc
+// @Summary Get All Users
+// @Description Get all information needed about user in list
+// @Tags users-internal
+// @Accept json
+// @Produce json
+// @Param searchBy path string true "can only be: communityId, name, email, phoneNumber"
+// @Param search path string true "inputted search based on searchBy"
+// @Param cursor path string true "Pagination"
+// @Param direction path string true "pagination direction - prev or next"
+// @Param limit path int true "how many data that user want to load"
+// @Param campusCode path int true "filter by campus"
+// @Param coolId path int true "filter by cool"
+// @Param departmentCode path int true "filter by department"
+// @Param X-API-Key header string true "mandatory header to access endpoint"
+// @Success 200 {object} models.Pagination{data=[]models.GetAllUserCursorResponse,pagination=models.CursorInfo} "Response indicates that the request succeeded and the resources has been fetched and transmitted in the message body"
+// @Failure 400 {object} models.ErrorResponse "Bad Request"
+// @Failure 422 {object} models.ErrorValidationResponse{errors=models.ErrorValidateResponse} "Validation error. This can happen if there is an error validation while create account"
+// @Router /api/v2/internal/users [get]
 func (uh *UserHandler) GetAllUserInternal(ctx echo.Context) error {
 	var param models.GetAllUserCursorParam
 	if err := ctx.Bind(&param); err != nil {
@@ -364,4 +384,34 @@ func (uh *UserHandler) GetAllUserInternal(ctx echo.Context) error {
 	}
 
 	return response.SuccessCursor(ctx, http.StatusOK, info, data)
+}
+
+// UpdateRolesOrUserType godoc
+// @Summary Update User Role or User Type
+// @Description Update Role or user Type
+// @Tags users
+// @Accept json
+// @Produce json
+// @Param user body models.UpdateUserPasswordRequest true "User object that needs to be added"
+// @Param X-API-Key header string true "mandatory header to access endpoint"
+// @Success 201 {object} models.UpdateRolesOrUserTypesResponse "Response indicates that the request succeeded and the resources has been fetched and transmitted in the message body"
+// @Failure 400 {object} models.ErrorResponse "Bad Request"
+// @Failure 422 {object} models.ErrorValidationResponse{errors=models.ErrorValidateResponse} "Validation error. This can happen if there is an error validation while create account"
+// @Router /api/v2/users/roles-types/update [put]
+func (uh *UserHandler) UpdateRolesOrUserType(ctx echo.Context) error {
+	var request models.UpdateRolesOrUserTypesRequest
+	if err := ctx.Bind(&request); err != nil {
+		return response.Error(ctx, err)
+	}
+
+	if err := validator.Validate(request); err != nil {
+		return response.ErrorValidation(ctx, err)
+	}
+
+	data, err := uh.usecase.User.UpdateRolesOrUserType(ctx.Request().Context(), &request)
+	if err != nil {
+		return response.Error(ctx, err)
+	}
+
+	return response.Success(ctx, http.StatusOK, data.ToResponse())
 }

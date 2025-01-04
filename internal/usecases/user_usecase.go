@@ -2,6 +2,7 @@ package usecases
 
 import (
 	"context"
+	"fmt"
 	"go-community/internal/common"
 	"go-community/internal/config"
 	"go-community/internal/models"
@@ -20,7 +21,8 @@ type UserUsecase interface {
 	GetByCommunityId(ctx context.Context, request models.GetOneByCommunityIdParameter) (response *models.GetOneByCommunityIdResponse, err error)
 	Check(ctx context.Context, identifier string) (isExist bool, err error)
 	UpdatePassword(ctx context.Context, param *models.UpdateUserPasswordParam, request *models.UpdateUserPasswordRequest) (user *models.User, err error)
-	GetAll()
+	GetAllCursor(ctx context.Context, params models.GetAllUserCursorParam) (res []models.GetAllUserCursorResponse, info *models.CursorInfo, err error)
+	UpdateRolesOrUserType(ctx context.Context, request *models.UpdateRolesOrUserTypesRequest) (res *models.UpdateRolesOrUserTypesResponse, err error)
 }
 
 type userUsecase struct {
@@ -645,4 +647,57 @@ func (uu *userUsecase) GetAllCursor(ctx context.Context, params models.GetAllUse
 	}
 
 	return response, info, nil
+}
+
+func (uu *userUsecase) UpdateRolesOrUserType(ctx context.Context, request *models.UpdateRolesOrUserTypesRequest) (res *models.UpdateRolesOrUserTypesResponse, err error) {
+	defer func() {
+		LogService(ctx, err)
+	}()
+
+	countUser, err := uu.ur.CheckMultiple(ctx, request.CommunityIds)
+	if err != nil {
+		return nil, err
+	}
+
+	if int(countUser) != len(request.CommunityIds) {
+		return nil, models.ErrorDataNotFound
+	}
+
+	switch request.Field {
+	case "role":
+		countRole, err := uu.rr.CheckMultiple(ctx, request.Changes)
+		if err != nil {
+			return nil, err
+		}
+
+		if int(countRole) != len(request.Changes) {
+			return nil, models.ErrorDataNotFound
+		}
+
+		if err := uu.ur.BulkUpdateRolesByCommunityIds(ctx, request.CommunityIds, request.Changes); err != nil {
+			return nil, err
+		}
+	case "userType":
+		countUserType, err := uu.utr.CheckMultiple(ctx, request.Changes)
+		if err != nil {
+			return nil, err
+		}
+
+		if int(countUserType) != len(request.Changes) {
+			return nil, models.ErrorDataNotFound
+		}
+
+		if err := uu.ur.BulkUpdateUserTypesByCommunityIds(ctx, request.CommunityIds, request.Changes); err != nil {
+			return nil, err
+		}
+	default:
+		return nil, fmt.Errorf("should be one of userType or role")
+	}
+
+	return &models.UpdateRolesOrUserTypesResponse{
+		Type:         models.TYPE_USER,
+		CommunityIds: request.CommunityIds,
+		Field:        request.Field,
+		Changes:      request.Changes,
+	}, nil
 }
