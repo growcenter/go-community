@@ -1338,7 +1338,7 @@ definitions:
 info:
   contact: {}
 paths:
-  /v2/campuses:
+  /api/v2/campuses:
     get:
       consumes:
       - application/json
@@ -1381,7 +1381,7 @@ paths:
       summary: Get Campuses from Config
       tags:
       - config
-  /v2/departments:
+  /api/v2/departments:
     get:
       consumes:
       - application/json

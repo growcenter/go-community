@@ -126,7 +126,50 @@ var (
 	`
 )
 
-func BuildEventRegistrationQuery(baseQuery string, eventCode string, nameSearch string, cursor time.Time, direction string) (string, []interface{}, error) {
+//func BuildEventRegistrationQuery(baseQuery string, eventCode string, nameSearch string, cursor time.Time, direction string) (string, []interface{}, error) {
+//	var conditions []string
+//	var params []interface{}
+//
+//	// Add conditions dynamically
+//	if eventCode != "" {
+//		conditions = append(conditions, "er.event_code = ?")
+//		params = append(params, eventCode)
+//	}
+//	if nameSearch != "" {
+//		conditions = append(conditions, "er.name ILIKE ?")
+//		params = append(params, "%"+nameSearch+"%")
+//	}
+//	if !cursor.IsZero() {
+//		if direction == "next" {
+//			conditions = append(conditions, "er.updated_at > ?")
+//		} else if direction == "prev" {
+//			conditions = append(conditions, "er.updated_at < ?")
+//		} else {
+//			return "", nil, fmt.Errorf("invalid direction: %s, must be 'next' or 'prev'", direction)
+//		}
+//		params = append(params, cursor)
+//	}
+//
+//	// Build WHERE clause
+//	if len(conditions) > 0 {
+//		baseQuery += " AND " + strings.Join(conditions, " AND ")
+//	}
+//
+//	// Add ordering
+//	if direction == "next" {
+//		baseQuery += " ORDER BY er.updated_at ASC"
+//	} else if direction == "prev" {
+//		baseQuery += " ORDER BY er.updated_at DESC"
+//	}
+//
+//	// Add limit placeholder
+//	baseQuery += " LIMIT ?"
+//	params = append(params, 100) // Default limit for now, can be adjusted
+//
+//	return baseQuery, params, nil
+//}
+
+func BuildEventRegistrationQuery(baseQuery string, eventCode string, nameSearch string, cursor time.Time, direction string, limit int) (string, []interface{}, error) {
 	var conditions []string
 	var params []interface{}
 
@@ -155,16 +198,71 @@ func BuildEventRegistrationQuery(baseQuery string, eventCode string, nameSearch 
 		baseQuery += " AND " + strings.Join(conditions, " AND ")
 	}
 
-	// Add ordering
+	// Add ordering based on direction
 	if direction == "next" {
 		baseQuery += " ORDER BY er.updated_at ASC"
 	} else if direction == "prev" {
 		baseQuery += " ORDER BY er.updated_at DESC"
 	}
 
-	// Add limit placeholder
+	// Add limit (fetch limit + 1 for cursor determination)
 	baseQuery += " LIMIT ?"
-	params = append(params, 100) // Default limit for now, can be adjusted
+	//if limit > 0 {
+	//	params = append(params, limit+1) // Fetch one more record than requested to determine if there's a next page
+	//} else {
+	//	params = append(params, 11)
+	//}
+
+	params = append(params, limit)
 
 	return baseQuery, params, nil
 }
+
+//func BuildEventRegistrationQuery(baseQuery string, eventCode string, nameSearch string, cursor int64, direction string, limit int) (string, []interface{}, error) {
+//	var conditions []string
+//	var params []interface{}
+//
+//	// Add conditions dynamically
+//	if eventCode != "" {
+//		conditions = append(conditions, "er.event_code = ?")
+//		params = append(params, eventCode)
+//	}
+//	if nameSearch != "" {
+//		conditions = append(conditions, "er.name ILIKE ?")
+//		params = append(params, "%"+nameSearch+"%")
+//	}
+//
+//	// Use cursor to filter based on ID for pagination
+//	if cursor > 0 {
+//		if direction == "next" {
+//			// Fetch records with ID greater than cursor for next page
+//			conditions = append(conditions, "er.id > ?")
+//		} else if direction == "prev" {
+//			// Fetch records with ID less than cursor for prev page
+//			conditions = append(conditions, "er.id < ?")
+//		} else {
+//			return "", nil, fmt.Errorf("invalid direction: %s, must be 'next' or 'prev'", direction)
+//		}
+//		params = append(params, cursor)
+//	}
+//
+//	// Build WHERE clause
+//	if len(conditions) > 0 {
+//		baseQuery += " AND " + strings.Join(conditions, " AND ")
+//	}
+//
+//	// Add ordering based on direction (ID)
+//	if direction == "next" {
+//		// For "next", we order by ID in ascending order
+//		baseQuery += " ORDER BY er.id ASC"
+//	} else if direction == "prev" {
+//		// For "prev", we order by ID in descending order
+//		baseQuery += " ORDER BY er.id DESC"
+//	}
+//
+//	// Apply limit
+//	baseQuery += " LIMIT ?"
+//	params = append(params, limit)
+//
+//	return baseQuery, params, nil
+//}

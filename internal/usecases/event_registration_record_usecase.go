@@ -568,7 +568,6 @@ func (erru *eventRegistrationRecordUsecase) GetAllCursor(ctx context.Context, pa
 			DeletedAt:         deletedAt,
 		})
 	}
-
 	info = &models.CursorInfo{
 		PreviousCursor: prev,
 		NextCursor:     next,

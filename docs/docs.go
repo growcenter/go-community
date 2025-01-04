@@ -15,7 +15,7 @@ const docTemplate = `{
     "host": "{{.Host}}",
     "basePath": "{{.BasePath}}",
     "paths": {
-        "/v2/campuses": {
+        "/api/v2/campuses": {
             "get": {
                 "description": "Get Campuses from Config",
                 "consumes": [
@@ -86,7 +86,7 @@ const docTemplate = `{
                 }
             }
         },
-        "/v2/departments": {
+        "/api/v2/departments": {
             "get": {
                 "description": "Get Departments from Config",
                 "consumes": [
