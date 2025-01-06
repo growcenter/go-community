@@ -45,6 +45,7 @@ func (erru *eventRegistrationRecordUsecase) createAtomic(ctx context.Context, re
 	res := &models.CreateEventRegistrationRecordResponse{}
 
 	var (
+		name              string
 		registerStatus    string
 		communityIdOrigin string
 		verifiedAt        sql.NullTime
@@ -62,6 +63,12 @@ func (erru *eventRegistrationRecordUsecase) createAtomic(ctx context.Context, re
 			Valid: true,
 		}
 		updatedBy = "user"
+
+		nameRegister, err := erru.r.User.GetUserNameByCommunityId(ctx, request.CommunityId)
+		if err != nil {
+			return nil, err
+		}
+		name = nameRegister.Name
 	} else {
 		registerStatus = models.MapRegisterStatus[models.REGISTER_STATUS_PENDING]
 		communityIdOrigin = value.CommunityId
@@ -69,6 +76,7 @@ func (erru *eventRegistrationRecordUsecase) createAtomic(ctx context.Context, re
 			Valid: false,
 		}
 		updatedBy = ""
+		name = common.StringTrimSpaceAndUpper(request.Name)
 	}
 
 	err = erru.r.Transaction.Atomic(ctx, func(ctx context.Context, r *pgsql.PostgreRepositories) error {
@@ -85,7 +93,7 @@ func (erru *eventRegistrationRecordUsecase) createAtomic(ctx context.Context, re
 
 		main := models.EventRegistrationRecord{
 			ID:                uuid.New(),
-			Name:              common.StringTrimSpaceAndUpper(request.Name),
+			Name:              name,
 			Identifier:        request.Identifier,
 			CommunityId:       request.CommunityId,
 			EventCode:         request.EventCode,
