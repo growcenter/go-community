@@ -172,15 +172,15 @@ func (uu *userUsecase) Create(ctx context.Context, request *models.CreateUserReq
 
 		return response, nil
 	case userExist.ID == 0:
-		var communityId string
-		switch {
-		case request.JemaatId != "" && request.KKJNumber != "":
-			communityId = request.JemaatId
-		case request.JemaatId != "" && request.KKJNumber == "":
-			return nil, models.ErrorDidNotFillKKJNumber
-		default:
-			communityId = generator.LuhnAccountNumber()
-		}
+		//var communityId string
+		//switch {
+		//case request.JemaatId != "" && request.KKJNumber != "":
+		//	communityId = request.JemaatId
+		//case request.JemaatId != "" && request.KKJNumber == "":
+		//	return nil, models.ErrorDidNotFillKKJNumber
+		//default:
+		//	communityId = generator.LuhnAccountNumber()
+		//}
 
 		salted := append([]byte(request.Password), uu.s...)
 		password, err := hash.Generate(salted)
@@ -195,7 +195,7 @@ func (uu *userUsecase) Create(ctx context.Context, request *models.CreateUserReq
 		}
 
 		input := models.User{
-			CommunityID:   communityId,
+			CommunityID:   generator.LuhnAccountNumber(),
 			Name:          strings.TrimSpace(common.CapitalizeFirstWord(request.Name)),
 			PhoneNumber:   strings.TrimSpace(request.PhoneNumber),
 			Email:         common.StringTrimSpaceAndLower(request.Email),
@@ -700,4 +700,109 @@ func (uu *userUsecase) UpdateRolesOrUserType(ctx context.Context, request *model
 		Field:        request.Field,
 		Changes:      request.Changes,
 	}, nil
+}
+
+func (uu *userUsecase) UpdateProfile(ctx context.Context, parameter models.UpdateProfileParameter, request models.UpdateProfileRequest) (response *models.UpdateProfileResponse, err error) {
+	defer func() {
+		LogService(ctx, err)
+	}()
+
+	data, err := uu.ur.GetOneByCommunityId(ctx, parameter.CommunityId)
+	if err != nil {
+		return nil, err
+	}
+
+	if data.ID == 0 {
+		return nil, models.ErrorDataNotFound
+	}
+
+	if request.CampusCode != "" {
+		_, campusExist := uu.cfg.Campus[strings.ToLower(request.CampusCode)]
+		if !campusExist {
+			return nil, models.ErrorDataNotFound
+		}
+		data.CampusCode = request.CampusCode
+	}
+
+	if request.DateOfBirth != "" {
+		location, _ := time.LoadLocation("Asia/Jakarta")
+		dob, err := common.ParseStringToDatetime("2006-01-02", request.DateOfBirth, location)
+		if err != nil {
+			return nil, err
+		}
+		data.DateOfBirth = &dob
+	}
+
+	if request.CoolID != 0 {
+		coolExist, err := uu.clr.CheckById(ctx, request.CoolID)
+		if err != nil {
+			return nil, err
+		}
+
+		if !coolExist {
+			return nil, models.ErrorDataNotFound
+		}
+		data.CoolID = request.CoolID
+	}
+
+	if request.DepartmentCode != "" {
+		_, departmentExist := uu.cfg.Department[strings.ToLower(request.DepartmentCode)]
+		if !departmentExist {
+			return nil, models.ErrorDataNotFound
+		}
+		data.Department = request.DepartmentCode
+	}
+
+	if request.DateOfMarriage != "" {
+		location, _ := time.LoadLocation("Asia/Jakarta")
+		dom, err := common.ParseStringToDatetime("2006-01-02", request.DateOfMarriage, location)
+		if err != nil {
+			return nil, err
+		}
+		data.DateOfMarriage = &dom
+	}
+
+	data.Name = strings.TrimSpace(common.CapitalizeFirstWord(request.Name))
+	data.Email = common.StringTrimSpaceAndLower(request.Email)
+	data.PhoneNumber = common.StringTrimSpaceAndLower(request.PhoneNumber)
+	data.Gender = request.Gender
+	data.Address = request.Address
+	data.PlaceOfBirth = request.PlaceOfBirth
+	data.MaritalStatus = request.MaritalStatus
+	data.EmploymentStatus = request.EmploymentStatus
+	data.EducationLevel = request.EducationLevel
+	data.KKJNumber = request.KKJNumber
+	data.JemaatID = request.JemaatID
+	data.IsBaptized = request.IsBaptized
+	data.IsKom100 = request.IsKom100
+
+	if err := uu.ur.Update(ctx, &data); err != nil {
+		return nil, err
+	}
+
+	response = &models.UpdateProfileResponse{
+		Type:             models.TYPE_USER,
+		CommunityId:      data.CommunityID,
+		Name:             data.Name,
+		PhoneNumber:      data.PhoneNumber,
+		Email:            data.Email,
+		Gender:           data.Gender,
+		Address:          data.Address,
+		CampusCode:       data.CampusCode,
+		CoolID:           data.CoolID,
+		DepartmentCode:   data.Department,
+		PlaceOfBirth:     data.PlaceOfBirth,
+		DateOfBirth:      data.DateOfBirth,
+		DateOfMarriage:   data.DateOfMarriage,
+		MaritalStatus:    data.MaritalStatus,
+		EmploymentStatus: data.EmploymentStatus,
+		EducationLevel:   data.EducationLevel,
+		KKJNumber:        data.KKJNumber,
+		JemaatID:         data.JemaatID,
+		IsBaptized:       data.IsBaptized,
+		IsKom100:         data.IsKom100,
+		Status:           data.Status,
+	}
+
+	return response, nil
 }

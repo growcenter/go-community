@@ -32,6 +32,7 @@ func NewUserHandler(api *echo.Group, u *usecases.Usecases, c *config.Configurati
 	endpoint.PATCH("/:identifier/password", handler.UpdatePassword)
 	endpoint.PUT("/logout", handler.Logout)
 	endpoint.PUT("/roles-types/update", handler.UpdateRolesOrUserType)
+	endpoint.PATCH("/:communityId/profile", handler.UpdateProfile)
 
 	endpointUserAuth := endpoint.Group("")
 	endpointUserAuth.Use(middleware.UserV2Middleware(c))
@@ -414,4 +415,30 @@ func (uh *UserHandler) UpdateRolesOrUserType(ctx echo.Context) error {
 	}
 
 	return response.Success(ctx, http.StatusOK, data.ToResponse())
+}
+
+func (uh *UserHandler) UpdateProfile(ctx echo.Context) error {
+	var request models.UpdateProfileRequest
+	parameter := models.UpdateProfileParameter{
+		CommunityId: ctx.Param("communityId"),
+	}
+
+	if err := ctx.Bind(&request); err != nil {
+		return response.Error(ctx, models.ErrorInvalidInput)
+	}
+
+	if err := validator.Validate(parameter); err != nil {
+		return response.ErrorValidation(ctx, err)
+	}
+
+	if err := validator.Validate(request); err != nil {
+		return response.ErrorValidation(ctx, err)
+	}
+
+	user, err := uh.usecase.User.UpdateProfile(ctx.Request().Context(), parameter, request)
+	if err != nil {
+		return response.Error(ctx, err)
+	}
+
+	return response.Success(ctx, http.StatusOK, user.ToResponse())
 }

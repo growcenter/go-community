@@ -487,3 +487,137 @@ type (
 		Changes      []string `json:"changes"`
 	}
 )
+
+func (u *UpdateProfileResponse) ToResponse() *UpdateProfileResponse {
+	return &UpdateProfileResponse{
+		Type:             TYPE_USER,
+		CommunityId:      u.CommunityId,
+		Name:             u.Name,
+		PhoneNumber:      u.PhoneNumber,
+		Email:            u.Email,
+		Gender:           u.Gender,
+		Address:          u.Address,
+		CampusCode:       u.CampusCode,
+		CoolID:           u.CoolID,
+		DepartmentCode:   u.DepartmentCode,
+		DateOfBirth:      u.DateOfBirth,
+		PlaceOfBirth:     u.PlaceOfBirth,
+		MaritalStatus:    u.MaritalStatus,
+		DateOfMarriage:   u.DateOfMarriage,
+		EmploymentStatus: u.EmploymentStatus,
+		EducationLevel:   u.EducationLevel,
+		KKJNumber:        u.KKJNumber,
+		JemaatID:         u.JemaatID,
+		IsBaptized:       u.IsBaptized,
+		IsKom100:         u.IsKom100,
+		Status:           u.Status,
+	}
+}
+
+type (
+	UpdateProfileParameter struct {
+		CommunityId string `json:"communityId" validate:"required,coummunityId"`
+	}
+	UpdateProfileRequest struct {
+		Name             string `json:"name" validate:"required,min=1,max=50,nospecial" example:"Professionals"`
+		Email            string `json:"email" validate:"omitempty,emailFormat" example:"jeremy@gmail.com"`
+		PhoneNumber      string `json:"phoneNumber" validate:"omitempty,phoneFormat"`
+		Gender           string `json:"gender" validate:"omitempty,oneof=male female"`
+		Address          string `json:"address"`
+		CampusCode       string `json:"campusCode" validate:"omitempty,min=3,max=3" example:"001"`
+		PlaceOfBirth     string `json:"placeOfBirth"`
+		DateOfBirth      string `json:"dateOfBirth" validate:"omitempty,yyymmddFormat"`
+		CoolID           int    `json:"coolId"`
+		DepartmentCode   string `json:"departmentCode" validate:"omitempty,noStartEndSpaces" example:"MUSIC"`
+		MaritalStatus    string `json:"maritalStatus" validate:"omitempty,oneof=single married others" example:"active"`
+		DateOfMarriage   string `json:"dateOfMarriage" validate:"omitempty,yyymmddFormat"`
+		EmploymentStatus string `json:"employmentStatus"`
+		EducationLevel   string `json:"educationLevel"`
+		KKJNumber        string `json:"kkjNumber"`
+		JemaatID         string `json:"jemaatId"`
+		IsBaptized       bool   `json:"isBaptized"`
+		IsKom100         bool   `json:"isKom100"`
+	}
+	UpdateProfileResponse struct {
+		Type             string     `json:"type"`
+		CommunityId      string     `json:"communityId"`
+		Name             string     `json:"name"`
+		PhoneNumber      string     `json:"phoneNumber"`
+		Email            string     `json:"email"`
+		Gender           string     `json:"gender"`
+		Address          string     `json:"address"`
+		CampusCode       string     `json:"campusCode"`
+		CoolID           int        `json:"coolId"`
+		DepartmentCode   string     `json:"departmentCode"`
+		DateOfBirth      *time.Time `json:"dateOfBirth"`
+		PlaceOfBirth     string     `json:"placeOfBirth"`
+		MaritalStatus    string     `json:"maritalStatus"`
+		DateOfMarriage   *time.Time `json:"dateOfMarriage"`
+		EmploymentStatus string     `json:"employmentStatus"`
+		EducationLevel   string     `json:"educationLevel"`
+		KKJNumber        string     `json:"kkjNumber"`
+		JemaatID         string     `json:"jemaatId"`
+		IsBaptized       bool       `json:"isBaptized"`
+		IsKom100         bool       `json:"isKom100"`
+		Status           string     `json:"status"`
+	}
+)
+
+type (
+	GetUserProfileParameter struct {
+		CommunityId string `json:"communityId" validate:"required,communityId"`
+	}
+	GetUserProfileResponse struct {
+		Type             string                    `json:"type"`
+		CommunityId      string                    `json:"communityId"`
+		Name             string                    `json:"name"`
+		PhoneNumber      string                    `json:"phoneNumber"`
+		Email            string                    `json:"email"`
+		UserType         []UserTypeSummaryResponse `json:"userType"`
+		Gender           string                    `json:"gender"`
+		Address          string                    `json:"address"`
+		Family           FamilyGetProfileResponse  `json:"family"`
+		CampusCode       string                    `json:"campusCode"`
+		CampusName       string                    `json:"campusName"`
+		CoolID           int                       `json:"coolId"`
+		CoolName         string                    `json:"coolName"`
+		DepartmentCode   string                    `json:"departmentCode"`
+		DepartmentName   string                    `json:"departmentName"`
+		DateOfBirth      *time.Time                `json:"dateOfBirth"`
+		PlaceOfBirth     string                    `json:"placeOfBirth"`
+		MaritalStatus    string                    `json:"maritalStatus"`
+		DateOfMarriage   *time.Time                `json:"dateOfMarriage"`
+		EmploymentStatus string                    `json:"employmentStatus"`
+		EducationLevel   string                    `json:"educationLevel"`
+		KKJNumber        string                    `json:"kkjNumber"`
+		JemaatID         string                    `json:"jemaatId"`
+		IsBaptized       bool                      `json:"isBaptized"`
+		IsKom100         bool                      `json:"isKom100"`
+		Status           string                    `json:"status"`
+	}
+	FamilyGetProfileResponse struct {
+		Partner  FamilyGetProfileResponseDetail   `json:"partner"`
+		Parents  []FamilyGetProfileResponseDetail `json:"parents"`
+		Children []FamilyGetProfileResponseDetail `json:"children"`
+	}
+	FamilyGetProfileResponseDetail struct {
+		Type        string `json:"type"`
+		Name        string `json:"name"`
+		CommunityId string `json:"communityId"`
+		Relation    string `json:"relationType"`
+	}
+)
+
+type (
+	UserAddRelationRequest struct {
+		Partner  string   `json:"partnerCommunityId" validate:"omitempty,communityId"`
+		Parents  []string `json:"parentsCommunityIds" validate:"omitempty,dive,communityId"`
+		Children []string `json:"childrenCommunityIds" validate:"omitempty,dive,communityId"`
+	}
+	UserAddRelationResponse struct {
+		Type        string `json:"type"`
+		Name        string `json:"name"`
+		CommunityId string `json:"communityId"`
+		Relation    string `json:"relationType"`
+	}
+)
