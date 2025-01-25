@@ -50,5 +50,5 @@ type (
 type UserTypeSummaryResponse struct {
 	Type     string `json:"type" example:"userType"`
 	UserType string `json:"userType" example:"volunteer"`
-	Name     string `json:"name" example:"Volunteer"`
+	Name     string `json:"name,omitempty" example:"Volunteer"`
 }

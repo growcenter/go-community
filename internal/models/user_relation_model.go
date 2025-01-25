@@ -27,3 +27,16 @@ type GetFamilyRelationDBOutput struct {
 	Name             string `json:"name"`
 	RelationshipType string `json:"relationshipType"`
 }
+
+func ReciprocalRelationshipType(relationshipType string) string {
+	switch relationshipType {
+	case "parent":
+		return "child"
+	case "child":
+		return "parent"
+	case "spouse":
+		return "spouse"
+	default:
+		return ""
+	}
+}

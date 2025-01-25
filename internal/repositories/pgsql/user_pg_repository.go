@@ -14,6 +14,7 @@ type UserRepository interface {
 	Create(ctx context.Context, user *models.User) (err error)
 	Update(ctx context.Context, user *models.User) (err error)
 	UpdateByEmailPhoneNumber(ctx context.Context, email string, phoneNumber string, user *models.User) (err error)
+	UpdateByCommunityId(ctx context.Context, communityId string, user *models.User) (err error)
 	GetByCommunityId(ctx context.Context, communityId string) (user models.User, err error)
 	GetOneByCommunityId(ctx context.Context, communityId string) (user models.User, err error)
 	GetByEmail(ctx context.Context, email string) (user models.User, err error)
@@ -28,6 +29,8 @@ type UserRepository interface {
 	BulkUpdateRolesByCommunityIds(ctx context.Context, communityIds []string, roles []string) (err error)
 	BulkUpdateUserTypesByCommunityIds(ctx context.Context, communityIds []string, userTypes []string) (err error)
 	CheckMultiple(ctx context.Context, communityIds []string) (count int64, err error)
+	GetDetailByCommunityId(ctx context.Context, communityId string) (output []models.GetUserProfileDBOutput, err error)
+	GetCommunityIdByParams(ctx context.Context, param models.GetCommunityIdsByParameter) (output []models.GetCommunityIdsByParamsDBOutput, err error)
 }
 
 type userRepository struct {
@@ -68,6 +71,14 @@ func (ur *userRepository) UpdateByEmailPhoneNumber(ctx context.Context, email st
 	return ur.trx.Transaction(func(dtx *gorm.DB) error {
 		return ur.db.Model(&models.User{}).Where(condition, args...).Updates(user).Error
 	})
+}
+
+func (ur *userRepository) UpdateByCommunityId(ctx context.Context, communityId string, user *models.User) (err error) {
+	defer func() {
+		LogRepository(ctx, err)
+	}()
+
+	return ur.db.Model(&models.User{}).Where("community_id = ?", communityId).Updates(user).Error
 }
 
 func (ur *userRepository) GetByCommunityId(ctx context.Context, communityId string) (user models.User, err error) {
@@ -265,4 +276,35 @@ func (ur *userRepository) CheckMultiple(ctx context.Context, communityIds []stri
 	}
 
 	return count, nil
+}
+
+func (ur *userRepository) GetDetailByCommunityId(ctx context.Context, communityId string) (output []models.GetUserProfileDBOutput, err error) {
+	defer func() {
+		LogRepository(ctx, err)
+	}()
+
+	err = ur.db.Raw(queryGetProfileByCommunityId, communityId).Scan(&output).Error
+	if err != nil {
+		return nil, err
+	}
+
+	return output, nil
+}
+
+func (ur *userRepository) GetCommunityIdByParams(ctx context.Context, param models.GetCommunityIdsByParameter) (output []models.GetCommunityIdsByParamsDBOutput, err error) {
+	defer func() {
+		LogRepository(ctx, err)
+	}()
+
+	finalQuery, input, err := BuildQueryGetCommunityIdByParams(param)
+	if err != nil {
+		return nil, err
+	}
+
+	err = ur.db.Raw(finalQuery, input...).Scan(&output).Error
+	if err != nil {
+		return nil, err
+	}
+
+	return output, nil
 }

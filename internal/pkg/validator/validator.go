@@ -96,22 +96,43 @@ func registerDatetime() {
 
 func registerEmailFormat() {
 	valid.RegisterValidation("emailFormat", func(fl v10.FieldLevel) bool {
-		input := fl.Field().String()
+		//input := fl.Field().String()
+		//pattern := `^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$`
+		//return regexp.MustCompile(pattern).MatchString(input)
+
+		input := fl.Field().Interface()
+
+		inputString := input.(string)
+		if inputString == "" {
+			return true
+		}
+
 		pattern := `^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$`
-		return regexp.MustCompile(pattern).MatchString(input)
+		return regexp.MustCompile(pattern).MatchString(inputString)
 	})
 }
 
 func registerPhoneFormat() {
 	valid.RegisterValidation("phoneFormat", func(fl v10.FieldLevel) bool {
-		input := fl.Field().String()
+		//input := fl.Field().String()
 		// Minimum of 10 digits
 		// pattern := `^\+?(\d{1,3})?[-.\s]?\(?\d{3}\)?[-.\s]?\d{3}[-.\s]?\d{4}$`
 		// Minimum of 8 digits
 		//pattern := `^\+?(\d{1,3})?[-.\s]?\(?\d{1,3}\)?[-.\s]?\d{1,4}[-.\s]?\d{1,4}$`
 		// Minimum of 7 digits, Maximum 14 digits, with pattern of 081,082,083,085,087,088,089
+		// ini yang bener
+		//pattern := `^(081|082|083|085|087|088|089)\d+$`
+		//return regexp.MustCompile(pattern).MatchString(input)
+
+		input := fl.Field().Interface()
+
+		inputString := input.(string)
+		if inputString == "" {
+			return true
+		}
+
 		pattern := `^(081|082|083|085|087|088|089)\d+$`
-		return regexp.MustCompile(pattern).MatchString(input)
+		return regexp.MustCompile(pattern).MatchString(inputString)
 	})
 }
 
@@ -132,10 +153,20 @@ func registerEmailPhoneFormat() {
 
 func registeryyyymmddFormat() {
 	valid.RegisterValidation("yyymmddFormat", func(fl v10.FieldLevel) bool {
-		date := fl.Field().String()
-		layout := "2006-01-02" // This layout corresponds to yyyy-mm-dd
+		//date := fl.Field().String()
+		//layout := "2006-01-02" // This layout corresponds to yyyy-mm-dd
+		//
+		//_, err := time.Parse(layout, date)
+		//return err == nil // Returns true if date is valid
 
-		_, err := time.Parse(layout, date)
+		input := fl.Field().Interface()
+
+		inputString := input.(string)
+		if inputString == "" {
+			return true
+		}
+
+		_, err := time.Parse("2006-01-02", inputString)
 		return err == nil // Returns true if date is valid
 	})
 }
