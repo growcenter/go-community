@@ -116,6 +116,14 @@ var (
 
 	queryGetCommunityIdsByParams = `SELECT name, community_id, email, phone_number
 	FROM users`
+
+	queryCountUserByUserTypeCategory = `SELECT COUNT(*)
+	FROM users u
+			 INNER JOIN user_types ut ON ut.type = ANY(u.user_types)
+	WHERE ut.category = ANY(?)
+	  AND u.status = 'active'
+	  AND u.deleted_at IS NULL
+	  AND ut.deleted_at IS NULL;`
 )
 
 func ConditionExistOrNot(email string, phoneNumber string) (condition string, args []interface{}) {

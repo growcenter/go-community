@@ -30,6 +30,7 @@ type UserRepository interface {
 	CheckMultiple(ctx context.Context, communityIds []string) (count int64, err error)
 	GetDetailByCommunityId(ctx context.Context, communityId string) (output []models.GetUserProfileDBOutput, err error)
 	GetCommunityIdByParams(ctx context.Context, param models.GetCommunityIdsByParameter) (output []models.GetCommunityIdsByParamsDBOutput, err error)
+	CountUserByUserTypeCategory(ctx context.Context, userTypeCategory []string) (count int64, err error)
 }
 
 type userRepository struct {
@@ -322,4 +323,17 @@ func (ur *userRepository) GetCommunityIdByParams(ctx context.Context, param mode
 	}
 
 	return output, nil
+}
+
+func (ur *userRepository) CountUserByUserTypeCategory(ctx context.Context, userTypeCategory []string) (count int64, err error) {
+	defer func() {
+		LogRepository(ctx, err)
+	}()
+
+	err = ur.db.Raw(queryCountUserByUserTypeCategory, pq.Array(userTypeCategory)).Scan(&count).Error
+	if err != nil {
+		return 0, err
+	}
+
+	return count, nil
 }

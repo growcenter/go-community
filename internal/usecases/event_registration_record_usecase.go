@@ -141,8 +141,15 @@ func (erru *eventRegistrationRecordUsecase) createAtomic(ctx context.Context, re
 			}
 		}
 
-		if err = r.EventInstance.UpdateBookedSeatsByCode(ctx, request.InstanceCode, instance); err != nil {
-			return err
+		if request.IsPersonalQR {
+			instance.ScannedSeats += countTotalRegistrants
+			if err = r.EventInstance.UpdateSeatsByCode(ctx, request.InstanceCode, instance); err != nil {
+				return err
+			}
+		} else {
+			if err = r.EventInstance.UpdateBookedSeatsByCode(ctx, request.InstanceCode, instance); err != nil {
+				return err
+			}
 		}
 
 		registrantRes := make([]models.CreateOtherEventRegistrationRecordResponse, len(register))

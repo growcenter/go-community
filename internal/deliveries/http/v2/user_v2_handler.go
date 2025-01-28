@@ -463,6 +463,18 @@ func (uh *UserHandler) UpdateProfile(ctx echo.Context) error {
 	return response.Success(ctx, http.StatusOK, user.ToResponse())
 }
 
+// GetProfile godoc
+// @Summary Get User Profile By Community ID
+// @Description Get all information needed about user by community id for profile
+// @Tags users
+// @Accept json
+// @Produce json
+// @Param communityId path int true "object that needs to be added"
+// @Param X-API-Key header string true "mandatory header to access endpoint"
+// @Success 200 {object} models.GetUserProfileResponse "Response indicates that the request succeeded and the resources has been fetched and transmitted in the message body"
+// @Failure 400 {object} models.ErrorResponse "Bad Request"
+// @Failure 422 {object} models.ErrorValidationResponse{errors=models.ErrorValidateResponse} "Validation error. This can happen if there is an error validation while create account"
+// @Router /v2/users/{communityId}/profile [get]
 func (uh *UserHandler) GetProfile(ctx echo.Context) error {
 	parameter := models.GetUserProfileParameter{
 		CommunityId: ctx.Param("communityId"),

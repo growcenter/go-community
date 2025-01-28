@@ -1805,6 +1805,67 @@ const docTemplate = `{
             }
         },
         "/v2/users/{communityId}/profile": {
+            "get": {
+                "description": "Get all information needed about user by community id for profile",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "users"
+                ],
+                "summary": "Get User Profile By Community ID",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "object that needs to be added",
+                        "name": "communityId",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "mandatory header to access endpoint",
+                        "name": "X-API-Key",
+                        "in": "header",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Response indicates that the request succeeded and the resources has been fetched and transmitted in the message body",
+                        "schema": {
+                            "$ref": "#/definitions/models.GetUserProfileResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/models.ErrorResponse"
+                        }
+                    },
+                    "422": {
+                        "description": "Validation error. This can happen if there is an error validation while create account",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/models.ErrorValidationResponse"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "errors": {
+                                            "$ref": "#/definitions/models.ErrorValidateResponse"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                }
+            },
             "patch": {
                 "description": "Update user through their own profile",
                 "consumes": [
@@ -3328,6 +3389,10 @@ const docTemplate = `{
                     "type": "integer",
                     "example": 309
                 },
+                "totalUsers": {
+                    "type": "integer",
+                    "example": 309
+                },
                 "type": {
                     "type": "string",
                     "example": "event"
@@ -3354,6 +3419,10 @@ const docTemplate = `{
         "models.GetInstanceSummaryResponse": {
             "type": "object",
             "properties": {
+                "attendPercentage": {
+                    "type": "number",
+                    "example": 50
+                },
                 "bookedSeats": {
                     "type": "integer",
                     "example": 50
@@ -3369,6 +3438,10 @@ const docTemplate = `{
                 "eventCode": {
                     "type": "string",
                     "example": "event-1"
+                },
+                "maxPerTransaction": {
+                    "type": "integer",
+                    "example": 5
                 },
                 "registerFlow": {
                     "type": "string",
@@ -3556,6 +3629,118 @@ const docTemplate = `{
                     "type": "array",
                     "items": {
                         "type": "string"
+                    }
+                }
+            }
+        },
+        "models.GetRelationAtProfileResponse": {
+            "type": "object",
+            "properties": {
+                "communityId": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "relationType": {
+                    "type": "string"
+                },
+                "type": {
+                    "type": "string"
+                }
+            }
+        },
+        "models.GetUserProfileResponse": {
+            "type": "object",
+            "properties": {
+                "address": {
+                    "type": "string"
+                },
+                "campusCode": {
+                    "type": "string"
+                },
+                "campusName": {
+                    "type": "string"
+                },
+                "communityId": {
+                    "type": "string"
+                },
+                "coolId": {
+                    "type": "integer"
+                },
+                "coolName": {
+                    "type": "string"
+                },
+                "dateOfBirth": {
+                    "type": "string"
+                },
+                "dateOfMarriage": {
+                    "type": "string"
+                },
+                "departmentCode": {
+                    "type": "string"
+                },
+                "departmentName": {
+                    "type": "string"
+                },
+                "educationLevel": {
+                    "type": "string"
+                },
+                "email": {
+                    "type": "string"
+                },
+                "employmentStatus": {
+                    "type": "string"
+                },
+                "gender": {
+                    "type": "string"
+                },
+                "isBaptized": {
+                    "type": "boolean"
+                },
+                "isKom100": {
+                    "type": "boolean"
+                },
+                "jemaatId": {
+                    "type": "string"
+                },
+                "kkjNumber": {
+                    "type": "string"
+                },
+                "maritalStatus": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "phoneNumber": {
+                    "type": "string"
+                },
+                "placeOfBirth": {
+                    "type": "string"
+                },
+                "relations": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/models.GetRelationAtProfileResponse"
+                    }
+                },
+                "role": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/models.RoleResponse"
+                    }
+                },
+                "status": {
+                    "type": "string"
+                },
+                "type": {
+                    "type": "string"
+                },
+                "userType": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/models.UserTypeSummaryResponse"
                     }
                 }
             }
@@ -4202,6 +4387,23 @@ const docTemplate = `{
                     "example": [
                         "event-view-event-viewer"
                     ]
+                },
+                "type": {
+                    "type": "string",
+                    "example": "userType"
+                },
+                "userType": {
+                    "type": "string",
+                    "example": "volunteer"
+                }
+            }
+        },
+        "models.UserTypeSummaryResponse": {
+            "type": "object",
+            "properties": {
+                "name": {
+                    "type": "string",
+                    "example": "Volunteer"
                 },
                 "type": {
                     "type": "string",

@@ -395,6 +395,7 @@ func (e GetEventSummaryDBOutput) ToResponse() *GetEventSummaryResponse {
 		AllowedCampuses:   e.EventAllowedCampuses,
 		TotalBookedSeats:  e.TotalBookedSeats,
 		TotalScannedSeats: e.TotalScannedSeats,
+		TotalUsers:        e.TotalUsers,
 		Status:            e.EventStatus,
 	}
 }
@@ -410,8 +411,10 @@ func (e GetInstanceSummaryDBOutput) ToResponse() GetInstanceSummaryResponse {
 		TotalSeats:          e.InstanceTotalSeats,
 		BookedSeats:         e.InstanceBookedSeats,
 		ScannedSeats:        e.InstanceScannedSeats,
-		Status:              e.InstanceStatus,
 		TotalRemainingSeats: e.TotalRemainingSeats,
+		MaxPerTransaction:   e.InstanceMaxPerTransaction,
+		AttendPercentage:    e.AttendancePercentage,
+		Status:              e.InstanceStatus,
 	}
 }
 
@@ -425,19 +428,22 @@ type (
 		EventAllowedCampuses pq.StringArray `gorm:"type:text[]"`
 		TotalBookedSeats     int
 		TotalScannedSeats    int
+		TotalUsers           int
 		EventStatus          string
 	}
 	GetInstanceSummaryDBOutput struct {
-		InstanceCode         string `json:"instance_code"`
-		InstanceEventCode    string `json:"instance_event_code"`
-		InstanceTitle        string `json:"instance_title"`
-		InstanceRegisterFlow string `json:"instance_register_flow"`
-		InstanceCheckType    string `json:"instance_check_type"`
-		InstanceTotalSeats   int    `json:"instance_total_seats"`
-		InstanceBookedSeats  int    `json:"instance_booked_seats"`
-		InstanceScannedSeats int    `json:"instance_scanned_seats"`
-		InstanceStatus       string `json:"instance_status"`
-		TotalRemainingSeats  int    `json:"total_remaining_seats"`
+		InstanceCode              string  `json:"instance_code"`
+		InstanceEventCode         string  `json:"instance_event_code"`
+		InstanceTitle             string  `json:"instance_title"`
+		InstanceRegisterFlow      string  `json:"instance_register_flow"`
+		InstanceCheckType         string  `json:"instance_check_type"`
+		InstanceTotalSeats        int     `json:"instance_total_seats"`
+		InstanceBookedSeats       int     `json:"instance_booked_seats"`
+		InstanceScannedSeats      int     `json:"instance_scanned_seats"`
+		InstanceMaxPerTransaction int     `json:"instance_max_per_transaction"`
+		InstanceStatus            string  `json:"instance_status"`
+		TotalRemainingSeats       int     `json:"total_remaining_seats"`
+		AttendancePercentage      float64 `json:"attendance_percentage"`
 	}
 	GetEventSummaryResponse struct {
 		Type              string   `json:"type" example:"event"`
@@ -449,20 +455,23 @@ type (
 		AllowedCampuses   []string `json:"allowedCampuses" example:"BKS, BKT"`
 		TotalBookedSeats  int      `json:"totalBookedSeats" example:"3003"`
 		TotalScannedSeats int      `json:"totalScannedSeats" example:"309"`
+		TotalUsers        int      `json:"totalUsers" example:"309"`
 		Status            string   `json:"status" example:"active"`
 	}
 	GetInstanceSummaryResponse struct {
-		Type                string `json:"type" example:"instance"`
-		EventCode           string `json:"eventCode" example:"event-1"`
-		Code                string `json:"code" example:"instance-1"`
-		Title               string `json:"title" example:"Instance 1"`
-		RegisterFlow        string `json:"registerFlow" example:"online"`
-		CheckType           string `json:"checkType" example:"online"`
-		TotalSeats          int    `json:"totalSeats" example:"100"`
-		BookedSeats         int    `json:"bookedSeats" example:"50"`
-		ScannedSeats        int    `json:"scannedSeats" example:"50"`
-		TotalRemainingSeats int    `json:"totalRemainingSeats" example:"50"`
-		Status              string `json:"status" example:"active"`
+		Type                string  `json:"type" example:"instance"`
+		EventCode           string  `json:"eventCode" example:"event-1"`
+		Code                string  `json:"code" example:"instance-1"`
+		Title               string  `json:"title" example:"Instance 1"`
+		RegisterFlow        string  `json:"registerFlow" example:"online"`
+		CheckType           string  `json:"checkType" example:"online"`
+		TotalSeats          int     `json:"totalSeats" example:"100"`
+		BookedSeats         int     `json:"bookedSeats" example:"50"`
+		ScannedSeats        int     `json:"scannedSeats" example:"50"`
+		MaxPerTransaction   int     `json:"maxPerTransaction" example:"5"`
+		TotalRemainingSeats int     `json:"totalRemainingSeats" example:"50"`
+		AttendPercentage    float64 `json:"attendPercentage" example:"50.0"`
+		Status              string  `json:"status" example:"active"`
 	}
 )
 
