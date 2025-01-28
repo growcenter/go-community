@@ -7,7 +7,6 @@ import (
 	"go-community/internal/models"
 	"go-community/internal/pkg/cursor"
 	"gorm.io/gorm"
-	"strconv"
 )
 
 type UserRepository interface {
@@ -217,7 +216,18 @@ func (ur *userRepository) GetAllWithCursor(ctx context.Context, param models.Get
 		limit = 10
 	}
 
-	query, params, err := BuildQueryGetAllUser(baseQueryGetAllUser, param.SearchBy, param.Search, param.CampusCode, param.CoolId, param.Department, decryptedCommunityId, param.Direction, limit+1)
+	// Query with limit + 1 to determine if there are more records
+	query, params, err := BuildQueryGetAllUser(
+		baseQueryGetAllUser,
+		param.SearchBy,
+		param.Search,
+		param.CampusCode,
+		param.CoolId,
+		param.Department,
+		decryptedCommunityId,
+		param.Direction,
+		limit+1,
+	)
 	if err != nil {
 		return nil, "", "", 0, fmt.Errorf("failed to build query: %w", err)
 	}
@@ -231,16 +241,21 @@ func (ur *userRepository) GetAllWithCursor(ctx context.Context, param models.Get
 		return nil, "", "", 0, fmt.Errorf("count query execution failed: %w", err)
 	}
 
-	if len(records) > limit {
+	hasMore := len(records) > limit
+	if hasMore {
+		// Remove the extra record we fetched
 		records = records[:limit]
 	}
 
 	if len(records) > 0 {
+		// Set previous cursor if we have a cursor parameter
 		if param.Cursor != "" {
-			prev, _ = cursor.EncryptCursor(strconv.Itoa(records[0].ID))
+			prev, _ = cursor.EncryptCursor(records[0].CommunityID)
 		}
-		if len(records) == limit {
-			next, _ = cursor.EncryptCursor(strconv.Itoa(records[len(records)-1].ID))
+
+		// Set next cursor only if we have more records
+		if hasMore {
+			next, _ = cursor.EncryptCursor(records[len(records)-1].CommunityID)
 		}
 	}
 

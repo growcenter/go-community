@@ -159,94 +159,12 @@ func (errr *eventRegistrationRecordRepository) GetEventAttendance(ctx context.Co
 	return output, nil
 }
 
-//func (errr *eventRegistrationRecordRepository) GetAllWithCursor(ctx context.Context, param models.GetAllRegisteredCursorParam) (output []models.GetAllRegisteredRecordDBOutput, prev string, next string, total int, err error) {
-//	defer func() {
-//		LogRepository(ctx, err)
-//	}()
-//
-//	var lastUpdatedAt time.Time
-//	var totalEntries int
-//
-//	// Decrypt cursor if provided (based on updated_at)
-//	if param.Cursor != "" {
-//		lastUpdatedAt, err = cursor.DecryptCursor(param.Cursor)
-//		if err != nil {
-//			return nil, "", "", 0, err
-//		}
-//	}
-//
-//	query, params, err := BuildEventRegistrationQuery(baseQueryGetRegisteredRecordList, param.EventCode, param.NameSearch, lastUpdatedAt, param.Direction)
-//	if err != nil {
-//		return nil, "", "", 0, err
-//	}
-//
-//	// Adjust limit in parameters
-//	if param.Limit > 0 {
-//		params[len(params)-1] = param.Limit
-//	} else {
-//		params[len(params)-1] = 10 // Default limit
-//	}
-//
-//	// Execute query
-//	var records []models.GetAllRegisteredRecordDBOutput
-//	err = errr.db.Raw(query, params...).Scan(&records).Error
-//	if err != nil {
-//		return nil, "", "", 0, err
-//	}
-//
-//	// Get total count for pagination info
-//	//countQuery := `
-//	//	SELECT COUNT(*)
-//	//	FROM event_registration er
-//	//	WHERE 1=1
-//	//`
-//	countQuery, countParams, _ := BuildEventRegistrationQuery(queryCountEventAllRegistered, param.EventCode, param.NameSearch, time.Time{}, "")
-//	err = errr.db.Raw(countQuery, countParams...).Scan(&totalEntries).Error
-//	if err != nil {
-//		return nil, "", "", 0, err
-//	}
-//
-//	// Generate cursors
-//	var nextCursor string
-//	var prevCursor string
-//
-//	if len(records) > 0 {
-//		// Always generate a `prev` cursor for subsequent pages
-//		if param.Cursor != "" {
-//			prevCursor, err = cursor.EncryptCursor(records[0].UpdatedAt.Format(time.RFC3339))
-//			if err != nil {
-//				return nil, "", "", 0, err
-//			}
-//		}
-//
-//		// Generate a `next` cursor if there are more entries
-//		if param.Direction != "prev" {
-//			nextCursor, err = cursor.EncryptCursor(records[len(records)-1].UpdatedAt.Format(time.RFC3339))
-//			if err != nil {
-//				return nil, "", "", 0, err
-//			}
-//		}
-//	} else {
-//		// Handle empty records for `next` or `prev` direction
-//		if param.Direction == "next" {
-//			prevCursor = param.Cursor
-//			nextCursor = "" // No more entries
-//		} else if param.Direction == "prev" {
-//			nextCursor = param.Cursor
-//			prevCursor = "" // No more entries
-//		}
-//	}
-//
-//	return records, prevCursor, nextCursor, totalEntries, nil
-//}
-
 func (errr *eventRegistrationRecordRepository) GetAllWithCursor(ctx context.Context, param models.GetAllRegisteredCursorParam) (output []models.GetAllRegisteredRecordDBOutput, prev string, next string, total int, err error) {
 	defer func() {
 		LogRepository(ctx, err)
 	}()
 
 	var lastUpdatedAt time.Time
-	var totalEntries int
 
 	// Decrypt cursor if provided (based on updated_at)
 	if param.Cursor != "" {
@@ -263,13 +181,17 @@ func (errr *eventRegistrationRecordRepository) GetAllWithCursor(ctx context.Cont
 	}
 
 	// Build the query
-	query, params, err := BuildEventRegistrationQuery(baseQueryGetRegisteredRecordList, param.EventCode, param.NameSearch, lastUpdatedAt, param.Direction, limit)
+	query, params, err := BuildEventRegistrationQuery(
+		baseQueryGetRegisteredRecordList,
+		param.EventCode,
+		param.NameSearch,
+		lastUpdatedAt,
+		param.Direction,
+		limit+1, // Request one extra record to determine if there are more pages
+	)
 	if err != nil {
 		return nil, "", "", 0, err
 	}
-
-	// Apply limit (fetch `limit + 1` to check for extra entries)
-	//params[len(params)-1] = limit + 1
 
 	// Execute query
 	var records []models.GetAllRegisteredRecordDBOutput
@@ -278,22 +200,29 @@ func (errr *eventRegistrationRecordRepository) GetAllWithCursor(ctx context.Cont
 		return nil, "", "", 0, err
 	}
 
-	// Get total count for pagination info
-	countQuery, countParams, _ := BuildEventRegistrationQuery(queryCountEventAllRegistered, param.EventCode, param.NameSearch, time.Time{}, "", limit)
-	err = errr.db.Raw(countQuery, countParams...).Scan(&totalEntries).Error
+	// Get total count
+	countQuery, countParams, _ := BuildEventRegistrationQuery(
+		queryCountEventAllRegistered,
+		param.EventCode,
+		param.NameSearch,
+		time.Time{},
+		"",
+		0, // No limit needed for count query
+	)
+	err = errr.db.Raw(countQuery, countParams...).Scan(&total).Error
 	if err != nil {
 		return nil, "", "", 0, err
 	}
 
-	// Handle pagination logic
-	hasMore := len(records) == limit && len(records) < totalEntries
+	// Check if there are more records
+	hasMore := len(records) > limit
 	if hasMore {
-		records = records[:limit] // Trim to the limit
+		records = records[:limit] // Remove the extra record
 	}
 
 	// Generate cursors
 	if len(records) > 0 {
-		// Generate a `prev` cursor for non-first pages
+		// Generate prev cursor if we're not on the first page
 		if param.Cursor != "" {
 			prev, err = cursor.EncryptCursor(records[0].UpdatedAt.Format(time.RFC3339))
 			if err != nil {
@@ -301,7 +230,7 @@ func (errr *eventRegistrationRecordRepository) GetAllWithCursor(ctx context.Cont
 			}
 		}
 
-		// Generate a `next` cursor if there are more entries
+		// Generate next cursor only if we have more records
 		if hasMore {
 			next, err = cursor.EncryptCursor(records[len(records)-1].UpdatedAt.Format(time.RFC3339))
 			if err != nil {
@@ -310,6 +239,5 @@ func (errr *eventRegistrationRecordRepository) GetAllWithCursor(ctx context.Cont
 		}
 	}
 
-	// Return results
-	return records, prev, next, totalEntries, nil
+	return records, prev, next, total, nil
 }
