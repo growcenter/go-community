@@ -166,6 +166,10 @@ type (
 		Name              string
 		Identifier        string
 		CommunityId       string
+		CampusCode        string
+		Department        string
+		CoolId            int
+		CoolName          string
 		EventCode         string
 		InstanceCode      string
 		IdentifierOrigin  string
@@ -182,18 +186,27 @@ type (
 		RegisteredBy      string
 	}
 	GetAllRegisteredCursorParam struct {
-		Cursor     string `query:"cursor"`
-		Limit      int    `query:"limit"`
-		Direction  string `query:"direction"`
-		EventCode  string `query:"eventCode" validate:"required"`
-		NameSearch string `query:"name"`
+		Cursor         string `query:"cursor"`
+		Limit          int    `query:"limit"`
+		Direction      string `query:"direction"`
+		EventCode      string `query:"eventCode" validate:"required"`
+		NameSearch     string `query:"name"`
+		CampusCode     string `query:"campusCode" validate:"omitempty,min=3,max=3"`
+		DepartmentCode string `query:"departmentCode"`
+		CoolId         string `query:"coolId" validate:"omitempty,numeric"`
 	}
 	GetAllRegisteredCursorResponse struct {
 		Type              string    `json:"type"`
 		ID                uuid.UUID `json:"id"`
 		Name              string    `json:"name"`
-		Identifier        string    `json:"identifier,omitempty"`
-		CommunityId       string    `json:"communityId,omitempty"`
+		Identifier        string    `json:"identifier"`
+		CommunityId       string    `json:"communityId"`
+		CampusCode        string    `json:"campusCode"`
+		CampusName        string    `json:"campusName"`
+		DepartmentCode    string    `json:"departmentCode"`
+		DepartmentName    string    `json:"departmentName"`
+		CoolId            int       `json:"coolId"`
+		CoolName          string    `json:"coolName"`
 		EventCode         string    `json:"eventCode"`
 		EventName         string    `json:"eventName"`
 		InstanceCode      string    `json:"instanceCode"`

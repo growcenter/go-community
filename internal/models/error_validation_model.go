@@ -50,6 +50,8 @@ func ErrorValidationMapping(validationError validator.FieldError) string {
 		return fmt.Sprintf("%s must be a valid email address", validationError.Field())
 	case validationError.Tag() == "emailPhoneFormat":
 		return fmt.Sprintf("%s must be a valid email or phone number", validationError.Field())
+	case validationError.Tag() == "numeric":
+		return fmt.Sprintf("%s must be a valid number", validationError.Field())
 	default:
 		return fmt.Sprintf("invalid input on field %s: %s", validationError.Field(), validationError.Tag())
 	}

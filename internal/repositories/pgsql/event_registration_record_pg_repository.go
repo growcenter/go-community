@@ -187,7 +187,10 @@ func (errr *eventRegistrationRecordRepository) GetAllWithCursor(ctx context.Cont
 		param.NameSearch,
 		lastUpdatedAt,
 		param.Direction,
-		limit+1, // Request one extra record to determine if there are more pages
+		limit+1,
+		param.CampusCode,
+		param.DepartmentCode,
+		param.CoolId,
 	)
 	if err != nil {
 		return nil, "", "", 0, err
@@ -208,6 +211,9 @@ func (errr *eventRegistrationRecordRepository) GetAllWithCursor(ctx context.Cont
 		time.Time{},
 		"",
 		0, // No limit needed for count query
+		param.CampusCode,
+		param.DepartmentCode,
+		param.CoolId,
 	)
 	err = errr.db.Raw(countQuery, countParams...).Scan(&total).Error
 	if err != nil {

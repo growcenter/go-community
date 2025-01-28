@@ -6,8 +6,10 @@ import (
 	"fmt"
 	"github.com/google/uuid"
 	"go-community/internal/common"
+	"go-community/internal/config"
 	"go-community/internal/models"
 	"go-community/internal/repositories/pgsql"
+	"strings"
 	"time"
 )
 
@@ -20,12 +22,14 @@ type EventRegistrationRecordUsecase interface {
 }
 
 type eventRegistrationRecordUsecase struct {
-	r pgsql.PostgreRepositories
+	r   pgsql.PostgreRepositories
+	cfg config.Configuration
 }
 
-func NewEventRegistrationRecordUsecase(r pgsql.PostgreRepositories) *eventRegistrationRecordUsecase {
+func NewEventRegistrationRecordUsecase(r pgsql.PostgreRepositories, cfg config.Configuration) *eventRegistrationRecordUsecase {
 	return &eventRegistrationRecordUsecase{
-		r: r,
+		r:   r,
+		cfg: cfg,
 	}
 }
 
@@ -294,6 +298,7 @@ func (erru *eventRegistrationRecordUsecase) validateCreate(ctx context.Context, 
 	case registerAt.Before(event.EventRegisterStartAt.In(common.GetLocation())):
 		return models.ErrorCannotRegisterYet
 	case instance.InstanceMaxPerTransaction > 0 && countTotalRegistrants > instance.InstanceMaxPerTransaction:
+		fmt.Println("error disini lele")
 		return models.ErrorExceedMaxSeating
 	}
 
@@ -346,15 +351,15 @@ func (erru *eventRegistrationRecordUsecase) validateCreate(ctx context.Context, 
 		if countRegistered > 0 {
 			return models.ErrorEventCanOnlyRegisterOnce
 		}
-	}
+	default:
+		countRegistered, err := erru.r.EventRegistrationRecord.CountByIdentifierOriginAndStatus(ctx, common.StringTrimSpaceAndLower(request.Identifier), models.MapRegisterStatus[models.REGISTER_STATUS_PENDING])
+		if err != nil {
+			return err
+		}
 
-	countRegistered, err := erru.r.EventRegistrationRecord.CountByIdentifierOriginAndStatus(ctx, common.StringTrimSpaceAndLower(request.Identifier), models.MapRegisterStatus[models.REGISTER_STATUS_PENDING])
-	if err != nil {
-		return err
-	}
-
-	if instance.InstanceMaxPerTransaction > 0 && ((int(countRegistered) + countTotalRegistrants) > instance.InstanceMaxPerTransaction) {
-		return models.ErrorExceedMaxSeating
+		if instance.InstanceMaxPerTransaction > 0 && ((int(countRegistered) + countTotalRegistrants) > instance.InstanceMaxPerTransaction) {
+			return models.ErrorExceedMaxSeating
+		}
 	}
 
 	return nil
@@ -553,12 +558,36 @@ func (erru *eventRegistrationRecordUsecase) GetAllCursor(ctx context.Context, pa
 			deletedAt = common.FormatDatetimeToString(v.DeletedAt.Time, time.RFC3339)
 		}
 
+		var departmentName string
+		if v.Department != "" {
+			value, department := erru.cfg.Department[strings.ToLower(v.Department)]
+			if !department {
+				return nil, nil, models.ErrorDataNotFound
+			}
+			departmentName = value
+		}
+
+		var campusName string
+		if v.CampusCode != "" {
+			value, campus := erru.cfg.Campus[strings.ToLower(v.CampusCode)]
+			if !campus {
+				return nil, nil, models.ErrorDataNotFound
+			}
+			campusName = value
+		}
+
 		response = append(response, models.GetAllRegisteredCursorResponse{
 			Type:              models.TYPE_EVENT_REGISTRATION_RECORD,
 			ID:                v.ID,
 			Name:              v.Name,
 			Identifier:        v.Identifier,
 			CommunityId:       v.CommunityId,
+			CampusCode:        v.CampusCode,
+			CampusName:        campusName,
+			CoolId:            v.CoolId,
+			CoolName:          v.CoolName,
+			DepartmentCode:    v.Department,
+			DepartmentName:    departmentName,
 			EventCode:         v.EventCode,
 			EventName:         v.EventName,
 			InstanceCode:      v.InstanceCode,
