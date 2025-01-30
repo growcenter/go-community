@@ -305,7 +305,6 @@ func (erru *eventRegistrationRecordUsecase) validateCreate(ctx context.Context, 
 	case registerAt.Before(event.EventRegisterStartAt.In(common.GetLocation())):
 		return models.ErrorCannotRegisterYet
 	case instance.InstanceMaxPerTransaction > 0 && countTotalRegistrants > instance.InstanceMaxPerTransaction:
-		fmt.Println("error disini lele")
 		return models.ErrorExceedMaxSeating
 	}
 

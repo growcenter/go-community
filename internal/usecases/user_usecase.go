@@ -25,8 +25,11 @@ type UserUsecase interface {
 	UpdatePassword(ctx context.Context, param *models.UpdateUserPasswordParam, request *models.UpdateUserPasswordRequest) (user *models.User, err error)
 	GetAllCursor(ctx context.Context, params models.GetAllUserCursorParam) (res []models.GetAllUserCursorResponse, info *models.CursorInfo, err error)
 	UpdateRolesOrUserType(ctx context.Context, request *models.UpdateRolesOrUserTypesRequest) (res *models.UpdateRolesOrUserTypesResponse, err error)
+	UpdateProfile(ctx context.Context, parameter models.UpdateProfileParameter, request models.UpdateProfileRequest, value models.TokenValues) (response *models.UpdateProfileResponse, err error)
 	GetUserProfile(ctx context.Context, communityId string, value models.TokenValues) (response *models.GetUserProfileResponse, err error)
 	GetCommunityIdsByParams(ctx context.Context, params models.GetCommunityIdsByParameter) (response []models.GetCommunityIdsByResponse, err error)
+	UpdateUser(ctx context.Context, parameter models.UpdateProfileParameter, request models.UpdateUserRequest) (response *models.UpdateUserResponse, err error)
+	Delete(ctx context.Context, parameter models.DeleteUserParameter) (response *models.DeleteUserResponse, err error)
 }
 
 type userUsecase struct {
@@ -1060,4 +1063,279 @@ func (uu *userUsecase) GetCommunityIdsByParams(ctx context.Context, params model
 	}
 
 	return response, nil
+}
+
+func (uu *userUsecase) UpdateUser(ctx context.Context, parameter models.UpdateProfileParameter, request models.UpdateUserRequest) (response *models.UpdateUserResponse, err error) {
+	defer func() {
+		LogService(ctx, err)
+	}()
+
+	if *request.Email == "" && *request.PhoneNumber == "" {
+		return nil, models.ErrorEmailPhoneNumberEmpty
+	}
+
+	data, err := uu.ur.GetOneByCommunityId(ctx, parameter.CommunityId)
+	if err != nil {
+		return nil, err
+	}
+
+	if data.ID == 0 {
+		return nil, models.ErrorDataNotFound
+	}
+
+	if request.CampusCode != "" {
+		_, campusExist := uu.cfg.Campus[strings.ToLower(request.CampusCode)]
+		if !campusExist {
+			return nil, models.ErrorDataNotFound
+		}
+		data.CampusCode = request.CampusCode
+	}
+
+	if request.DateOfBirth != "" {
+		location, _ := time.LoadLocation("Asia/Jakarta")
+		dob, err := common.ParseStringToDatetime("2006-01-02", request.DateOfBirth, location)
+		if err != nil {
+			return nil, err
+		}
+		data.DateOfBirth = &dob
+	}
+
+	if *request.CoolID != 0 {
+		coolExist, err := uu.clr.CheckById(ctx, *request.CoolID)
+		if err != nil {
+			return nil, err
+		}
+
+		if !coolExist {
+			return nil, models.ErrorDataNotFound
+		}
+		data.CoolID = *request.CoolID
+	}
+
+	if *request.DepartmentCode != "" {
+		_, departmentExist := uu.cfg.Department[strings.ToLower(*request.DepartmentCode)]
+		if !departmentExist {
+			return nil, models.ErrorDataNotFound
+		}
+		data.Department = *request.DepartmentCode
+	}
+
+	if *request.DateOfMarriage != "" {
+		location, _ := time.LoadLocation("Asia/Jakarta")
+		dom, err := common.ParseStringToDatetime("2006-01-02", *request.DateOfMarriage, location)
+		if err != nil {
+			return nil, err
+		}
+		data.DateOfMarriage = &dom
+	}
+
+	if request.Roles != nil {
+		countRole, err := uu.r.Role.CheckMultiple(ctx, request.Roles)
+		if err != nil {
+			return nil, err
+		}
+
+		if int(countRole) != len(request.Roles) {
+			return nil, models.ErrorDataNotFound
+		}
+
+		data.Roles = request.Roles
+	}
+
+	if request.UserTypes != nil {
+		countUserType, err := uu.r.UserType.CheckMultiple(ctx, request.UserTypes)
+		if err != nil {
+			return nil, err
+		}
+
+		if int(countUserType) != len(request.UserTypes) {
+			return nil, models.ErrorDataNotFound
+		}
+
+		data.UserTypes = request.UserTypes
+	}
+
+	updatedUser := models.User{
+		Name:             strings.TrimSpace(common.CapitalizeFirstWord(request.Name)),
+		Email:            common.StringTrimSpaceAndLower(*request.Email),
+		PhoneNumber:      common.StringTrimSpaceAndLower(*request.PhoneNumber),
+		Roles:            data.Roles,
+		UserTypes:        data.UserTypes,
+		Gender:           request.Gender,
+		Address:          *request.Address,
+		CampusCode:       data.CampusCode,
+		PlaceOfBirth:     *request.PlaceOfBirth,
+		DateOfBirth:      data.DateOfBirth,
+		CoolID:           data.CoolID,
+		Department:       data.Department,
+		MaritalStatus:    request.MaritalStatus,
+		DateOfMarriage:   data.DateOfMarriage,
+		EmploymentStatus: *request.EmploymentStatus,
+		EducationLevel:   *request.EducationLevel,
+		KKJNumber:        *request.KKJNumber,
+		JemaatID:         *request.JemaatID,
+		IsBaptized:       request.IsBaptized,
+		IsKom100:         request.IsKom100,
+		Status:           data.Status,
+	}
+
+	return uu.updateUserAtomic(ctx, parameter, &updatedUser, &request)
+}
+
+func (uu *userUsecase) updateUserAtomic(ctx context.Context, parameter models.UpdateProfileParameter, user *models.User, request *models.UpdateUserRequest) (response *models.UpdateUserResponse, err error) {
+	res := &models.UpdateUserResponse{}
+
+	err = uu.r.Transaction.Atomic(ctx, func(ctx context.Context, r *pgsql.PostgreRepositories) error {
+
+		if err := uu.ur.UpdateByCommunityId(ctx, parameter.CommunityId, user); err != nil {
+			return err
+		}
+
+		if request.DeleteRelation != nil || request.Relation != nil {
+			relationCommunityIds := make([]string, 0, len(request.Relation))
+			for _, relation := range request.Relation {
+				relationCommunityIds = append(relationCommunityIds, relation.CommunityId)
+			}
+
+			if common.CheckOneDataInList(relationCommunityIds, request.DeleteRelation) {
+				return models.ErrorConflictRelationDelete
+			}
+		}
+
+		if request.Relation != nil {
+			for _, relation := range request.Relation {
+				relationExist, err := uu.ur.CheckByCommunityId(ctx, relation.CommunityId)
+				if err != nil {
+					return err
+				}
+
+				if !relationExist {
+					return models.ErrorDataNotFound
+				}
+
+				existingRelation, err := uu.urr.GetOneByRelatedCommunityIds(ctx, parameter.CommunityId, relation.CommunityId)
+				if err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
+					return err
+				}
+
+				switch {
+				case existingRelation.ID > 0:
+					existingRelation.RelationshipType = relation.Type
+					if err := uu.urr.Update(ctx, existingRelation); err != nil {
+						return err
+					}
+
+					existingRelationRecriprocal, err := uu.urr.GetOneByRelatedCommunityIds(ctx, relation.CommunityId, parameter.CommunityId)
+					if err != nil {
+						return err
+					}
+
+					if existingRelationRecriprocal.ID > 0 {
+						existingRelationRecriprocal.RelationshipType = models.ReciprocalRelationshipType(relation.Type)
+						if err := uu.urr.Update(ctx, existingRelationRecriprocal); err != nil {
+							return err
+						}
+					}
+				case existingRelation.ID == 0 || errors.Is(err, gorm.ErrRecordNotFound):
+					err := uu.urr.Create(ctx, &models.UserRelation{
+						CommunityId:        parameter.CommunityId,
+						RelatedCommunityId: relation.CommunityId,
+						RelationshipType:   relation.Type,
+					})
+
+					if err != nil {
+						return err
+					}
+
+					err = uu.urr.Create(ctx, &models.UserRelation{
+						CommunityId:        relation.CommunityId,
+						RelatedCommunityId: parameter.CommunityId,
+						RelationshipType:   models.ReciprocalRelationshipType(relation.Type),
+					})
+
+					if err != nil {
+						return err
+					}
+				default:
+					return err
+				}
+
+			}
+		}
+
+		if request.DeleteRelation != nil {
+			for _, deleteRelation := range request.DeleteRelation {
+				err := uu.urr.Delete(ctx, parameter.CommunityId, deleteRelation)
+				if err != nil {
+					return err
+				}
+
+				err = uu.urr.Delete(ctx, deleteRelation, parameter.CommunityId)
+				if err != nil {
+					return err
+				}
+			}
+		}
+
+		res = &models.UpdateUserResponse{
+			Type:             models.TYPE_USER,
+			CommunityId:      parameter.CommunityId,
+			Name:             user.Name,
+			Email:            user.Email,
+			PhoneNumber:      user.PhoneNumber,
+			Roles:            user.Roles,
+			UserTypes:        user.UserTypes,
+			Gender:           user.Gender,
+			Address:          user.Address,
+			PlaceOfBirth:     user.PlaceOfBirth,
+			MaritalStatus:    user.MaritalStatus,
+			EmploymentStatus: user.EmploymentStatus,
+			EducationLevel:   user.EducationLevel,
+			KKJNumber:        user.KKJNumber,
+			JemaatID:         user.JemaatID,
+			IsBaptized:       user.IsBaptized,
+			IsKom100:         user.IsKom100,
+			CampusCode:       user.CampusCode,
+			CoolID:           user.CoolID,
+			DepartmentCode:   user.Department,
+			DateOfBirth:      user.DateOfBirth,
+			DateOfMarriage:   user.DateOfMarriage,
+			Relation:         request.Relation,
+			DeleteRelation:   request.DeleteRelation,
+			Status:           user.Status,
+		}
+
+		return nil
+	})
+	return res, err
+}
+
+func (uu *userUsecase) Delete(ctx context.Context, parameter models.DeleteUserParameter) (response *models.DeleteUserResponse, err error) {
+	defer func() {
+		LogService(ctx, err)
+	}()
+
+	data, err := uu.ur.GetOneByCommunityId(ctx, parameter.CommunityId)
+	if err != nil {
+		return nil, err
+	}
+
+	if data.ID == 0 {
+		return nil, models.ErrorDataNotFound
+	}
+
+	if err := uu.ur.Delete(ctx, parameter.CommunityId); err != nil {
+		return nil, err
+	}
+
+	res := &models.DeleteUserResponse{
+		Type:        models.TYPE_USER,
+		CommunityId: parameter.CommunityId,
+		Name:        data.Name,
+		Email:       data.Email,
+		PhoneNumber: data.PhoneNumber,
+		IsExist:     false,
+	}
+
+	return res, nil
 }

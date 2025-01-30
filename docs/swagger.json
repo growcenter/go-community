@@ -969,6 +969,141 @@
                 }
             }
         },
+        "/v2/internal/users/{communityId}": {
+            "delete": {
+                "description": "Update user through their own profile",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "users-internal"
+                ],
+                "summary": "Update User Profile",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "object that needs to be added",
+                        "name": "communityId",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "mandatory header to access endpoint",
+                        "name": "X-API-Key",
+                        "in": "header",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Response indicates that the request succeeded and the resources has been fetched and transmitted in the message body",
+                        "schema": {
+                            "$ref": "#/definitions/models.DeleteUserResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/models.ErrorResponse"
+                        }
+                    },
+                    "422": {
+                        "description": "Validation error. This can happen if there is an error validation while create account",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/models.ErrorValidationResponse"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "errors": {
+                                            "$ref": "#/definitions/models.ErrorValidateResponse"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                }
+            }
+        },
+        "/v2/internal/users/{communityId}/update": {
+            "patch": {
+                "description": "Update user through their own profile",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "users-internal"
+                ],
+                "summary": "Update User Profile",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "object that needs to be added",
+                        "name": "communityId",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "User object that needs to be added",
+                        "name": "user",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/models.UpdateUserRequest"
+                        }
+                    },
+                    {
+                        "type": "string",
+                        "description": "mandatory header to access endpoint",
+                        "name": "X-API-Key",
+                        "in": "header",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Response indicates that the request succeeded and the resources has been fetched and transmitted in the message body",
+                        "schema": {
+                            "$ref": "#/definitions/models.UpdateUserResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/models.ErrorResponse"
+                        }
+                    },
+                    "422": {
+                        "description": "Validation error. This can happen if there is an error validation while create account",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/models.ErrorValidationResponse"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "errors": {
+                                            "$ref": "#/definitions/models.ErrorValidateResponse"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                }
+            }
+        },
         "/v2/roles": {
             "get": {
                 "description": "Get All Roles",
@@ -2950,6 +3085,29 @@
                 }
             }
         },
+        "models.DeleteUserResponse": {
+            "type": "object",
+            "properties": {
+                "communityId": {
+                    "type": "string"
+                },
+                "email": {
+                    "type": "string"
+                },
+                "isExist": {
+                    "type": "boolean"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "phoneNumber": {
+                    "type": "string"
+                },
+                "type": {
+                    "type": "string"
+                }
+            }
+        },
         "models.DepartmentsResponse": {
             "type": "object",
             "properties": {
@@ -4303,6 +4461,213 @@
                 "type": {
                     "type": "string",
                     "example": "coolCategory"
+                },
+                "userTypes": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                }
+            }
+        },
+        "models.UpdateUserRequest": {
+            "type": "object",
+            "required": [
+                "campusCode",
+                "gender",
+                "maritalStatus",
+                "name",
+                "roles",
+                "userTypes"
+            ],
+            "properties": {
+                "address": {
+                    "type": "string"
+                },
+                "campusCode": {
+                    "type": "string",
+                    "maxLength": 3,
+                    "minLength": 3,
+                    "example": "001"
+                },
+                "coolId": {
+                    "type": "integer"
+                },
+                "dateOfBirth": {
+                    "type": "string"
+                },
+                "dateOfMarriage": {
+                    "type": "string"
+                },
+                "deleteRelationCommunityIds": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "departmentCode": {
+                    "type": "string",
+                    "example": "MUSIC"
+                },
+                "educationLevel": {
+                    "type": "string"
+                },
+                "email": {
+                    "type": "string",
+                    "example": "jeremy@gmail.com"
+                },
+                "employmentStatus": {
+                    "type": "string"
+                },
+                "gender": {
+                    "type": "string",
+                    "enum": [
+                        "male",
+                        "female"
+                    ]
+                },
+                "isBaptized": {
+                    "type": "boolean"
+                },
+                "isKom100": {
+                    "type": "boolean"
+                },
+                "jemaatId": {
+                    "type": "string"
+                },
+                "kkjNumber": {
+                    "type": "string"
+                },
+                "maritalStatus": {
+                    "type": "string",
+                    "enum": [
+                        "single",
+                        "married",
+                        "others"
+                    ],
+                    "example": "active"
+                },
+                "name": {
+                    "type": "string",
+                    "maxLength": 50,
+                    "minLength": 1,
+                    "example": "Professionals"
+                },
+                "phoneNumber": {
+                    "type": "string"
+                },
+                "placeOfBirth": {
+                    "type": "string"
+                },
+                "relation": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/models.RelationUpdateProfile"
+                    }
+                },
+                "roles": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    },
+                    "example": [
+                        "volunteer"
+                    ]
+                },
+                "userTypes": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    },
+                    "example": [
+                        "volunteer"
+                    ]
+                }
+            }
+        },
+        "models.UpdateUserResponse": {
+            "type": "object",
+            "properties": {
+                "address": {
+                    "type": "string"
+                },
+                "campusCode": {
+                    "type": "string"
+                },
+                "communityId": {
+                    "type": "string"
+                },
+                "coolId": {
+                    "type": "integer"
+                },
+                "dateOfBirth": {
+                    "type": "string"
+                },
+                "dateOfMarriage": {
+                    "type": "string"
+                },
+                "deleteRelationCommunityIds": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "departmentCode": {
+                    "type": "string"
+                },
+                "educationLevel": {
+                    "type": "string"
+                },
+                "email": {
+                    "type": "string"
+                },
+                "employmentStatus": {
+                    "type": "string"
+                },
+                "gender": {
+                    "type": "string"
+                },
+                "isBaptized": {
+                    "type": "boolean"
+                },
+                "isKom100": {
+                    "type": "boolean"
+                },
+                "jemaatId": {
+                    "type": "string"
+                },
+                "kkjNumber": {
+                    "type": "string"
+                },
+                "maritalStatus": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "phoneNumber": {
+                    "type": "string"
+                },
+                "placeOfBirth": {
+                    "type": "string"
+                },
+                "relation": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/models.RelationUpdateProfile"
+                    }
+                },
+                "roles": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "status": {
+                    "type": "string"
+                },
+                "type": {
+                    "type": "string"
                 },
                 "userTypes": {
                     "type": "array",

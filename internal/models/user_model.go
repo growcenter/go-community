@@ -516,6 +516,36 @@ func (u *UpdateProfileResponse) ToResponse() *UpdateProfileResponse {
 	}
 }
 
+func (u *UpdateUserResponse) ToUpdateInternal() *UpdateUserResponse {
+	return &UpdateUserResponse{
+		Type:             TYPE_USER,
+		CommunityId:      u.CommunityId,
+		Name:             u.Name,
+		PhoneNumber:      u.PhoneNumber,
+		Email:            u.Email,
+		Roles:            u.Roles,
+		UserTypes:        u.UserTypes,
+		Gender:           u.Gender,
+		Address:          u.Address,
+		CampusCode:       u.CampusCode,
+		CoolID:           u.CoolID,
+		DepartmentCode:   u.DepartmentCode,
+		DateOfBirth:      u.DateOfBirth,
+		PlaceOfBirth:     u.PlaceOfBirth,
+		MaritalStatus:    u.MaritalStatus,
+		DateOfMarriage:   u.DateOfMarriage,
+		EmploymentStatus: u.EmploymentStatus,
+		EducationLevel:   u.EducationLevel,
+		KKJNumber:        u.KKJNumber,
+		JemaatID:         u.JemaatID,
+		IsBaptized:       u.IsBaptized,
+		IsKom100:         u.IsKom100,
+		Relation:         u.Relation,
+		DeleteRelation:   u.DeleteRelation,
+		Status:           u.Status,
+	}
+}
+
 type (
 	UpdateProfileParameter struct {
 		CommunityId string `json:"communityId" validate:"required,communityId"`
@@ -552,6 +582,57 @@ type (
 		Name             string                  `json:"name"`
 		PhoneNumber      string                  `json:"phoneNumber"`
 		Email            string                  `json:"email"`
+		Gender           string                  `json:"gender"`
+		Address          string                  `json:"address"`
+		CampusCode       string                  `json:"campusCode"`
+		CoolID           int                     `json:"coolId"`
+		DepartmentCode   string                  `json:"departmentCode"`
+		DateOfBirth      *time.Time              `json:"dateOfBirth"`
+		PlaceOfBirth     string                  `json:"placeOfBirth"`
+		MaritalStatus    string                  `json:"maritalStatus"`
+		DateOfMarriage   *time.Time              `json:"dateOfMarriage"`
+		EmploymentStatus string                  `json:"employmentStatus"`
+		EducationLevel   string                  `json:"educationLevel"`
+		KKJNumber        string                  `json:"kkjNumber"`
+		JemaatID         string                  `json:"jemaatId"`
+		IsBaptized       bool                    `json:"isBaptized"`
+		IsKom100         bool                    `json:"isKom100"`
+		Relation         []RelationUpdateProfile `json:"relation"`
+		DeleteRelation   []string                `json:"deleteRelationCommunityIds,omitempty"`
+		Status           string                  `json:"status"`
+	}
+	UpdateUserRequest struct {
+		Name             string                  `json:"name" validate:"required,min=1,max=50,nospecial" example:"Professionals"`
+		Email            *string                 `json:"email" validate:"omitempty,emailFormat" example:"jeremy@gmail.com"`
+		PhoneNumber      *string                 `json:"phoneNumber" validate:"omitempty,phoneFormat"`
+		UserTypes        []string                `json:"userTypes" validate:"required" example:"volunteer"`
+		Roles            []string                `json:"roles" validate:"required" example:"volunteer"`
+		Gender           string                  `json:"gender" validate:"required,oneof=male female"`
+		Address          *string                 `json:"address"`
+		CampusCode       string                  `json:"campusCode" validate:"required,min=3,max=3" example:"001"`
+		PlaceOfBirth     *string                 `json:"placeOfBirth"`
+		DateOfBirth      string                  `json:"dateOfBirth" validate:"omitempty,yyymmddFormat"`
+		CoolID           *int                    `json:"coolId"`
+		DepartmentCode   *string                 `json:"departmentCode" validate:"omitempty,noStartEndSpaces" example:"MUSIC"`
+		MaritalStatus    string                  `json:"maritalStatus" validate:"required,oneof=single married others" example:"active"`
+		DateOfMarriage   *string                 `json:"dateOfMarriage" validate:"omitempty,yyymmddFormat"`
+		EmploymentStatus *string                 `json:"employmentStatus"`
+		EducationLevel   *string                 `json:"educationLevel"`
+		KKJNumber        *string                 `json:"kkjNumber"`
+		JemaatID         *string                 `json:"jemaatId"`
+		IsBaptized       bool                    `json:"isBaptized"`
+		IsKom100         bool                    `json:"isKom100"`
+		Relation         []RelationUpdateProfile `json:"relation" validate:"omitempty,dive"`
+		DeleteRelation   []string                `json:"deleteRelationCommunityIds" validate:"omitempty,dive,communityId"`
+	}
+	UpdateUserResponse struct {
+		Type             string                  `json:"type"`
+		CommunityId      string                  `json:"communityId"`
+		Name             string                  `json:"name"`
+		PhoneNumber      string                  `json:"phoneNumber"`
+		Email            string                  `json:"email"`
+		Roles            []string                `json:"roles"`
+		UserTypes        []string                `json:"userTypes"`
 		Gender           string                  `json:"gender"`
 		Address          string                  `json:"address"`
 		CampusCode       string                  `json:"campusCode"`
@@ -718,5 +799,30 @@ type (
 		Name        string `json:"name"`
 		Email       string `json:"email,omitempty"`
 		PhoneNumber string `json:"phoneNumber,omitempty"`
+	}
+)
+
+func (u *DeleteUserResponse) ToResponse() *DeleteUserResponse {
+	return &DeleteUserResponse{
+		Type:        TYPE_USER,
+		CommunityId: u.CommunityId,
+		Name:        u.Name,
+		Email:       u.Email,
+		PhoneNumber: u.PhoneNumber,
+		IsExist:     u.IsExist,
+	}
+}
+
+type (
+	DeleteUserParameter struct {
+		CommunityId string `json:"communityId" validate:"required,communityId"`
+	}
+	DeleteUserResponse struct {
+		Type        string `json:"type"`
+		CommunityId string `json:"communityId"`
+		Name        string `json:"name"`
+		Email       string `json:"email"`
+		PhoneNumber string `json:"phoneNumber"`
+		IsExist     bool   `json:"isExist"`
 	}
 )

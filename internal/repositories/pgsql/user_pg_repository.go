@@ -31,6 +31,7 @@ type UserRepository interface {
 	GetDetailByCommunityId(ctx context.Context, communityId string) (output []models.GetUserProfileDBOutput, err error)
 	GetCommunityIdByParams(ctx context.Context, param models.GetCommunityIdsByParameter) (output []models.GetCommunityIdsByParamsDBOutput, err error)
 	CountUserByUserTypeCategory(ctx context.Context, userTypeCategory []string) (count int64, err error)
+	Delete(ctx context.Context, communityId string) (err error)
 }
 
 type userRepository struct {
@@ -336,4 +337,12 @@ func (ur *userRepository) CountUserByUserTypeCategory(ctx context.Context, userT
 	}
 
 	return count, nil
+}
+
+func (ur *userRepository) Delete(ctx context.Context, communityId string) (err error) {
+	defer func() {
+		LogRepository(ctx, err)
+	}()
+
+	return ur.db.Where("community_id = ?", communityId).Delete(&models.User{}).Error
 }
