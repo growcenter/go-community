@@ -75,6 +75,10 @@ var (
 	ErrorMismatchFields        = errors.New("please input the same input on both fields")
 	ErrorMissingDepartmentCool = errors.New("please input department code or cool id")
 
+	// Update User Error
+	ErrorDifferentCommunityId   = errors.New("you cannot take action with this different account from your account")
+	ErrorConflictRelationDelete = errors.New("its not allowed to place the same user relation in update and delete")
+
 	// Time error
 	ErrorStartDateLater = errors.New("start time cannot be later than end time")
 )
@@ -356,6 +360,18 @@ func ErrorMapping(err error) ErrorResponse {
 		return ErrorResponse{
 			Code:    http.StatusUnprocessableEntity,
 			Status:  "MISSING_FIELDS",
+			Message: err.Error(),
+		}
+	case ErrorDifferentCommunityId:
+		return ErrorResponse{
+			Code:    http.StatusForbidden,
+			Status:  "FORBIDDEN_ACTION",
+			Message: err.Error(),
+		}
+	case ErrorConflictRelationDelete:
+		return ErrorResponse{
+			Code:    http.StatusConflict,
+			Status:  "CONFLICT_USERS",
 			Message: err.Error(),
 		}
 	default:

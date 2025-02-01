@@ -36,6 +36,9 @@ func NewUserHandler(api *echo.Group, u *usecases.Usecases, c *config.Configurati
 	endpointUserAuth := endpoint.Group("")
 	endpointUserAuth.Use(middleware.UserV2Middleware(c))
 	endpointUserAuth.GET("/access-token", handler.GetByAccessToken)
+	endpointUserAuth.PATCH("/:communityId/profile", handler.UpdateProfile)
+	endpointUserAuth.GET("/:communityId/profile", handler.GetProfile)
+	endpointUserAuth.GET("/community-ids", handler.GetCommunityIdsByParams)
 
 	userTypeEndpoint := endpoint.Group("/types")
 	userTypeEndpoint.POST("", handler.CreateUserType)
@@ -44,6 +47,8 @@ func NewUserHandler(api *echo.Group, u *usecases.Usecases, c *config.Configurati
 	userInternalEndpoint := api.Group("/internal/users")
 	userInternalEndpoint.Use(middleware.RoleUserMiddleware(c, []string{"event-internal-view", "event-internal-edit"}))
 	userInternalEndpoint.GET("", handler.GetAllUserInternal)
+	userInternalEndpoint.PATCH("/:communityId/update", handler.UpdateUser)
+	userInternalEndpoint.DELETE("/:communityId", handler.Delete)
 }
 
 // Create godoc
@@ -392,7 +397,7 @@ func (uh *UserHandler) GetAllUserInternal(ctx echo.Context) error {
 // @Tags users
 // @Accept json
 // @Produce json
-// @Param user body models.UpdateUserPasswordRequest true "User object that needs to be added"
+// @Param user body models.UpdateRolesOrUserTypesRequest true "User object that needs to be added"
 // @Param X-API-Key header string true "mandatory header to access endpoint"
 // @Success 201 {object} models.UpdateRolesOrUserTypesResponse "Response indicates that the request succeeded and the resources has been fetched and transmitted in the message body"
 // @Failure 400 {object} models.ErrorResponse "Bad Request"
@@ -414,4 +419,168 @@ func (uh *UserHandler) UpdateRolesOrUserType(ctx echo.Context) error {
 	}
 
 	return response.Success(ctx, http.StatusOK, data.ToResponse())
+}
+
+// UpdateProfile godoc
+// @Summary Update User Profile
+// @Description Update user through their own profile
+// @Tags users
+// @Accept json
+// @Produce json
+// @Param communityId path string true "object that needs to be added"
+// @Param user body models.UpdateProfileRequest true "User object that needs to be added"
+// @Param X-API-Key header string true "mandatory header to access endpoint"
+// @Success 201 {object} models.UpdateProfileResponse "Response indicates that the request succeeded and the resources has been fetched and transmitted in the message body"
+// @Failure 400 {object} models.ErrorResponse "Bad Request"
+// @Failure 422 {object} models.ErrorValidationResponse{errors=models.ErrorValidateResponse} "Validation error. This can happen if there is an error validation while create account"
+// @Router /v2/users/{communityId}/profile [patch]
+func (uh *UserHandler) UpdateProfile(ctx echo.Context) error {
+	var request models.UpdateProfileRequest
+	parameter := models.UpdateProfileParameter{
+		CommunityId: ctx.Param("communityId"),
+	}
+
+	if err := ctx.Bind(&request); err != nil {
+		return response.Error(ctx, err)
+	}
+
+	if err := validator.Validate(parameter); err != nil {
+		return response.ErrorValidation(ctx, err)
+	}
+
+	if err := validator.Validate(&request); err != nil {
+		return response.ErrorValidation(ctx, err)
+	}
+
+	tokenValue, err := models.GetValueFromToken(ctx)
+	if err != nil {
+		return response.Error(ctx, err)
+	}
+
+	user, err := uh.usecase.User.UpdateProfile(ctx.Request().Context(), parameter, request, tokenValue)
+	if err != nil {
+		return response.Error(ctx, err)
+	}
+
+	return response.Success(ctx, http.StatusOK, user.ToResponse())
+}
+
+// GetProfile godoc
+// @Summary Get User Profile By Community ID
+// @Description Get all information needed about user by community id for profile
+// @Tags users
+// @Accept json
+// @Produce json
+// @Param communityId path int true "object that needs to be added"
+// @Param X-API-Key header string true "mandatory header to access endpoint"
+// @Success 200 {object} models.GetUserProfileResponse "Response indicates that the request succeeded and the resources has been fetched and transmitted in the message body"
+// @Failure 400 {object} models.ErrorResponse "Bad Request"
+// @Failure 422 {object} models.ErrorValidationResponse{errors=models.ErrorValidateResponse} "Validation error. This can happen if there is an error validation while create account"
+// @Router /v2/users/{communityId}/profile [get]
+func (uh *UserHandler) GetProfile(ctx echo.Context) error {
+	parameter := models.GetUserProfileParameter{
+		CommunityId: ctx.Param("communityId"),
+	}
+
+	if err := validator.Validate(parameter); err != nil {
+		return response.ErrorValidation(ctx, err)
+	}
+
+	tokenValue, err := models.GetValueFromToken(ctx)
+	if err != nil {
+		return response.Error(ctx, err)
+	}
+
+	user, err := uh.usecase.User.GetUserProfile(ctx.Request().Context(), parameter.CommunityId, tokenValue)
+	if err != nil {
+		return response.Error(ctx, err)
+	}
+
+	return response.Success(ctx, http.StatusOK, user.ToResponse())
+}
+
+func (uh *UserHandler) GetCommunityIdsByParams(ctx echo.Context) error {
+	var param models.GetCommunityIdsByParameter
+	if err := ctx.Bind(&param); err != nil {
+		return response.Error(ctx, err)
+	}
+
+	if err := validator.Validate(param); err != nil {
+		return response.ErrorValidation(ctx, err)
+	}
+
+	data, err := uh.usecase.User.GetCommunityIdsByParams(ctx.Request().Context(), param)
+	if err != nil {
+		return response.Error(ctx, err)
+	}
+
+	return response.SuccessList(ctx, http.StatusOK, len(data), data)
+}
+
+// UpdateUser godoc
+// @Summary Update User Profile
+// @Description Update user through their own profile
+// @Tags users-internal
+// @Accept json
+// @Produce json
+// @Param communityId path string true "object that needs to be added"
+// @Param user body models.UpdateUserRequest true "User object that needs to be added"
+// @Param X-API-Key header string true "mandatory header to access endpoint"
+// @Success 201 {object} models.UpdateUserResponse "Response indicates that the request succeeded and the resources has been fetched and transmitted in the message body"
+// @Failure 400 {object} models.ErrorResponse "Bad Request"
+// @Failure 422 {object} models.ErrorValidationResponse{errors=models.ErrorValidateResponse} "Validation error. This can happen if there is an error validation while create account"
+// @Router /v2/internal/users/{communityId}/update [patch]
+func (uh *UserHandler) UpdateUser(ctx echo.Context) error {
+	var request models.UpdateUserRequest
+	parameter := models.UpdateProfileParameter{
+		CommunityId: ctx.Param("communityId"),
+	}
+
+	if err := ctx.Bind(&request); err != nil {
+		return response.Error(ctx, err)
+	}
+
+	if err := validator.Validate(parameter); err != nil {
+		return response.ErrorValidation(ctx, err)
+	}
+
+	if err := validator.Validate(&request); err != nil {
+		return response.ErrorValidation(ctx, err)
+	}
+
+	user, err := uh.usecase.User.UpdateUser(ctx.Request().Context(), parameter, request)
+	if err != nil {
+		return response.Error(ctx, err)
+	}
+
+	return response.Success(ctx, http.StatusOK, user.ToUpdateInternal())
+}
+
+// Delete godoc
+// @Summary Update User Profile
+// @Description Update user through their own profile
+// @Tags users-internal
+// @Accept json
+// @Produce json
+// @Param communityId path string true "object that needs to be added"
+// @Param X-API-Key header string true "mandatory header to access endpoint"
+// @Success 201 {object} models.DeleteUserResponse "Response indicates that the request succeeded and the resources has been fetched and transmitted in the message body"
+// @Failure 400 {object} models.ErrorResponse "Bad Request"
+// @Failure 422 {object} models.ErrorValidationResponse{errors=models.ErrorValidateResponse} "Validation error. This can happen if there is an error validation while create account"
+// @Router /v2/internal/users/{communityId} [delete]
+func (uh *UserHandler) Delete(ctx echo.Context) error {
+	parameter := models.DeleteUserParameter{
+		CommunityId: ctx.Param("communityId"),
+	}
+
+	if err := validator.Validate(parameter); err != nil {
+		return response.ErrorValidation(ctx, err)
+	}
+
+	user, err := uh.usecase.User.Delete(ctx.Request().Context(), parameter)
+	if err != nil {
+		return response.Error(ctx, err)
+	}
+
+	return response.Success(ctx, http.StatusOK, user.ToResponse())
 }

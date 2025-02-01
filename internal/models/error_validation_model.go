@@ -3,6 +3,7 @@ package models
 import (
 	"fmt"
 	"github.com/go-playground/validator/v10"
+	"strings"
 )
 
 type (
@@ -21,6 +22,8 @@ func ErrorValidationMapping(validationError validator.FieldError) string {
 	switch {
 	case validationError.Tag() == "required":
 		return fmt.Sprintf("%s is required", validationError.Field())
+	case validationError.Tag() == "required_without_all":
+		return fmt.Sprintf("%s is required when %s is not inputted", validationError.Field(), strings.ReplaceAll(validationError.Param(), " ", ", "))
 	case validationError.Tag() == "oneof":
 		return fmt.Sprintf("%s should be inputted either %s", validationError.Field(), validationError.Param())
 	case validationError.Tag() == "min":
@@ -47,6 +50,8 @@ func ErrorValidationMapping(validationError validator.FieldError) string {
 		return fmt.Sprintf("%s must be a valid email address", validationError.Field())
 	case validationError.Tag() == "emailPhoneFormat":
 		return fmt.Sprintf("%s must be a valid email or phone number", validationError.Field())
+	case validationError.Tag() == "numeric":
+		return fmt.Sprintf("%s must be a valid number", validationError.Field())
 	default:
 		return fmt.Sprintf("invalid input on field %s: %s", validationError.Field(), validationError.Tag())
 	}

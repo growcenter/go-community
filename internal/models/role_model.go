@@ -28,6 +28,6 @@ type (
 	RoleResponse struct {
 		Type        string `json:"type" example:"role"`
 		Role        string `json:"role" example:"event-view-volunteer"`
-		Description string `json:"description" example:"View specifically for event"`
+		Description string `json:"description,omitempty" example:"View specifically for event"`
 	}
 )

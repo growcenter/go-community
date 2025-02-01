@@ -2,6 +2,7 @@ package pgsql
 
 import (
 	"fmt"
+	"go-community/internal/models"
 	"strings"
 )
 
@@ -72,6 +73,57 @@ var (
 		FROM users u
 		WHERE 1=1
 	`
+
+	queryGetProfileByCommunityId = `
+			select u.community_id as community_id,
+				   u.name as name,
+				   u.phone_number as phone_number,
+				   u.email as email,
+				   u.roles as roles,
+					u.status as status,
+					u.gender as gender,
+					coalesce(u.address, '') as address,
+					u.campus_code as campus_code,
+					coalesce(u.cool_id, 0) as cool_id,
+					coalesce(c.name, '') as cool_name,
+					u.department as department,
+					u.date_of_birth as date_of_birth,
+					coalesce(u.place_of_birth, '') as place_of_birth,
+					u.marital_status as marital_status,
+					u.date_of_marriage as date_of_marriage,
+					coalesce(u.employment_status, '') as employment_status,
+					coalesce(u.education_level, '') as education_level,
+					coalesce(u.kkj_number, '') as kkj_number,
+					coalesce(u.jemaat_id, '') as jemaat_id,
+					u.is_baptized as is_baptized,
+					u.is_kom100 as is_kom100,
+					u.created_at as created_at,
+					u.updated_at as updated_at,
+					u.user_types as user_types,
+				   ru.community_id as related_community_id,
+				   ru.name as related_name,
+				   ur.relationship_type as relationship_type
+			from users u
+				left join user_relations ur on ur.community_id = u.community_id
+				left join users ru on ru.community_id = ur.related_community_id
+				left join cools c on c.id = u.cool_id
+			WHERE ur.community_id = ?
+			group by u.community_id, u.name, u.phone_number, u.email, u.roles, u.status, u.gender, coalesce(u.address, ''), u.campus_code, u.cool_id, c.name, u.department, u.date_of_birth, coalesce(u.place_of_birth, ''), u.marital_status, u.date_of_marriage, coalesce(u.employment_status, ''), coalesce(u.education_level, ''), coalesce(u.kkj_number, ''), coalesce(u.jemaat_id, ''), u.is_baptized, u.is_kom100, u.created_at, u.updated_at, u.user_types, ru.community_id, ru.name, ur.relationship_type
+	`
+
+	queryGetCommunityIdByName = `SELECT name, community_id
+	FROM users WHERE name ILIKE ? LIMIT 1`
+
+	queryGetCommunityIdsByParams = `SELECT name, community_id, email, phone_number
+	FROM users`
+
+	queryCountUserByUserTypeCategory = `SELECT COUNT(*)
+	FROM users u
+			 INNER JOIN user_types ut ON ut.type = ANY(u.user_types)
+	WHERE ut.category = ANY(?)
+	  AND u.status = 'active'
+	  AND u.deleted_at IS NULL
+	  AND ut.deleted_at IS NULL;`
 )
 
 func ConditionExistOrNot(email string, phoneNumber string) (condition string, args []interface{}) {
@@ -160,4 +212,31 @@ func BuildQueryGetAllUser(baseQuery string, searchBy string, search string, camp
 	}
 
 	return baseQuery, params, nil
+}
+
+func BuildQueryGetCommunityIdByParams(parameter models.GetCommunityIdsByParameter) (string, []interface{}, error) {
+	var conditions []string
+	var params []interface{}
+	base := queryGetCommunityIdsByParams
+
+	switch {
+	case parameter.Name != "":
+		conditions = append(conditions, "name ILIKE ?")
+		params = append(params, "%"+parameter.Name+"%")
+	case parameter.Email != "":
+		conditions = append(conditions, "email ILIKE ?")
+		params = append(params, "%"+parameter.Email+"%")
+	case parameter.PhoneNumber != "":
+		conditions = append(conditions, "phone_number ILIKE ?")
+		params = append(params, "%"+parameter.PhoneNumber+"%")
+	default:
+		return "", nil, fmt.Errorf("invalid parameter: must be 'email', 'phoneNumber', or 'name'")
+	}
+
+	// Build WHERE clause
+	if len(conditions) > 0 {
+		base += " WHERE " + strings.Join(conditions, " AND ")
+	}
+
+	return base, params, nil
 }

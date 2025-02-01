@@ -650,6 +650,25 @@ func (eu *eventUsecase) GetSummary(ctx context.Context, code string) (detail *mo
 		return nil, nil, models.ErrorDataNotFound
 	}
 
+	switch event.EventAllowedFor {
+	case "public":
+		publicCount, err := eu.r.User.CountUserByUserTypeCategory(ctx, []string{"general", "cool", "internal"})
+		if err != nil {
+			return nil, nil, err
+		}
+
+		event.TotalUsers = int(publicCount)
+	case "private":
+		privateCount, err := eu.r.User.CountUserByUserTypeCategory(ctx, []string{"cool", "internal"})
+		if err != nil {
+			return nil, nil, err
+		}
+
+		event.TotalUsers = int(privateCount)
+	default:
+		return nil, nil, models.ErrorEventNotValid
+	}
+
 	instances, err := eu.r.EventInstance.GetSummary(ctx, event.EventCode)
 	if err != nil {
 		return nil, nil, err
@@ -657,6 +676,18 @@ func (eu *eventUsecase) GetSummary(ctx context.Context, code string) (detail *mo
 
 	var instanceRes []models.GetInstanceSummaryResponse
 	for _, i := range instances {
+		var totalRemainingSeats int
+		switch {
+		case event.EventAllowedFor == "private" && i.InstanceTotalSeats == 0:
+			totalRemainingSeats = event.TotalUsers - i.InstanceBookedSeats
+		case event.EventAllowedFor == "public" && i.InstanceTotalSeats == 0:
+			totalRemainingSeats = event.TotalUsers - i.InstanceBookedSeats
+		default:
+			totalRemainingSeats = i.TotalRemainingSeats
+		}
+
+		i.AttendancePercentage = float64(i.InstanceScannedSeats) / float64(event.TotalUsers) * 100
+
 		instanceRes = append(instanceRes, models.GetInstanceSummaryResponse{
 			Type:                models.TYPE_EVENT_INSTANCE,
 			EventCode:           event.EventCode,
@@ -667,7 +698,9 @@ func (eu *eventUsecase) GetSummary(ctx context.Context, code string) (detail *mo
 			TotalSeats:          i.InstanceTotalSeats,
 			BookedSeats:         i.InstanceBookedSeats,
 			ScannedSeats:        i.InstanceScannedSeats,
-			TotalRemainingSeats: i.TotalRemainingSeats,
+			TotalRemainingSeats: totalRemainingSeats,
+			AttendPercentage:    i.AttendancePercentage,
+			MaxPerTransaction:   i.InstanceMaxPerTransaction,
 			Status:              i.InstanceStatus,
 		})
 	}

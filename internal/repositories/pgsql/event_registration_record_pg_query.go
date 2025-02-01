@@ -2,6 +2,7 @@ package pgsql
 
 import (
 	"fmt"
+	"strconv"
 	"strings"
 	"time"
 )
@@ -97,6 +98,10 @@ var (
 			er.name,
 			er.identifier,
 			er.community_id,
+			coalesce(u.campus_code, '') AS campus_code,
+			coalesce(u.department, '') AS department,
+			coalesce(u.cool_id, 0) AS cool_id,
+			coalesce(c.name, '') AS cool_name,
 			er.event_code,
 			er.instance_code,
 			er.identifier_origin,
@@ -116,12 +121,14 @@ var (
 		LEFT JOIN events e ON er.event_code = e.code
 		LEFT JOIN event_instances i ON er.instance_code = i.code
 		LEFT JOIN users u ON er.community_id_origin = u.community_id
+		LEFT JOIN cools c ON u.cool_id = c.id
 		WHERE 1=1
 	`
 
 	queryCountEventAllRegistered = `
 		SELECT COUNT(*)
 		FROM event_registration_records er
+		LEFT JOIN users u ON er.community_id_origin = u.community_id
 		WHERE 1=1
 	`
 )
@@ -169,7 +176,7 @@ var (
 //	return baseQuery, params, nil
 //}
 
-func BuildEventRegistrationQuery(baseQuery string, eventCode string, nameSearch string, cursor time.Time, direction string, limit int) (string, []interface{}, error) {
+func BuildEventRegistrationQuery(baseQuery string, eventCode string, nameSearch string, cursor time.Time, direction string, limit int, campusCode string, departmentCode string, coolId string) (string, []interface{}, error) {
 	var conditions []string
 	var params []interface{}
 
@@ -181,6 +188,19 @@ func BuildEventRegistrationQuery(baseQuery string, eventCode string, nameSearch 
 	if nameSearch != "" {
 		conditions = append(conditions, "er.name ILIKE ?")
 		params = append(params, "%"+nameSearch+"%")
+	}
+	if campusCode != "" {
+		conditions = append(conditions, "u.campus_code = ?")
+		params = append(params, campusCode)
+	}
+	if departmentCode != "" {
+		conditions = append(conditions, "u.department = ?")
+		params = append(params, departmentCode)
+	}
+	if coolId != "" {
+		conditions = append(conditions, "u.cool_id = ?")
+		intCool, _ := strconv.Atoi(coolId)
+		params = append(params, intCool)
 	}
 	if !cursor.IsZero() {
 		if direction == "next" {

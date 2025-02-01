@@ -39,7 +39,7 @@ func New(d Dependencies) *Usecases {
 		Campus:                  *NewCampusUsecase(d.Repository.Campus),
 		CoolCategory:            *NewCoolCategoryUsecase(d.Repository.CoolCategory),
 		Location:                *NewLocationUsecase(d.Repository.Location, d.Repository.Campus),
-		User:                    *NewUserUsecase(d.Repository.User, d.Repository.Campus, d.Repository.CoolCategory, d.Repository.Cool, d.Repository.UserType, d.Repository.Role, *d.Config, *d.Authorization, d.Salt),
+		User:                    *NewUserUsecase(d.Repository.User, d.Repository.UserRelation, d.Repository.Campus, d.Repository.CoolCategory, d.Repository.Cool, d.Repository.UserType, d.Repository.Role, *d.Repository, *d.Config, *d.Authorization, d.Salt),
 		EventUser:               *NewEventUserUsecase(d.Repository.EventUser, *d.Google, *d.Authorization, d.Salt),
 		EventGeneral:            *NewEventGeneralUsecase(d.Repository.EventGeneral),
 		EventSession:            *NewEventSessionUsecase(d.Repository.EventSession, d.Repository.EventGeneral),
@@ -48,7 +48,7 @@ func New(d Dependencies) *Usecases {
 		Role:                    *NewRoleUsecase(d.Repository.Role),
 		UserType:                *NewUserTypeUsecase(*d.Repository),
 		Event:                   *NewEventUsecase(*d.Config, *d.Authorization, *d.Repository),
-		EventRegistrationRecord: *NewEventRegistrationRecordUsecase(*d.Repository),
+		EventRegistrationRecord: *NewEventRegistrationRecordUsecase(*d.Repository, *d.Config),
 		EventInstance:           *NewEventInstanceUsecase(*d.Config, *d.Authorization, *d.Repository),
 	}
 }

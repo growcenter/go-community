@@ -10,6 +10,7 @@ type PostgreRepositories struct {
 	Cool                  CoolRepository
 	Location              LocationRepository
 	User                  UserRepository
+	UserRelation          UserRelationRepository
 	EventUser             EventUserRepository
 	EventGeneral          EventGeneralRepository
 	EventSession          EventSessionRepository
@@ -32,6 +33,7 @@ func New(db *gorm.DB) *PostgreRepositories {
 		Cool:                    NewCoolRepository(db, NewTransactionRepository(db)),
 		Location:                NewLocationRepository(db, NewTransactionRepository(db)),
 		User:                    NewUserRepository(db, NewTransactionRepository(db)),
+		UserRelation:            NewUserRelationRepository(db, NewTransactionRepository(db)),
 		EventUser:               NewEventUserRepository(db, NewTransactionRepository(db)),
 		EventGeneral:            NewEventGeneralRepository(db, NewTransactionRepository(db)),
 		EventSession:            NewEventSessionRepository(db, NewTransactionRepository(db)),
