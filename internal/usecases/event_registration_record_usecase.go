@@ -310,7 +310,7 @@ func (erru *eventRegistrationRecordUsecase) validateCreate(ctx context.Context, 
 
 	switch {
 	case instance.InstanceIsOnePerAccount:
-		countRegistered, err := erru.r.EventRegistrationRecord.CountByCommunityIdOrigin(ctx, common.StringTrimSpaceAndLower(request.CommunityId))
+		countRegistered, err := erru.r.EventRegistrationRecord.CountByCommunityIdOriginAndInstanceCode(ctx, common.StringTrimSpaceAndLower(request.CommunityId), common.StringTrimSpaceAndLower(request.InstanceCode))
 		if err != nil {
 			return err
 		}
@@ -319,7 +319,7 @@ func (erru *eventRegistrationRecordUsecase) validateCreate(ctx context.Context, 
 		}
 	case instance.InstanceIsOnePerTicket:
 		if request.Identifier != "" && request.CommunityId == "" {
-			identifierExist, err := erru.r.EventRegistrationRecord.CheckByIdentifier(ctx, common.StringTrimSpaceAndLower(request.Identifier))
+			identifierExist, err := erru.r.EventRegistrationRecord.CheckByIdentifierAndInstanceCode(ctx, common.StringTrimSpaceAndLower(request.Identifier), common.StringTrimSpaceAndLower(request.InstanceCode))
 			if err != nil {
 				return err
 			}
@@ -327,7 +327,7 @@ func (erru *eventRegistrationRecordUsecase) validateCreate(ctx context.Context, 
 				return models.ErrorAlreadyRegistered
 			}
 		} else if request.Identifier == "" && request.CommunityId != "" {
-			communityIdExist, err := erru.r.EventRegistrationRecord.CheckByCommunityId(ctx, request.CommunityId)
+			communityIdExist, err := erru.r.EventRegistrationRecord.CheckByCommunityIdAndInstanceCode(ctx, request.CommunityId, common.StringTrimSpaceAndLower(request.InstanceCode))
 			if err != nil {
 				return err
 			}
@@ -340,7 +340,7 @@ func (erru *eventRegistrationRecordUsecase) validateCreate(ctx context.Context, 
 
 		if len(request.Registrants) > 0 {
 			for _, registrant := range request.Registrants {
-				nameExist, err := erru.r.EventRegistrationRecord.CheckByName(ctx, common.StringTrimSpaceAndUpper(registrant.Name))
+				nameExist, err := erru.r.EventRegistrationRecord.CheckByNameAndInstanceCode(ctx, common.StringTrimSpaceAndUpper(registrant.Name), common.StringTrimSpaceAndLower(request.InstanceCode))
 				if err != nil {
 					return err
 				}
@@ -350,7 +350,7 @@ func (erru *eventRegistrationRecordUsecase) validateCreate(ctx context.Context, 
 			}
 		}
 	case instance.InstanceIsOnePerTicket && instance.InstanceIsOnePerAccount:
-		countRegistered, err := erru.r.EventRegistrationRecord.CountByCommunityIdOrigin(ctx, common.StringTrimSpaceAndLower(request.CommunityId))
+		countRegistered, err := erru.r.EventRegistrationRecord.CountByCommunityIdOriginAndInstanceCode(ctx, common.StringTrimSpaceAndLower(request.CommunityId), common.StringTrimSpaceAndLower(request.InstanceCode))
 		if err != nil {
 			return err
 		}

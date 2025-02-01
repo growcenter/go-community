@@ -8,12 +8,16 @@ import (
 )
 
 var (
-	queryCountRecordByIdentifierOriginAndStatus = `SELECT COUNT(*) FROM event_registration_records WHERE identifier_origin = ? AND status = ?`
-	queryCountRecordByCommunityIdOrigin         = `SELECT COUNT(*) FROM event_registration_records WHERE community_id_origin = ?`
-	queryCheckRecordByIdentifier                = `SELECT EXISTS (SELECT 1 FROM event_registration_records WHERE identifier = ?)`
-	queryCheckRecordByName                      = `SELECT EXISTS (SELECT 1 FROM event_registration_records WHERE name = ?)`
-	queryCheckRecordByCommunityId               = `SELECT EXISTS (SELECT 1 FROM event_registration_records WHERE community_id = ?)`
-	queryGetEventAttendance                     = `
+	queryCountRecordByIdentifierOriginAndStatus        = `SELECT COUNT(*) FROM event_registration_records WHERE identifier_origin = ? AND status = ?`
+	queryCountRecordByCommunityIdOrigin                = `SELECT COUNT(*) FROM event_registration_records WHERE community_id_origin = ?`
+	queryCountRecordByCommunityIdOriginAndInstanceCode = `SELECT COUNT(*) FROM event_registration_records WHERE community_id_origin = ? AND instance_code = ?`
+	queryCheckRecordByIdentifier                       = `SELECT EXISTS (SELECT 1 FROM event_registration_records WHERE identifier = ?)`
+	queryCheckRecordByIdentifierAndInstanceCode        = `SELECT EXISTS (SELECT 1 FROM event_registration_records WHERE identifier = ? AND instance_code = ?)`
+	queryCheckRecordByName                             = `SELECT EXISTS (SELECT 1 FROM event_registration_records WHERE name = ?)`
+	queryCheckRecordByNameAndInstanceCode              = `SELECT EXISTS (SELECT 1 FROM event_registration_records WHERE name = ? AND instance_code = ?)`
+	queryCheckRecordByCommunityId                      = `SELECT EXISTS (SELECT 1 FROM event_registration_records WHERE community_id = ?)`
+	queryCheckRecordByCommunityIdAndInstanceCode       = `SELECT EXISTS (SELECT 1 FROM event_registration_records WHERE community_id = ? AND instance_code = ?)`
+	queryGetEventAttendance                            = `
 		SELECT 
 			er.community_id,
 			er.event_code,

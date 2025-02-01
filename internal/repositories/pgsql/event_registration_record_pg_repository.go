@@ -16,9 +16,13 @@ type EventRegistrationRecordRepository interface {
 	GetAll(ctx context.Context) (eventRegistrationRecord []models.EventRegistrationRecord, err error)
 	CountByIdentifierOriginAndStatus(ctx context.Context, identifierOrigin string, status string) (count int64, err error)
 	CountByCommunityIdOrigin(ctx context.Context, communityIdOrigin string) (count int64, err error)
+	CountByCommunityIdOriginAndInstanceCode(ctx context.Context, communityIdOrigin string, instanceCode string) (count int64, err error)
 	CheckByIdentifier(ctx context.Context, identifier string) (isExist bool, err error)
+	CheckByIdentifierAndInstanceCode(ctx context.Context, identifier string, instanceCode string) (isExist bool, err error)
 	CheckByName(ctx context.Context, name string) (isExist bool, err error)
+	CheckByNameAndInstanceCode(ctx context.Context, name string, instanceCode string) (isExist bool, err error)
 	CheckByCommunityId(ctx context.Context, communityId string) (isExist bool, err error)
+	CheckByCommunityIdAndInstanceCode(ctx context.Context, communityId string, instanceCode string) (isExist bool, err error)
 	Update(ctx context.Context, eventRegistrationRecord models.EventRegistrationRecord) (err error)
 	GetEventAttendance(ctx context.Context, communityId, startDate string, endDate string) (output []models.GetEventAttendanceDBOutput, err error)
 	GetAllWithCursor(ctx context.Context, param models.GetAllRegisteredCursorParam) (output []models.GetAllRegisteredRecordDBOutput, prev string, next string, total int, err error)
@@ -99,12 +103,38 @@ func (errr *eventRegistrationRecordRepository) CountByCommunityIdOrigin(ctx cont
 	return count, nil
 }
 
+func (errr *eventRegistrationRecordRepository) CountByCommunityIdOriginAndInstanceCode(ctx context.Context, communityIdOrigin string, instanceCode string) (count int64, err error) {
+	defer func() {
+		LogRepository(ctx, err)
+	}()
+
+	err = errr.db.Raw(queryCountRecordByCommunityIdOriginAndInstanceCode, communityIdOrigin, instanceCode).Scan(&count).Error
+	if err != nil {
+		return 0, err
+	}
+
+	return count, nil
+}
+
 func (errr *eventRegistrationRecordRepository) CheckByIdentifier(ctx context.Context, identifier string) (isExist bool, err error) {
 	defer func() {
 		LogRepository(ctx, err)
 	}()
 
 	err = errr.db.Raw(queryCheckRecordByIdentifier, identifier).Scan(&isExist).Error
+	if err != nil {
+		return false, err
+	}
+
+	return isExist, nil
+}
+
+func (errr *eventRegistrationRecordRepository) CheckByIdentifierAndInstanceCode(ctx context.Context, identifier string, instanceCode string) (isExist bool, err error) {
+	defer func() {
+		LogRepository(ctx, err)
+	}()
+
+	err = errr.db.Raw(queryCheckRecordByIdentifierAndInstanceCode, identifier, instanceCode).Scan(&isExist).Error
 	if err != nil {
 		return false, err
 	}
@@ -125,12 +155,38 @@ func (errr *eventRegistrationRecordRepository) CheckByName(ctx context.Context, 
 	return isExist, nil
 }
 
+func (errr *eventRegistrationRecordRepository) CheckByNameAndInstanceCode(ctx context.Context, name string, instanceCode string) (isExist bool, err error) {
+	defer func() {
+		LogRepository(ctx, err)
+	}()
+
+	err = errr.db.Raw(queryCheckRecordByNameAndInstanceCode, name, instanceCode).Scan(&isExist).Error
+	if err != nil {
+		return false, err
+	}
+
+	return isExist, nil
+}
+
 func (errr *eventRegistrationRecordRepository) CheckByCommunityId(ctx context.Context, communityId string) (isExist bool, err error) {
 	defer func() {
 		LogRepository(ctx, err)
 	}()
 
 	err = errr.db.Raw(queryCheckRecordByCommunityId, communityId).Scan(&isExist).Error
+	if err != nil {
+		return false, err
+	}
+
+	return isExist, nil
+}
+
+func (errr *eventRegistrationRecordRepository) CheckByCommunityIdAndInstanceCode(ctx context.Context, communityId string, instanceCode string) (isExist bool, err error) {
+	defer func() {
+		LogRepository(ctx, err)
+	}()
+
+	err = errr.db.Raw(queryCheckRecordByCommunityIdAndInstanceCode, communityId, instanceCode).Scan(&isExist).Error
 	if err != nil {
 		return false, err
 	}
