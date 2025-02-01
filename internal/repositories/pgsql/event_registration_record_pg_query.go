@@ -180,7 +180,7 @@ var (
 //	return baseQuery, params, nil
 //}
 
-func BuildEventRegistrationQuery(baseQuery string, eventCode string, nameSearch string, cursor time.Time, direction string, limit int, campusCode string, departmentCode string, coolId string) (string, []interface{}, error) {
+func BuildEventRegistrationQuery(baseQuery string, eventCode string, instanceCode string, nameSearch string, cursor time.Time, direction string, limit int, campusCode string, departmentCode string, coolId string) (string, []interface{}, error) {
 	var conditions []string
 	var params []interface{}
 
@@ -188,6 +188,10 @@ func BuildEventRegistrationQuery(baseQuery string, eventCode string, nameSearch 
 	if eventCode != "" {
 		conditions = append(conditions, "er.event_code = ?")
 		params = append(params, eventCode)
+	}
+	if instanceCode != "" {
+		conditions = append(conditions, "er.instance_code = ?")
+		params = append(params, instanceCode)
 	}
 	if nameSearch != "" {
 		conditions = append(conditions, "er.name ILIKE ?")

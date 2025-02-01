@@ -190,6 +190,7 @@ type (
 		Limit          int    `query:"limit"`
 		Direction      string `query:"direction"`
 		EventCode      string `query:"eventCode" validate:"required"`
+		InstanceCode   string `query:"instanceCode"`
 		NameSearch     string `query:"name"`
 		CampusCode     string `query:"campusCode" validate:"omitempty,min=3,max=3"`
 		DepartmentCode string `query:"departmentCode"`
