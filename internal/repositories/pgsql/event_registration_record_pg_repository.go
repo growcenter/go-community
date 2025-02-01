@@ -240,6 +240,7 @@ func (errr *eventRegistrationRecordRepository) GetAllWithCursor(ctx context.Cont
 	query, params, err := BuildEventRegistrationQuery(
 		baseQueryGetRegisteredRecordList,
 		param.EventCode,
+		param.InstanceCode,
 		param.NameSearch,
 		lastUpdatedAt,
 		param.Direction,
@@ -263,6 +264,7 @@ func (errr *eventRegistrationRecordRepository) GetAllWithCursor(ctx context.Cont
 	countQuery, countParams, _ := BuildEventRegistrationQuery(
 		queryCountEventAllRegistered,
 		param.EventCode,
+		param.InstanceCode,
 		param.NameSearch,
 		time.Time{},
 		"",
