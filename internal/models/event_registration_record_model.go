@@ -22,6 +22,7 @@ type EventRegistrationRecord struct {
 	UpdatedBy         string
 	Status            string
 	Reason            string
+	Description       string
 	RegisteredAt      time.Time
 	VerifiedAt        sql.NullTime
 	CreatedAt         time.Time
@@ -41,6 +42,7 @@ func (erer *CreateEventRegistrationRecordResponse) ToResponse() *CreateEventRegi
 		EventTitle:       erer.EventTitle,
 		InstanceCode:     erer.InstanceCode,
 		InstanceTitle:    erer.InstanceTitle,
+		Description:      erer.Description,
 		TotalRegistrants: erer.TotalRegistrants,
 		RegisterAt:       erer.RegisterAt,
 		Registrants:      erer.Registrants,
@@ -56,6 +58,7 @@ type (
 		CommunityId  string                                      `json:"communityId" validate:"omitempty,communityId"`
 		EventCode    string                                      `json:"eventCode" validate:"required,min=7,max=7"`
 		InstanceCode string                                      `json:"instanceCode" validate:"required,min=15,max=15"`
+		Description  string                                      `json:"description"`
 		RegisterAt   string                                      `json:"registerAt" validate:"required"`
 		Registrants  []CreateOtherEventRegistrationRecordRequest `json:"registrants" validate:"dive,required"`
 	}
@@ -73,6 +76,7 @@ type (
 		EventTitle       string                                       `json:"eventTitle"`
 		InstanceCode     string                                       `json:"instanceCode"`
 		InstanceTitle    string                                       `json:"instanceTitle"`
+		Description      string                                       `json:"description,omitempty"`
 		TotalRegistrants int                                          `json:"totalRegistrants"`
 		RegisterAt       time.Time                                    `json:"registerAt"`
 		Registrants      []CreateOtherEventRegistrationRecordResponse `json:"registrants,omitempty"`
@@ -161,6 +165,10 @@ type (
 )
 
 type (
+	GetAllRegisteredRecordCursor struct {
+		ID        uuid.UUID
+		CreatedAt time.Time
+	}
 	GetAllRegisteredRecordDBOutput struct {
 		ID                uuid.UUID
 		Name              string
@@ -175,6 +183,7 @@ type (
 		IdentifierOrigin  string
 		CommunityIdOrigin string
 		UpdatedBy         string
+		Description       string
 		Status            string
 		RegisteredAt      time.Time
 		VerifiedAt        sql.NullTime
@@ -217,11 +226,50 @@ type (
 		RegisteredBy      string    `json:"registeredBy"`
 		UpdatedBy         string    `json:"updatedBy,omitempty"`
 		IsPersonalQr      bool      `json:"isPersonalQr,omitempty"`
+		Description       string    `json:"description"`
 		Status            string    `json:"status"`
 		RegisteredAt      time.Time `json:"registeredAt"`
 		VerifiedAt        string    `json:"verifiedAt"`
 		CreatedAt         time.Time `json:"createdAt"`
 		UpdatedAt         time.Time `json:"updatedAt"`
 		DeletedAt         string    `json:"deletedAt"`
+	}
+)
+
+type (
+	GetDownloadAllRegisteredDBOutput struct {
+		ID                uuid.UUID
+		Name              string
+		Identifier        string
+		CommunityId       string
+		CampusCode        string
+		Department        string
+		CoolId            int
+		CoolName          string
+		EventCode         string
+		InstanceCode      string
+		IdentifierOrigin  string
+		CommunityIdOrigin string
+		UpdatedBy         string
+		Description       string
+		Status            string
+		RegisteredAt      time.Time
+		VerifiedAt        sql.NullTime
+		CreatedAt         time.Time
+		UpdatedAt         time.Time
+		DeletedAt         sql.NullTime
+		EventName         string
+		InstanceName      string
+		RegisteredBy      string
+	}
+	GetDownloadAllRegisteredParam struct {
+		Limit          int    `query:"limit"`
+		Format         string `query:"format" validate:"required,oneof=csv xlsx"`
+		EventCode      string `query:"eventCode" validate:"required"`
+		InstanceCode   string `query:"instanceCode" validate:"required"`
+		CampusCode     string `query:"campusCode" validate:"omitempty,min=3,max=3"`
+		DepartmentCode string `query:"departmentCode"`
+		NameSearch     string `query:"name"`
+		CoolId         string `query:"coolId" validate:"omitempty,numeric"`
 	}
 )

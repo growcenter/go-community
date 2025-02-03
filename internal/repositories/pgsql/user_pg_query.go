@@ -3,6 +3,7 @@ package pgsql
 import (
 	"fmt"
 	"go-community/internal/models"
+	"go-community/internal/pkg/cursor"
 	"strings"
 )
 
@@ -71,7 +72,6 @@ var (
 	queryCountAllUser = `
 		SELECT COUNT(*)
 		FROM users u
-		WHERE 1=1
 	`
 
 	queryGetProfileByCommunityId = `
@@ -143,77 +143,6 @@ func ConditionExistOrNot(email string, phoneNumber string) (condition string, ar
 	return condition, args
 }
 
-func BuildQueryGetAllUser(baseQuery string, searchBy string, search string, campusCode string, coolId int, departmentCode string, cursor string, direction string, limit int) (string, []interface{}, error) {
-	var conditions []string
-	var params []interface{}
-
-	// Apply filters
-	if campusCode != "" {
-		conditions = append(conditions, "u.campus_code = ?")
-		params = append(params, campusCode)
-	}
-	if departmentCode != "" {
-		conditions = append(conditions, "u.department = ?")
-		params = append(params, departmentCode)
-	}
-	if coolId != 0 {
-		conditions = append(conditions, "u.cool_id = ?")
-		params = append(params, coolId)
-	}
-
-	// Apply search
-	if searchBy != "" && search != "" {
-		switch searchBy {
-		case "name":
-			conditions = append(conditions, "u.name ILIKE ?")
-			params = append(params, "%"+search+"%")
-		case "phoneNumber":
-			conditions = append(conditions, "u.phone_number ILIKE ?")
-			params = append(params, "%"+search+"%")
-		case "email":
-			conditions = append(conditions, "u.email ILIKE ?")
-			params = append(params, "%"+search+"%")
-		case "communityId":
-			conditions = append(conditions, "u.community_id = ?")
-			params = append(params, search)
-		default:
-			return "", nil, fmt.Errorf("invalid searchBy: %s, must be 'communityId', 'email', 'phoneNumber', or 'name'", searchBy)
-		}
-	}
-
-	// Apply cursor for pagination
-	if cursor != "" {
-		if direction == "next" {
-			conditions = append(conditions, "u.community_id > ?")
-		} else if direction == "prev" {
-			conditions = append(conditions, "u.community_id < ?")
-		} else {
-			return "", nil, fmt.Errorf("invalid direction: %s, must be 'next' or 'prev'", direction)
-		}
-		params = append(params, cursor)
-	}
-
-	// Build WHERE clause
-	if len(conditions) > 0 {
-		baseQuery += " AND " + strings.Join(conditions, " AND ")
-	}
-
-	// Add ordering based on direction
-	if direction == "prev" {
-		baseQuery += " ORDER BY u.community_id DESC"
-	} else {
-		baseQuery += " ORDER BY u.community_id ASC"
-	}
-
-	// Add LIMIT clause
-	if limit > 0 {
-		baseQuery += " LIMIT ?"
-		params = append(params, limit)
-	}
-
-	return baseQuery, params, nil
-}
-
 func BuildQueryGetCommunityIdByParams(parameter models.GetCommunityIdsByParameter) (string, []interface{}, error) {
 	var conditions []string
 	var params []interface{}
@@ -239,4 +168,119 @@ func BuildQueryGetCommunityIdByParams(parameter models.GetCommunityIdsByParamete
 	}
 
 	return base, params, nil
+}
+
+func BuildCountGetAllUser(param models.GetAllUserCursorParam) (string, []interface{}, error) {
+	var queryBuilder strings.Builder
+	var args []interface{}
+
+	queryBuilder.WriteString(queryCountAllUser)
+	queryBuilder.WriteString(" WHERE u.deleted_at IS NULL")
+
+	// Add conditions dynamically
+	if param.Department != "" {
+		queryBuilder.WriteString(" AND u.department = ?")
+		args = append(args, param.Department)
+	}
+	if param.CampusCode != "" {
+		queryBuilder.WriteString(" AND u.campus_code = ?")
+		args = append(args, param.CampusCode)
+	}
+	if param.CoolId != 0 {
+		queryBuilder.WriteString(" AND u.cool_id = ?")
+		args = append(args, param.CoolId)
+	}
+
+	// Apply search
+	if param.SearchBy != "" && param.Search != "" {
+		switch param.SearchBy {
+		case "name":
+			queryBuilder.WriteString(" AND u.name ILIKE ?")
+			args = append(args, param.Search)
+		case "phoneNumber":
+			queryBuilder.WriteString(" AND u.phone_number ILIKE ?")
+			args = append(args, param.Search)
+		case "email":
+			queryBuilder.WriteString(" AND u.email ILIKE ?")
+			args = append(args, param.Search)
+		case "communityId":
+			queryBuilder.WriteString(" AND u.community_id ILIKE ?")
+			args = append(args, param.Search)
+		default:
+			return "", nil, fmt.Errorf("invalid searchBy: %s, must be 'communityId', 'email', 'phoneNumber', or 'name'", param.SearchBy)
+		}
+	}
+
+	return queryBuilder.String(), args, nil
+}
+
+func BuildQueryGetAllUser(param models.GetAllUserCursorParam) (string, []interface{}, error) {
+	var queryBuilder strings.Builder
+	var args []interface{}
+
+	queryBuilder.WriteString(baseQueryGetAllUser)
+
+	// Add conditions dynamically
+	if param.Department != "" {
+		queryBuilder.WriteString(" AND u.department = ?")
+		args = append(args, param.Department)
+	}
+	if param.CampusCode != "" {
+		queryBuilder.WriteString(" AND u.campus_code = ?")
+		args = append(args, param.CampusCode)
+	}
+	if param.CoolId != 0 {
+		queryBuilder.WriteString(" AND u.cool_id = ?")
+		args = append(args, param.CoolId)
+	}
+
+	// Apply search
+	if param.SearchBy != "" && param.Search != "" {
+		switch param.SearchBy {
+		case "name":
+			queryBuilder.WriteString(" AND u.name ILIKE ?")
+			args = append(args, param.Search)
+		case "phoneNumber":
+			queryBuilder.WriteString(" AND u.phone_number ILIKE ?")
+			args = append(args, param.Search)
+		case "email":
+			queryBuilder.WriteString(" AND u.email ILIKE ?")
+			args = append(args, param.Search)
+		case "communityId":
+			queryBuilder.WriteString(" AND u.community_id ILIKE ?")
+			args = append(args, param.Search)
+		default:
+			return "", nil, fmt.Errorf("invalid searchBy: %s, must be 'communityId', 'email', 'phoneNumber', or 'name'", param.SearchBy)
+		}
+	}
+
+	if param.Cursor != "" {
+		createdCursor, err := cursor.DecryptCursorForGetAllUser(param.Cursor)
+		if err != nil {
+			return "", nil, err
+		}
+
+		isForward := param.Direction != "prev"
+		operator := "<"
+		if !isForward {
+			operator = ">"
+		}
+
+		// Add cursor condition
+		queryBuilder.WriteString(fmt.Sprintf(" AND (u.created_at, u.id) %s (?, ?)", operator))
+		args = append(args, createdCursor.CreatedAt, createdCursor.ID)
+	}
+
+	// Add ordering - Note the direction changes based on pagination direction
+	if param.Direction == "prev" {
+		queryBuilder.WriteString(" ORDER BY u.created_at ASC, u.id ASC")
+	} else {
+		queryBuilder.WriteString(" ORDER BY u.created_at DESC, u.id DESC")
+	}
+
+	// Add limit
+	queryBuilder.WriteString(" LIMIT ?")
+	args = append(args, param.Limit+1)
+
+	return queryBuilder.String(), args, nil
 }

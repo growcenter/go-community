@@ -4,8 +4,6 @@ import (
 	"context"
 	"go-community/internal/models"
 	"go-community/internal/pkg/cursor"
-	"time"
-
 	"gorm.io/gorm"
 )
 
@@ -26,6 +24,8 @@ type EventRegistrationRecordRepository interface {
 	Update(ctx context.Context, eventRegistrationRecord models.EventRegistrationRecord) (err error)
 	GetEventAttendance(ctx context.Context, communityId, startDate string, endDate string) (output []models.GetEventAttendanceDBOutput, err error)
 	GetAllWithCursor(ctx context.Context, param models.GetAllRegisteredCursorParam) (output []models.GetAllRegisteredRecordDBOutput, prev string, next string, total int, err error)
+	Download(ctx context.Context, param models.GetDownloadAllRegisteredParam) (output []models.GetDownloadAllRegisteredDBOutput, err error)
+	//GetAllWithCursor(ctx context.Context, param models.GetAllRegisteredFilterOptions) (output []models.GetAllRegisteredRecordDBOutput, err error)
 }
 
 type eventRegistrationRecordRepository struct {
@@ -220,88 +220,92 @@ func (errr *eventRegistrationRecordRepository) GetAllWithCursor(ctx context.Cont
 		LogRepository(ctx, err)
 	}()
 
-	var lastUpdatedAt time.Time
-
-	// Decrypt cursor if provided (based on updated_at)
-	if param.Cursor != "" {
-		lastUpdatedAt, err = cursor.DecryptCursor(param.Cursor)
-		if err != nil {
-			return nil, "", "", 0, err
-		}
-	}
-
 	// Set default limit if none provided
-	limit := param.Limit
-	if limit <= 0 {
-		limit = 10 // Default limit
+	if param.Limit <= 0 {
+		param.Limit = 10 // Default limit
 	}
 
 	// Build the query
-	query, params, err := BuildEventRegistrationQuery(
-		baseQueryGetRegisteredRecordList,
-		param.EventCode,
-		param.InstanceCode,
-		param.NameSearch,
-		lastUpdatedAt,
-		param.Direction,
-		limit+1,
-		param.CampusCode,
-		param.DepartmentCode,
-		param.CoolId,
-	)
+	queryList, paramList, err := BuildGetRegisteredQuery(param)
 	if err != nil {
 		return nil, "", "", 0, err
 	}
 
 	// Execute query
 	var records []models.GetAllRegisteredRecordDBOutput
-	err = errr.db.Raw(query, params...).Scan(&records).Error
+	err = errr.db.Raw(queryList, paramList...).Scan(&records).Error
 	if err != nil {
 		return nil, "", "", 0, err
 	}
 
-	// Get total count
-	countQuery, countParams, _ := BuildEventRegistrationQuery(
-		queryCountEventAllRegistered,
-		param.EventCode,
-		param.InstanceCode,
-		param.NameSearch,
-		time.Time{},
-		"",
-		0, // No limit needed for count query
-		param.CampusCode,
-		param.DepartmentCode,
-		param.CoolId,
-	)
-	err = errr.db.Raw(countQuery, countParams...).Scan(&total).Error
+	queryCount, paramCount, err := BuildCountGetRegisteredQuery(param)
 	if err != nil {
 		return nil, "", "", 0, err
 	}
 
-	// Check if there are more records
-	hasMore := len(records) > limit
-	if hasMore {
-		records = records[:limit] // Remove the extra record
+	// Execute query
+	err = errr.db.Raw(queryCount, paramCount...).Scan(&total).Error
+	if err != nil {
+		return nil, "", "", 0, err
 	}
 
-	// Generate cursors
 	if len(records) > 0 {
-		// Generate prev cursor if we're not on the first page
-		if param.Cursor != "" {
-			prev, err = cursor.EncryptCursor(records[0].UpdatedAt.Format(time.RFC3339))
-			if err != nil {
-				return nil, "", "", 0, err
+		// If we got more records than requested, we have a next page
+		hasMore := len(records) > param.Limit
+		if hasMore {
+			records = records[:param.Limit] // Remove the extra record
+		}
+
+		// For "prev" direction, we need to reverse the records
+		if param.Direction == "prev" {
+			//reverseRecords(records)
+			for i, j := 0, len(records)-1; i < j; i, j = i+1, j-1 {
+				records[i], records[j] = records[j], records[i]
 			}
 		}
 
-		// Generate next cursor only if we have more records
+		// Generate next cursor from last record if we have more
 		if hasMore {
-			next, err = cursor.EncryptCursor(records[len(records)-1].UpdatedAt.Format(time.RFC3339))
-			if err != nil {
-				return nil, "", "", 0, err
+			lastRecord := records[len(records)-1]
+			nextCursor := models.GetAllRegisteredRecordCursor{
+				CreatedAt: lastRecord.CreatedAt,
+				ID:        lastRecord.ID,
 			}
+			next = cursor.EncryptCursorFromStruct(nextCursor)
 		}
+
+		// Only generate prevCursor if we're not at the first page
+		if param.Cursor != "" {
+			firstRecord := records[0]
+			prevCursor := models.GetAllRegisteredRecordCursor{
+				CreatedAt: firstRecord.CreatedAt,
+				ID:        firstRecord.ID,
+			}
+			prev = cursor.EncryptCursorFromStruct(prevCursor)
+		}
+
 	}
 
 	return records, prev, next, total, nil
+}
+
+func (errr *eventRegistrationRecordRepository) Download(ctx context.Context, param models.GetDownloadAllRegisteredParam) (output []models.GetDownloadAllRegisteredDBOutput, err error) {
+	defer func() {
+		LogRepository(ctx, err)
+	}()
+
+	// Build the query
+	queryList, paramList, err := BuildDownloadGetRegisteredQuery(param)
+	if err != nil {
+		return nil, err
+	}
+
+	// Execute query
+	var records []models.GetDownloadAllRegisteredDBOutput
+	err = errr.db.Raw(queryList, paramList...).Scan(&records).Error
+	if err != nil {
+		return nil, err
+	}
+
+	return records, nil
 }

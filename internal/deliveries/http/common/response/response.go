@@ -69,3 +69,9 @@ func SuccessCursor(ctx echo.Context, code int, cursorInfo interface{}, data inte
 
 	return ctx.JSON(code, response)
 }
+
+func SuccessDownload(ctx echo.Context, code int, contentType string, fileName string, data []byte) error {
+	ctx.Response().Header().Set("Content-Type", contentType)
+	ctx.Response().Header().Set("Content-Disposition", "attachment; filename="+fileName)
+	return ctx.Blob(http.StatusOK, contentType, data)
+}

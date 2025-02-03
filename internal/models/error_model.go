@@ -81,6 +81,12 @@ var (
 
 	// Time error
 	ErrorStartDateLater = errors.New("start time cannot be later than end time")
+
+	// Pagination Error
+	ErrorLimitMustBeGreaterThanZero = errors.New("the limit must be greater than zero")
+
+	// Download Error
+	ErrorCSVOrXLSX = errors.New("should be either csv or xlsx")
 )
 
 type (
@@ -374,6 +380,19 @@ func ErrorMapping(err error) ErrorResponse {
 			Status:  "CONFLICT_USERS",
 			Message: err.Error(),
 		}
+	case ErrorLimitMustBeGreaterThanZero:
+		return ErrorResponse{
+			Code:    http.StatusBadRequest,
+			Status:  "INVALID_VALUES",
+			Message: err.Error(),
+		}
+	case ErrorCSVOrXLSX:
+		return ErrorResponse{
+			Code:    http.StatusUnprocessableEntity,
+			Status:  "INVALID_FORMAT",
+			Message: err.Error(),
+		}
+
 	default:
 		return ErrorResponse{
 			Code:    http.StatusInternalServerError,

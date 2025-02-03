@@ -2,9 +2,10 @@ package pgsql
 
 import (
 	"fmt"
+	"go-community/internal/models"
+	"go-community/internal/pkg/cursor"
 	"strconv"
 	"strings"
-	"time"
 )
 
 var (
@@ -98,7 +99,7 @@ var (
 
 	baseQueryGetRegisteredRecordList = `
 		SELECT 
-			er.id,
+            er.id,
 			er.name,
 			er.identifier,
 			er.community_id,
@@ -113,6 +114,7 @@ var (
 			er.updated_by,
 			er.status,
 			er.reason,
+			er.description,
 			er.registered_at,
 			er.verified_at,
 			er.created_at,
@@ -121,176 +123,203 @@ var (
 			e.title AS event_name,
 			i.title AS instance_name,
 			u.name AS registered_by
-		FROM event_registration_records er
-		LEFT JOIN events e ON er.event_code = e.code
-		LEFT JOIN event_instances i ON er.instance_code = i.code
-		LEFT JOIN users u ON er.community_id_origin = u.community_id
-		LEFT JOIN cools c ON u.cool_id = c.id
-		WHERE 1=1
+        FROM event_registration_records er
+        	LEFT JOIN events e ON er.event_code = e.code
+			LEFT JOIN event_instances i ON er.instance_code = i.code
+			LEFT JOIN users u ON er.community_id_origin = u.community_id
+			LEFT JOIN cools c ON u.cool_id = c.id
+        WHERE er.deleted_at IS NULL		
 	`
 
 	queryCountEventAllRegistered = `
 		SELECT COUNT(*)
 		FROM event_registration_records er
-		LEFT JOIN users u ON er.community_id_origin = u.community_id
-		WHERE 1=1
+			LEFT JOIN events e ON er.event_code = e.code
+			LEFT JOIN event_instances i ON er.instance_code = i.code
+			LEFT JOIN users u ON er.community_id_origin = u.community_id
+			LEFT JOIN cools c ON u.cool_id = c.id
+	`
+
+	baseQueryGetDownloadRegisteredRecordList = `
+		SELECT 
+            er.id,
+			er.name,
+			er.identifier,
+			er.community_id,
+			coalesce(u.campus_code, '') AS campus_code,
+			coalesce(u.department, '') AS department,
+			coalesce(u.cool_id, 0) AS cool_id,
+			coalesce(c.name, '') AS cool_name,
+			er.event_code,
+			er.instance_code,
+			er.identifier_origin,
+			er.community_id_origin,
+			er.updated_by,
+			er.status,
+			er.reason,
+			er.description,
+			er.registered_at,
+			er.verified_at,
+			er.created_at,
+			er.updated_at,
+			er.deleted_at,
+			e.title AS event_name,
+			i.title AS instance_name,
+			u.name AS registered_by
+        FROM event_registration_records er
+        	LEFT JOIN events e ON er.event_code = e.code
+			LEFT JOIN event_instances i ON er.instance_code = i.code
+			LEFT JOIN users u ON er.community_id_origin = u.community_id
+			LEFT JOIN cools c ON u.cool_id = c.id
+        WHERE er.deleted_at IS NULL	
 	`
 )
 
-//func BuildEventRegistrationQuery(baseQuery string, eventCode string, nameSearch string, cursor time.Time, direction string) (string, []interface{}, error) {
-//	var conditions []string
-//	var params []interface{}
-//
-//	// Add conditions dynamically
-//	if eventCode != "" {
-//		conditions = append(conditions, "er.event_code = ?")
-//		params = append(params, eventCode)
-//	}
-//	if nameSearch != "" {
-//		conditions = append(conditions, "er.name ILIKE ?")
-//		params = append(params, "%"+nameSearch+"%")
-//	}
-//	if !cursor.IsZero() {
-//		if direction == "next" {
-//			conditions = append(conditions, "er.updated_at > ?")
-//		} else if direction == "prev" {
-//			conditions = append(conditions, "er.updated_at < ?")
-//		} else {
-//			return "", nil, fmt.Errorf("invalid direction: %s, must be 'next' or 'prev'", direction)
-//		}
-//		params = append(params, cursor)
-//	}
-//
-//	// Build WHERE clause
-//	if len(conditions) > 0 {
-//		baseQuery += " AND " + strings.Join(conditions, " AND ")
-//	}
-//
-//	// Add ordering
-//	if direction == "next" {
-//		baseQuery += " ORDER BY er.updated_at ASC"
-//	} else if direction == "prev" {
-//		baseQuery += " ORDER BY er.updated_at DESC"
-//	}
-//
-//	// Add limit placeholder
-//	baseQuery += " LIMIT ?"
-//	params = append(params, 100) // Default limit for now, can be adjusted
-//
-//	return baseQuery, params, nil
-//}
+func BuildCountGetRegisteredQuery(param models.GetAllRegisteredCursorParam) (string, []interface{}, error) {
+	var queryBuilder strings.Builder
+	var args []interface{}
 
-func BuildEventRegistrationQuery(baseQuery string, eventCode string, instanceCode string, nameSearch string, cursor time.Time, direction string, limit int, campusCode string, departmentCode string, coolId string) (string, []interface{}, error) {
-	var conditions []string
-	var params []interface{}
+	queryBuilder.WriteString(queryCountEventAllRegistered)
+	queryBuilder.WriteString(" WHERE er.deleted_at IS NULL")
 
 	// Add conditions dynamically
-	if eventCode != "" {
-		conditions = append(conditions, "er.event_code = ?")
-		params = append(params, eventCode)
+	if param.EventCode != "" {
+		queryBuilder.WriteString(" AND er.event_code = ?")
+		args = append(args, param.EventCode)
 	}
-	if instanceCode != "" {
-		conditions = append(conditions, "er.instance_code = ?")
-		params = append(params, instanceCode)
+	if param.InstanceCode != "" {
+		queryBuilder.WriteString(" AND er.instance_code = ?")
+		args = append(args, param.InstanceCode)
 	}
-	if nameSearch != "" {
-		conditions = append(conditions, "er.name ILIKE ?")
-		params = append(params, "%"+nameSearch+"%")
+	if param.NameSearch != "" {
+		//queryBuilder.WriteString(" AND er.name ILIKE ?")
+		//args = append(args, param.NameSearch)
+		queryBuilder.WriteString(" AND (er.name ILIKE ? OR er.description ILIKE ?)")
+		args = append(args, param.NameSearch, param.NameSearch)
 	}
-	if campusCode != "" {
-		conditions = append(conditions, "u.campus_code = ?")
-		params = append(params, campusCode)
+	if param.CampusCode != "" {
+		queryBuilder.WriteString(" AND u.campus_code = ?")
+		args = append(args, param.CampusCode)
 	}
-	if departmentCode != "" {
-		conditions = append(conditions, "u.department = ?")
-		params = append(params, departmentCode)
+	if param.DepartmentCode != "" {
+		queryBuilder.WriteString(" AND u.department = ?")
+		args = append(args, param.DepartmentCode)
 	}
-	if coolId != "" {
-		conditions = append(conditions, "u.cool_id = ?")
-		intCool, _ := strconv.Atoi(coolId)
-		params = append(params, intCool)
-	}
-	if !cursor.IsZero() {
-		if direction == "next" {
-			conditions = append(conditions, "er.updated_at > ?")
-		} else if direction == "prev" {
-			conditions = append(conditions, "er.updated_at < ?")
-		} else {
-			return "", nil, fmt.Errorf("invalid direction: %s, must be 'next' or 'prev'", direction)
-		}
-		params = append(params, cursor)
+	if param.CoolId != "" {
+		queryBuilder.WriteString(" AND u.cool_id = ?")
+		intCool, _ := strconv.Atoi(param.CoolId)
+		args = append(args, intCool)
 	}
 
-	// Build WHERE clause
-	if len(conditions) > 0 {
-		baseQuery += " AND " + strings.Join(conditions, " AND ")
-	}
-
-	// Add ordering based on direction
-	if direction == "next" {
-		baseQuery += " ORDER BY er.updated_at ASC"
-	} else if direction == "prev" {
-		baseQuery += " ORDER BY er.updated_at DESC"
-	}
-
-	// Add limit (fetch limit + 1 for cursor determination)
-	baseQuery += " LIMIT ?"
-	//if limit > 0 {
-	//	params = append(params, limit+1) // Fetch one more record than requested to determine if there's a next page
-	//} else {
-	//	params = append(params, 11)
-	//}
-
-	params = append(params, limit)
-
-	return baseQuery, params, nil
+	return queryBuilder.String(), args, nil
 }
 
-//func BuildEventRegistrationQuery(baseQuery string, eventCode string, nameSearch string, cursor int64, direction string, limit int) (string, []interface{}, error) {
-//	var conditions []string
-//	var params []interface{}
-//
-//	// Add conditions dynamically
-//	if eventCode != "" {
-//		conditions = append(conditions, "er.event_code = ?")
-//		params = append(params, eventCode)
-//	}
-//	if nameSearch != "" {
-//		conditions = append(conditions, "er.name ILIKE ?")
-//		params = append(params, "%"+nameSearch+"%")
-//	}
-//
-//	// Use cursor to filter based on ID for pagination
-//	if cursor > 0 {
-//		if direction == "next" {
-//			// Fetch records with ID greater than cursor for next page
-//			conditions = append(conditions, "er.id > ?")
-//		} else if direction == "prev" {
-//			// Fetch records with ID less than cursor for prev page
-//			conditions = append(conditions, "er.id < ?")
-//		} else {
-//			return "", nil, fmt.Errorf("invalid direction: %s, must be 'next' or 'prev'", direction)
-//		}
-//		params = append(params, cursor)
-//	}
-//
-//	// Build WHERE clause
-//	if len(conditions) > 0 {
-//		baseQuery += " AND " + strings.Join(conditions, " AND ")
-//	}
-//
-//	// Add ordering based on direction (ID)
-//	if direction == "next" {
-//		// For "next", we order by ID in ascending order
-//		baseQuery += " ORDER BY er.id ASC"
-//	} else if direction == "prev" {
-//		// For "prev", we order by ID in descending order
-//		baseQuery += " ORDER BY er.id DESC"
-//	}
-//
-//	// Apply limit
-//	baseQuery += " LIMIT ?"
-//	params = append(params, limit)
-//
-//	return baseQuery, params, nil
-//}
+func BuildGetRegisteredQuery(param models.GetAllRegisteredCursorParam) (string, []interface{}, error) {
+	var queryBuilder strings.Builder
+	var args []interface{}
+
+	queryBuilder.WriteString(baseQueryGetRegisteredRecordList)
+
+	// Add conditions dynamically
+	if param.EventCode != "" {
+		queryBuilder.WriteString(" AND er.event_code = ?")
+		args = append(args, param.EventCode)
+	}
+	if param.InstanceCode != "" {
+		queryBuilder.WriteString(" AND er.instance_code = ?")
+		args = append(args, param.InstanceCode)
+	}
+	if param.NameSearch != "" {
+		//queryBuilder.WriteString(" AND er.name ILIKE ?")
+		queryBuilder.WriteString(" AND (er.name ILIKE ? OR er.description ILIKE ?)")
+		args = append(args, param.NameSearch, param.NameSearch)
+	}
+	if param.CampusCode != "" {
+		queryBuilder.WriteString(" AND u.campus_code = ?")
+		args = append(args, param.CampusCode)
+	}
+	if param.DepartmentCode != "" {
+		queryBuilder.WriteString(" AND u.department = ?")
+		args = append(args, param.DepartmentCode)
+	}
+	if param.CoolId != "" {
+		queryBuilder.WriteString(" AND u.cool_id = ?")
+		intCool, _ := strconv.Atoi(param.CoolId)
+		args = append(args, intCool)
+	}
+
+	if param.Cursor != "" {
+		createdCursor, err := cursor.DecryptCursorForGetRegisteredRecord(param.Cursor)
+		if err != nil {
+			return "", nil, err
+		}
+
+		isForward := param.Direction != "prev"
+		operator := "<"
+		if !isForward {
+			operator = ">"
+		}
+
+		// Add cursor condition
+		queryBuilder.WriteString(fmt.Sprintf(" AND (er.created_at, er.id) %s (?, ?)", operator))
+		args = append(args, createdCursor.CreatedAt, createdCursor.ID)
+	}
+
+	// Add ordering - Note the direction changes based on pagination direction
+	if param.Direction == "prev" {
+		queryBuilder.WriteString(" ORDER BY er.created_at ASC, er.id ASC")
+	} else {
+		queryBuilder.WriteString(" ORDER BY er.created_at DESC, er.id DESC")
+	}
+
+	// Add limit
+	queryBuilder.WriteString(" LIMIT ?")
+	args = append(args, param.Limit+1)
+
+	return queryBuilder.String(), args, nil
+}
+
+// Helper function to reverse records slice
+func reverseRecords(records []any) {
+	for i, j := 0, len(records)-1; i < j; i, j = i+1, j-1 {
+		records[i], records[j] = records[j], records[i]
+	}
+}
+
+func BuildDownloadGetRegisteredQuery(param models.GetDownloadAllRegisteredParam) (string, []interface{}, error) {
+	var queryBuilder strings.Builder
+	var args []interface{}
+
+	queryBuilder.WriteString(baseQueryGetDownloadRegisteredRecordList)
+
+	// Add conditions dynamically
+	if param.EventCode != "" {
+		queryBuilder.WriteString(" AND er.event_code = ?")
+		args = append(args, param.EventCode)
+	}
+	if param.InstanceCode != "" {
+		queryBuilder.WriteString(" AND er.instance_code = ?")
+		args = append(args, param.InstanceCode)
+	}
+	if param.NameSearch != "" {
+		//queryBuilder.WriteString(" AND er.name ILIKE ?")
+		//args = append(args, param.NameSearch)
+		queryBuilder.WriteString(" AND (er.name ILIKE ? OR er.description ILIKE ?)")
+		args = append(args, param.NameSearch, param.NameSearch)
+	}
+	if param.CampusCode != "" {
+		queryBuilder.WriteString(" AND u.campus_code = ?")
+		args = append(args, param.CampusCode)
+	}
+	if param.DepartmentCode != "" {
+		queryBuilder.WriteString(" AND u.department = ?")
+		args = append(args, param.DepartmentCode)
+	}
+	if param.CoolId != "" {
+		queryBuilder.WriteString(" AND u.cool_id = ?")
+		intCool, _ := strconv.Atoi(param.CoolId)
+		args = append(args, intCool)
+	}
+
+	return queryBuilder.String(), args, nil
+}

@@ -37,7 +37,7 @@ func NewEventHandler(api *echo.Group, u *usecases.Usecases, c *config.Configurat
 	endpointUserInternal.GET("/:eventCode/summary", handler.GetSummary)
 	endpointUserInternal.GET("/registers", handler.GetAllRegisteredInternal)
 	endpointUserInternal.POST("/instances", handler.CreateInstance)
-
+	endpointUserInternal.GET("/registers/download", handler.DownloadInternal)
 }
 
 // Create godoc
@@ -323,6 +323,24 @@ func (eh *EventHandler) GetEventAttendance(ctx echo.Context) error {
 	return response.SuccessListWithDetail(ctx, http.StatusOK, len(list), detail, list)
 }
 
+//func (eh *EventHandler) GetAllRegisteredInternal(ctx echo.Context) error {
+//	var param models.GetAllRegisteredCursorParam
+//	if err := ctx.Bind(&param); err != nil {
+//		return response.Error(ctx, err)
+//	}
+//
+//	if err := validator.Validate(param); err != nil {
+//		return response.ErrorValidation(ctx, err)
+//	}
+//
+//	data, info, err := eh.usecase.EventRegistrationRecord.GetAllCursor(ctx.Request().Context(), param)
+//	if err != nil {
+//		return response.Error(ctx, err)
+//	}
+//
+//	return response.SuccessCursor(ctx, http.StatusOK, info, data)
+//}
+
 func (eh *EventHandler) GetAllRegisteredInternal(ctx echo.Context) error {
 	var param models.GetAllRegisteredCursorParam
 	if err := ctx.Bind(&param); err != nil {
@@ -338,5 +356,24 @@ func (eh *EventHandler) GetAllRegisteredInternal(ctx echo.Context) error {
 		return response.Error(ctx, err)
 	}
 
+	//return response.SuccessCursor[models.GetAllRegisteredCursorResponse](ctx, data, 0, 0, nil)
 	return response.SuccessCursor(ctx, http.StatusOK, info, data)
+}
+
+func (eh *EventHandler) DownloadInternal(ctx echo.Context) error {
+	var param models.GetDownloadAllRegisteredParam
+	if err := ctx.Bind(&param); err != nil {
+		return response.Error(ctx, err)
+	}
+
+	if err := validator.Validate(param); err != nil {
+		return response.ErrorValidation(ctx, err)
+	}
+
+	data, contentType, fileName, err := eh.usecase.EventRegistrationRecord.Download(ctx.Request().Context(), param)
+	if err != nil {
+		return response.Error(ctx, err)
+	}
+
+	return response.SuccessDownload(ctx, http.StatusOK, contentType, fileName, data)
 }

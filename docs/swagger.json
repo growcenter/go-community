@@ -2179,6 +2179,9 @@
                 "communityId": {
                     "type": "string"
                 },
+                "description": {
+                    "type": "string"
+                },
                 "eventCode": {
                     "type": "string",
                     "maxLength": 7,
@@ -2217,6 +2220,9 @@
             "type": "object",
             "properties": {
                 "communityId": {
+                    "type": "string"
+                },
+                "description": {
                     "type": "string"
                 },
                 "eventCode": {
@@ -4055,6 +4061,7 @@
             "type": "object",
             "properties": {
                 "data": {},
+                "details": {},
                 "pagination": {},
                 "type": {
                     "type": "string",
