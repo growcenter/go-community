@@ -2,7 +2,9 @@ package cursor
 
 import (
 	"encoding/base64"
+	"encoding/json"
 	"fmt"
+	"go-community/internal/models"
 	"strconv"
 	"time"
 )
@@ -56,4 +58,56 @@ func DecryptCursorFromString(cursor string) (string, error) {
 	}
 
 	return string(decoded), nil
+}
+
+func EncryptCursorFromStruct(cursor interface{}) string {
+	bytes, err := json.Marshal(cursor)
+	if err != nil {
+		return ""
+	}
+	return base64.StdEncoding.EncodeToString(bytes)
+}
+
+func DecryptCursorToStruct(cursor string, target interface{}) (interface{}, error) {
+	decoded, err := base64.StdEncoding.DecodeString(cursor)
+	if err != nil {
+		return nil, fmt.Errorf("failed to decode cursor: %w", err)
+	}
+
+	err = json.Unmarshal(decoded, target)
+	if err != nil {
+		return nil, fmt.Errorf("failed to unmarshal cursor: %w", err)
+	}
+
+	return target, nil
+}
+
+func DecryptCursorForGetRegisteredRecord(s string) (*models.GetAllRegisteredRecordCursor, error) {
+	decoded, err := base64.StdEncoding.DecodeString(s)
+	if err != nil {
+		return nil, fmt.Errorf("failed to decode cursor: %w", err)
+	}
+
+	var cursor models.GetAllRegisteredRecordCursor
+	err = json.Unmarshal(decoded, &cursor)
+	if err != nil {
+		return nil, fmt.Errorf("failed to unmarshal cursor: %w", err)
+	}
+
+	return &cursor, nil
+}
+
+func DecryptCursorForGetAllUser(s string) (*models.GetAllUserCursor, error) {
+	decoded, err := base64.StdEncoding.DecodeString(s)
+	if err != nil {
+		return nil, fmt.Errorf("failed to decode cursor: %w", err)
+	}
+
+	var cursor models.GetAllUserCursor
+	err = json.Unmarshal(decoded, &cursor)
+	if err != nil {
+		return nil, fmt.Errorf("failed to unmarshal cursor: %w", err)
+	}
+
+	return &cursor, nil
 }

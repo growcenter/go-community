@@ -205,60 +205,64 @@ func (ur *userRepository) GetAllWithCursor(ctx context.Context, param models.Get
 		LogRepository(ctx, err)
 	}()
 
-	var decryptedCommunityId string
-	if param.Cursor != "" {
-		decryptedCommunityId, err = cursor.DecryptCursorFromString(param.Cursor)
-		if err != nil {
-			return nil, "", "", 0, fmt.Errorf("invalid cursor: %w", err)
-		}
+	// Set default limit if none provided
+	if param.Limit <= 0 {
+		param.Limit = 10 // Default limit
 	}
 
-	limit := param.Limit
-	if limit <= 0 {
-		limit = 10
-	}
-
-	// Query with limit + 1 to determine if there are more records
-	query, params, err := BuildQueryGetAllUser(
-		baseQueryGetAllUser,
-		param.SearchBy,
-		param.Search,
-		param.CampusCode,
-		param.CoolId,
-		param.Department,
-		decryptedCommunityId,
-		param.Direction,
-		limit+1,
-	)
+	queryList, paramList, err := BuildQueryGetAllUser(param)
 	if err != nil {
-		return nil, "", "", 0, fmt.Errorf("failed to build query: %w", err)
+		return nil, "", "", 0, fmt.Errorf("failed to build list query: %w", err)
 	}
 
 	var records []models.GetAllUserDBOutput
-	if err := ur.db.Raw(query, params...).Scan(&records).Error; err != nil {
+	if err := ur.db.Raw(queryList, paramList...).Scan(&records).Error; err != nil {
 		return nil, "", "", 0, fmt.Errorf("query execution failed: %w", err)
 	}
 
-	if err := ur.db.Raw(queryCountAllUser).Scan(&total).Error; err != nil {
+	queryCount, paramCount, err := BuildCountGetAllUser(param)
+	if err != nil {
+		return nil, "", "", 0, fmt.Errorf("failed to build count query: %w", err)
+	}
+
+	if err := ur.db.Raw(queryCount, paramCount...).Scan(&total).Error; err != nil {
 		return nil, "", "", 0, fmt.Errorf("count query execution failed: %w", err)
 	}
 
-	hasMore := len(records) > limit
-	if hasMore {
-		// Remove the extra record we fetched
-		records = records[:limit]
-	}
-
 	if len(records) > 0 {
-		// Set previous cursor if we have a cursor parameter
-		if param.Cursor != "" {
-			prev, _ = cursor.EncryptCursor(records[0].CommunityID)
+		// If we got more records than requested, we have a next page
+		hasMore := len(records) > param.Limit
+		if hasMore {
+			records = records[:param.Limit] // Remove the extra record
 		}
 
-		// Set next cursor only if we have more records
-		if hasMore {
-			next, _ = cursor.EncryptCursor(records[len(records)-1].CommunityID)
+		// For "prev" direction, we need to reverse the records
+		if param.Direction == "prev" {
+			for i, j := 0, len(records)-1; i < j; i, j = i+1, j-1 {
+				records[i], records[j] = records[j], records[i]
+			}
 		}
+
+		// Generate next cursor from last record if we have more
+		if hasMore {
+			lastRecord := records[len(records)-1]
+			nextCursor := models.GetAllUserCursor{
+				CreatedAt: *lastRecord.CreatedAt,
+				ID:        lastRecord.ID,
+			}
+			next = cursor.EncryptCursorFromStruct(nextCursor)
+		}
+
+		// Only generate prevCursor if we're not at the first page
+		if param.Cursor != "" {
+			firstRecord := records[0]
+			prevCursor := models.GetAllUserCursor{
+				CreatedAt: *firstRecord.CreatedAt,
+				ID:        firstRecord.ID,
+			}
+			prev = cursor.EncryptCursorFromStruct(prevCursor)
+		}
+
 	}
 
 	return records, prev, next, total, nil

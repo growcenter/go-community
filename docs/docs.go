@@ -2190,6 +2190,9 @@ const docTemplate = `{
                 "communityId": {
                     "type": "string"
                 },
+                "description": {
+                    "type": "string"
+                },
                 "eventCode": {
                     "type": "string",
                     "maxLength": 7,
@@ -2228,6 +2231,9 @@ const docTemplate = `{
             "type": "object",
             "properties": {
                 "communityId": {
+                    "type": "string"
+                },
+                "description": {
                     "type": "string"
                 },
                 "eventCode": {
@@ -4066,6 +4072,7 @@ const docTemplate = `{
             "type": "object",
             "properties": {
                 "data": {},
+                "details": {},
                 "pagination": {},
                 "type": {
                     "type": "string",

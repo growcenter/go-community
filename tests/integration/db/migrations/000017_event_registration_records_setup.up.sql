@@ -12,6 +12,7 @@ CREATE TABLE "event_registration_records" (
     "updated_by" varchar(100) NULL,
     "status" varchar(20) NOT NULL,
     "reason" text NULL,
+    "description" varchar(255),
     "registered_at" timestamptz NOT NULL,
     "verified_at" timestamptz NULL,
     "created_at" TIMESTAMP NOT NULL DEFAULT now(),

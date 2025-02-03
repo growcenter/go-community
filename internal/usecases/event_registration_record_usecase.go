@@ -1,14 +1,18 @@
 package usecases
 
 import (
+	"bytes"
 	"context"
 	"database/sql"
+	"encoding/csv"
 	"fmt"
 	"github.com/google/uuid"
+	"github.com/xuri/excelize/v2"
 	"go-community/internal/common"
 	"go-community/internal/config"
 	"go-community/internal/models"
 	"go-community/internal/repositories/pgsql"
+	"strconv"
 	"strings"
 	"time"
 )
@@ -19,6 +23,7 @@ type EventRegistrationRecordUsecase interface {
 	UpdateStatus(ctx context.Context, requestParam *models.UpdateRegistrationStatusParameter, requestBody *models.UpdateRegistrationStatusRequest, value *models.TokenValues) (response *models.UpdateRegistrationStatusResponse, err error)
 	GetAttendance(ctx context.Context, request models.GetEventAttendanceParameter) (detail *models.GetEventAttendanceDetailResponse, list []models.GetEventAttendanceListResponse, err error)
 	GetAllCursor(ctx context.Context, params models.GetAllRegisteredCursorParam) (res []models.GetAllRegisteredCursorResponse, total int, err error)
+	Download(ctx context.Context, param models.GetDownloadAllRegisteredParam) (data []byte, contentType string, err error)
 }
 
 type eventRegistrationRecordUsecase struct {
@@ -107,6 +112,7 @@ func (erru *eventRegistrationRecordUsecase) createAtomic(ctx context.Context, re
 			Status:            registerStatus,
 			RegisteredAt:      registerAt,
 			VerifiedAt:        verifiedAt,
+			Description:       request.Description,
 			UpdatedBy:         updatedBy,
 		}
 
@@ -120,6 +126,7 @@ func (erru *eventRegistrationRecordUsecase) createAtomic(ctx context.Context, re
 				InstanceCode:      request.InstanceCode,
 				IdentifierOrigin:  request.Identifier,
 				CommunityIdOrigin: communityIdOrigin,
+				Description:       request.Description,
 				Status:            registerStatus,
 				RegisteredAt:      registerAt,
 			})
@@ -174,6 +181,7 @@ func (erru *eventRegistrationRecordUsecase) createAtomic(ctx context.Context, re
 			InstanceCode:     request.InstanceCode,
 			InstanceTitle:    instance.EventInstanceTitle,
 			TotalRegistrants: countTotalRegistrants,
+			Description:      request.Description,
 			RegisterAt:       registerAt,
 			Registrants:      registrantRes[1:],
 		}
@@ -547,6 +555,11 @@ func (erru *eventRegistrationRecordUsecase) GetAllCursor(ctx context.Context, pa
 		return nil, nil, err
 	}
 
+	//output, err := erru.r.EventRegistrationRecord.GetAllWithCursor(ctx, params)
+	//if err != nil {
+	//	return nil, err
+	//}
+
 	var response []models.GetAllRegisteredCursorResponse
 	for _, v := range output {
 		var isPersonalQr bool
@@ -603,6 +616,7 @@ func (erru *eventRegistrationRecordUsecase) GetAllCursor(ctx context.Context, pa
 			RegisteredBy:      v.RegisteredBy,
 			UpdatedBy:         v.UpdatedBy,
 			IsPersonalQr:      isPersonalQr,
+			Description:       v.Description,
 			Status:            v.Status,
 			RegisteredAt:      v.RegisteredAt,
 			VerifiedAt:        verifiedAt,
@@ -618,4 +632,182 @@ func (erru *eventRegistrationRecordUsecase) GetAllCursor(ctx context.Context, pa
 	}
 
 	return response, info, nil
+}
+
+func (erru *eventRegistrationRecordUsecase) Download(ctx context.Context, param models.GetDownloadAllRegisteredParam) (data []byte, contentType string, fileName string, err error) {
+	defer func() {
+		LogService(ctx, err)
+	}()
+
+	record, err := erru.r.EventRegistrationRecord.Download(ctx, param)
+	if err != nil {
+		return nil, "", "", err
+	}
+
+	fileName = fmt.Sprintf("%s-%s", record[0].EventName, record[0].InstanceName)
+
+	switch param.Format {
+	case "csv":
+		output, contentType, err := erru.downloadCSV(record)
+		if err != nil {
+			return nil, "", "", err
+		}
+
+		return output, contentType, fmt.Sprintf("%s.csv", fileName), nil
+	case "xlsx":
+		output, contentType, err := erru.downloadXLSX(record)
+		if err != nil {
+			return nil, "", "", err
+		}
+
+		return output, contentType, fmt.Sprintf("%s.xlsx", fileName), nil
+	default:
+		return nil, "", "", nil
+	}
+}
+
+func (erru *eventRegistrationRecordUsecase) downloadXLSX(data []models.GetDownloadAllRegisteredDBOutput) (file []byte, contentType string, err error) {
+	f := excelize.NewFile()
+	// Create a new Excel file
+	sheetName := "Registration-Record"
+	err = f.SetSheetName("Sheet1", sheetName)
+	if err != nil {
+		return nil, "", err
+	}
+
+	// Define headers
+	headers := []string{"ID", "Name", "Email/Phone Number", "Community ID", "Campus", "COOL", "Department", "Event", "Event Instance", "Description", "Is Using QR", "Register At", "Verified At", "Status"}
+
+	// Write headers to the first row
+	for i, header := range headers {
+		col := fmt.Sprintf("%c1", 'A'+i) // Convert index to column letter (A, B, C, etc.)
+		err = f.SetCellValue(sheetName, col, header)
+		if err != nil {
+			return nil, "", err
+		}
+	}
+
+	// Write user data
+	for i, user := range data {
+		var isPersonalQr bool
+		if user.UpdatedBy == "user" {
+			isPersonalQr = true
+		}
+
+		var verifiedAt string
+		if !user.VerifiedAt.Time.IsZero() {
+			verifiedAt = common.FormatDatetimeToString(user.VerifiedAt.Time, time.RFC3339)
+		}
+
+		var departmentName string
+		if user.Department != "" {
+			value, department := erru.cfg.Department[strings.ToLower(user.Department)]
+			if !department {
+				return nil, "", models.ErrorDataNotFound
+			}
+			departmentName = value
+		}
+
+		var campusName string
+		if user.CampusCode != "" {
+			value, campus := erru.cfg.Campus[strings.ToLower(user.CampusCode)]
+			if !campus {
+				return nil, "", models.ErrorDataNotFound
+			}
+			campusName = value
+		}
+
+		row := i + 2 // Start from row 2 (after headers)
+		f.SetCellValue(sheetName, fmt.Sprintf("A%d", row), user.ID)
+		f.SetCellValue(sheetName, fmt.Sprintf("B%d", row), user.Name)
+		f.SetCellValue(sheetName, fmt.Sprintf("C%d", row), user.Identifier)
+		f.SetCellValue(sheetName, fmt.Sprintf("D%d", row), user.CommunityId)
+		f.SetCellValue(sheetName, fmt.Sprintf("E%d", row), campusName)
+		f.SetCellValue(sheetName, fmt.Sprintf("F%d", row), user.CoolName)
+		f.SetCellValue(sheetName, fmt.Sprintf("G%d", row), departmentName)
+		f.SetCellValue(sheetName, fmt.Sprintf("H%d", row), user.EventName)
+		f.SetCellValue(sheetName, fmt.Sprintf("I%d", row), user.InstanceName)
+		f.SetCellValue(sheetName, fmt.Sprintf("J%d", row), user.Description)
+		f.SetCellValue(sheetName, fmt.Sprintf("K%d", row), isPersonalQr)
+		f.SetCellValue(sheetName, fmt.Sprintf("L%d", row), user.RegisteredAt)
+		f.SetCellValue(sheetName, fmt.Sprintf("M%d", row), verifiedAt)
+		f.SetCellValue(sheetName, fmt.Sprintf("N%d", row), user.Status)
+	}
+
+	buffer, err := f.WriteToBuffer()
+	if err != nil {
+		return nil, "", fmt.Errorf("error writing to buffer: %w", err)
+	}
+
+	return buffer.Bytes(), "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", nil
+}
+
+func (erru *eventRegistrationRecordUsecase) downloadCSV(data []models.GetDownloadAllRegisteredDBOutput) (file []byte, contentType string, err error) {
+	buffer := bytes.NewBuffer(nil)
+	writer := csv.NewWriter(buffer)
+
+	// Define headers
+	headers := []string{"ID", "Name", "Email/Phone Number", "Community ID", "Campus", "COOL", "Department", "Event", "Event Instance", "Description", "Is Using QR", "Register At", "Verified At", "Status"}
+	if err := writer.Write(headers); err != nil {
+		return nil, "", err
+	}
+
+	// Write user data
+	for _, user := range data {
+		var isPersonalQr bool
+		if user.UpdatedBy == "user" {
+			isPersonalQr = true
+		}
+
+		var verifiedAt string
+		if !user.VerifiedAt.Time.IsZero() {
+			verifiedAt = common.FormatDatetimeToString(user.VerifiedAt.Time, time.RFC3339)
+		}
+
+		var departmentName string
+		if user.Department != "" {
+			value, department := erru.cfg.Department[strings.ToLower(user.Department)]
+			if !department {
+				return nil, "", models.ErrorDataNotFound
+			}
+			departmentName = value
+		}
+
+		var campusName string
+		if user.CampusCode != "" {
+			value, campus := erru.cfg.Campus[strings.ToLower(user.CampusCode)]
+			if !campus {
+				return nil, "", models.ErrorDataNotFound
+			}
+			campusName = value
+		}
+
+		row := []string{
+			user.ID.String(),
+			user.Name,
+			user.Identifier,
+			user.CommunityId,
+			campusName,
+			user.CoolName,
+			departmentName,
+			user.EventName,
+			user.InstanceName,
+			user.Description,
+			strconv.FormatBool(isPersonalQr),
+			user.RegisteredAt.String(),
+			verifiedAt,
+			user.Status,
+		}
+
+		if err := writer.Write(row); err != nil {
+			return nil, "", err
+		}
+	}
+
+	writer.Flush()
+	if err := writer.Error(); err != nil {
+		return nil, "", err
+	}
+
+	return buffer.Bytes(), "text/csv", nil
 }

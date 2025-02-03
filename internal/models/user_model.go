@@ -399,6 +399,10 @@ type (
 )
 
 type (
+	GetAllUserCursor struct {
+		ID        int
+		CreatedAt time.Time
+	}
 	GetAllUserDBOutput struct {
 		ID            int
 		CommunityID   string

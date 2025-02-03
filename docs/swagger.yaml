@@ -25,6 +25,8 @@ definitions:
     properties:
       communityId:
         type: string
+      description:
+        type: string
       eventCode:
         maxLength: 7
         minLength: 7
@@ -59,6 +61,8 @@ definitions:
   models.CreateEventRegistrationRecordResponse:
     properties:
       communityId:
+        type: string
+      description:
         type: string
       eventCode:
         type: string
@@ -1344,6 +1348,7 @@ definitions:
   models.Pagination:
     properties:
       data: {}
+      details: {}
       pagination: {}
       type:
         example: collection

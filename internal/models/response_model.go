@@ -22,6 +22,14 @@ type ListWithDetail struct {
 
 type Pagination struct {
 	Type           string      `json:"type" example:"collection"`
+	Details        interface{} `json:"details,omitempty"`
+	Data           interface{} `json:"data"`
+	PaginationInfo interface{} `json:"pagination"`
+}
+
+type CursorPagination[T any] struct {
+	Type           string      `json:"type" example:"collection"`
+	Details        interface{} `json:"details,omitempty"`
 	Data           interface{} `json:"data"`
 	PaginationInfo interface{} `json:"pagination"`
 }
