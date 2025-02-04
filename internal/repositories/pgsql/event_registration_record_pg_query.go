@@ -232,7 +232,7 @@ func BuildGetRegisteredQuery(param models.GetAllRegisteredCursorParam) (string, 
 	if param.NameSearch != "" {
 		//queryBuilder.WriteString(" AND er.name ILIKE ?")
 		queryBuilder.WriteString(" AND (er.name ILIKE ? OR er.description ILIKE ?)")
-		args = append(args, param.NameSearch, param.NameSearch)
+		args = append(args, "%"+param.NameSearch+"%", "%"+param.NameSearch+"%")
 	}
 	if param.CampusCode != "" {
 		queryBuilder.WriteString(" AND u.campus_code = ?")
@@ -248,13 +248,13 @@ func BuildGetRegisteredQuery(param models.GetAllRegisteredCursorParam) (string, 
 		args = append(args, intCool)
 	}
 
+	isForward := param.Direction != "prev"
 	if param.Cursor != "" {
 		createdCursor, err := cursor.DecryptCursorForGetRegisteredRecord(param.Cursor)
 		if err != nil {
 			return "", nil, err
 		}
 
-		isForward := param.Direction != "prev"
 		operator := "<"
 		if !isForward {
 			operator = ">"
@@ -266,11 +266,13 @@ func BuildGetRegisteredQuery(param models.GetAllRegisteredCursorParam) (string, 
 	}
 
 	// Add ordering - Note the direction changes based on pagination direction
-	if param.Direction == "prev" {
-		queryBuilder.WriteString(" ORDER BY er.created_at ASC, er.id ASC")
-	} else {
-		queryBuilder.WriteString(" ORDER BY er.created_at DESC, er.id DESC")
-	}
+	// Add ordering
+	queryBuilder.WriteString(" ORDER BY er.created_at DESC, er.id DESC")
+	//if isForward {
+	//	queryBuilder.WriteString(" ORDER BY er.created_at DESC, er.id DESC")
+	//} else {
+	//	queryBuilder.WriteString(" ORDER BY er.created_at ASC, er.id ASC")
+	//}
 
 	// Add limit
 	queryBuilder.WriteString(" LIMIT ?")

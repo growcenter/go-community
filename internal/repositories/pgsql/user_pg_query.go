@@ -254,13 +254,13 @@ func BuildQueryGetAllUser(param models.GetAllUserCursorParam) (string, []interfa
 		}
 	}
 
+	isForward := param.Direction != "prev"
 	if param.Cursor != "" {
 		createdCursor, err := cursor.DecryptCursorForGetAllUser(param.Cursor)
 		if err != nil {
 			return "", nil, err
 		}
 
-		isForward := param.Direction != "prev"
 		operator := "<"
 		if !isForward {
 			operator = ">"
@@ -272,11 +272,12 @@ func BuildQueryGetAllUser(param models.GetAllUserCursorParam) (string, []interfa
 	}
 
 	// Add ordering - Note the direction changes based on pagination direction
-	if param.Direction == "prev" {
-		queryBuilder.WriteString(" ORDER BY u.created_at ASC, u.id ASC")
-	} else {
-		queryBuilder.WriteString(" ORDER BY u.created_at DESC, u.id DESC")
-	}
+	queryBuilder.WriteString(" ORDER BY er.created_at DESC, er.id DESC")
+	//if param.Direction == "prev" {
+	//	queryBuilder.WriteString(" ORDER BY u.created_at ASC, u.id ASC")
+	//} else {
+	//	queryBuilder.WriteString(" ORDER BY u.created_at DESC, u.id DESC")
+	//}
 
 	// Add limit
 	queryBuilder.WriteString(" LIMIT ?")
