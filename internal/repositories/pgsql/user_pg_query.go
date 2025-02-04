@@ -272,7 +272,7 @@ func BuildQueryGetAllUser(param models.GetAllUserCursorParam) (string, []interfa
 	}
 
 	// Add ordering - Note the direction changes based on pagination direction
-	queryBuilder.WriteString(" ORDER BY er.created_at DESC, er.id DESC")
+	queryBuilder.WriteString(" ORDER BY u.created_at DESC, u.id DESC")
 	//if param.Direction == "prev" {
 	//	queryBuilder.WriteString(" ORDER BY u.created_at ASC, u.id ASC")
 	//} else {
