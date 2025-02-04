@@ -250,22 +250,21 @@ func (errr *eventRegistrationRecordRepository) GetAllWithCursor(ctx context.Cont
 	}
 
 	if len(records) > 0 {
-		// If we got more records than requested, we have a next page
 		hasMore := len(records) > param.Limit
+		isForward := param.Direction != "prev" && param.Cursor != ""
+		isBackward := !isForward && param.Direction == "prev" && param.Cursor != ""
+
 		if hasMore {
 			records = records[:param.Limit] // Remove the extra record
 		}
 
-		// For "prev" direction, we need to reverse the records
-		if param.Direction == "prev" {
-			//reverseRecords(records)
+		if isBackward {
 			for i, j := 0, len(records)-1; i < j; i, j = i+1, j-1 {
 				records[i], records[j] = records[j], records[i]
 			}
 		}
 
-		// Generate next cursor from last record if we have more
-		if hasMore {
+		if isBackward || hasMore {
 			lastRecord := records[len(records)-1]
 			nextCursor := models.GetAllRegisteredRecordCursor{
 				CreatedAt: lastRecord.CreatedAt,
@@ -274,8 +273,7 @@ func (errr *eventRegistrationRecordRepository) GetAllWithCursor(ctx context.Cont
 			next = cursor.EncryptCursorFromStruct(nextCursor)
 		}
 
-		// Only generate prevCursor if we're not at the first page
-		if param.Cursor != "" {
+		if isForward || (hasMore && isBackward) {
 			firstRecord := records[0]
 			prevCursor := models.GetAllRegisteredRecordCursor{
 				CreatedAt: firstRecord.CreatedAt,
@@ -283,7 +281,6 @@ func (errr *eventRegistrationRecordRepository) GetAllWithCursor(ctx context.Cont
 			}
 			prev = cursor.EncryptCursorFromStruct(prevCursor)
 		}
-
 	}
 
 	return records, prev, next, total, nil
