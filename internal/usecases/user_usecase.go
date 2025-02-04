@@ -950,14 +950,30 @@ func (uu *userUsecase) GetUserProfile(ctx context.Context, communityId string, v
 		return nil, models.ErrorUserNotFound
 	}
 
-	campusName, campus := uu.cfg.Campus[strings.ToLower(output[0].CampusCode)]
-	if !campus {
-		return nil, models.ErrorDataNotFound
+	var campusName string
+	if output[0].CampusCode != "" {
+		value, campus := uu.cfg.Campus[strings.ToLower(output[0].CampusCode)]
+		if !campus {
+			return nil, models.ErrorDataNotFound
+		}
+		campusName = value
 	}
 
 	location, _ := time.LoadLocation("Asia/Jakarta")
-	dob := output[0].DateOfBirth.In(location)
-	dom := output[0].DateOfMarriage.In(location)
+
+	var dob time.Time
+	if output[0].DateOfBirth != nil {
+		dob = output[0].DateOfBirth.In(location)
+	} else {
+		dob = time.Time{}
+	}
+
+	var dom time.Time
+	if output[0].DateOfMarriage != nil {
+		dom = output[0].DateOfMarriage.In(location)
+	} else {
+		dom = time.Time{}
+	}
 
 	var departmentName string
 	if output[0].Department != "" {
@@ -987,7 +1003,14 @@ func (uu *userUsecase) GetUserProfile(ctx context.Context, communityId string, v
 		return nil, err
 	}
 
-	userRoles := common.CombineMapStrings(rolesInUserType, output[0].Roles)
+	var userRoles []string
+	if output[0].Roles != nil {
+		combinedRoles := common.CombineMapStrings(rolesInUserType, output[0].Roles)
+		userRoles = combinedRoles
+	} else {
+		userRoles = rolesInUserType
+	}
+
 	roles, err := uu.rr.GetByArray(ctx, userRoles)
 	if err != nil {
 		return nil, err

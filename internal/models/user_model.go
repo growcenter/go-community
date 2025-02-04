@@ -754,10 +754,10 @@ type (
 		Status           string                         `json:"status"`
 	}
 	GetRelationAtProfileResponse struct {
-		Type        string `json:"type"`
-		Name        string `json:"name"`
-		CommunityId string `json:"communityId"`
-		Relation    string `json:"relationType"`
+		Type        string `json:"type,omitempty"`
+		Name        string `json:"name,omitempty"`
+		CommunityId string `json:"communityId,omitempty"`
+		Relation    string `json:"relationType,omitempty"`
 	}
 )
 
