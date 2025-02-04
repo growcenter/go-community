@@ -107,7 +107,7 @@ var (
 				left join user_relations ur on ur.community_id = u.community_id
 				left join users ru on ru.community_id = ur.related_community_id
 				left join cools c on c.id = u.cool_id
-			WHERE ur.community_id = ?
+			WHERE u.community_id = ?
 			group by u.community_id, u.name, u.phone_number, u.email, u.roles, u.status, u.gender, coalesce(u.address, ''), u.campus_code, u.cool_id, c.name, u.department, u.date_of_birth, coalesce(u.place_of_birth, ''), u.marital_status, u.date_of_marriage, coalesce(u.employment_status, ''), coalesce(u.education_level, ''), coalesce(u.kkj_number, ''), coalesce(u.jemaat_id, ''), u.is_baptized, u.is_kom100, u.created_at, u.updated_at, u.user_types, ru.community_id, ru.name, ur.relationship_type
 	`
 
