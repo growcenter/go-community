@@ -239,16 +239,16 @@ func BuildQueryGetAllUser(param models.GetAllUserCursorParam) (string, []interfa
 		switch param.SearchBy {
 		case "name":
 			queryBuilder.WriteString(" AND u.name ILIKE ?")
-			args = append(args, param.Search)
+			args = append(args, "%"+param.Search+"%")
 		case "phoneNumber":
 			queryBuilder.WriteString(" AND u.phone_number ILIKE ?")
-			args = append(args, param.Search)
+			args = append(args, "%"+param.Search+"%")
 		case "email":
 			queryBuilder.WriteString(" AND u.email ILIKE ?")
-			args = append(args, param.Search)
+			args = append(args, "%"+param.Search+"%")
 		case "communityId":
 			queryBuilder.WriteString(" AND u.community_id ILIKE ?")
-			args = append(args, param.Search)
+			args = append(args, "%"+param.Search+"%")
 		default:
 			return "", nil, fmt.Errorf("invalid searchBy: %s, must be 'communityId', 'email', 'phoneNumber', or 'name'", param.SearchBy)
 		}
