@@ -19,6 +19,7 @@ CREATE TABLE "events" (
     "register_end_at" TIMESTAMPTZ,
     "location_type" varchar(6) not null,
     "location_name" varchar(255) NOT NULL,
+    "image_links" TEXT[],
     "status" varchar(8) NOT NULL,
     "created_at" TIMESTAMP NOT NULL DEFAULT now(),
     "updated_at" TIMESTAMP NOT NULL DEFAULT now(),

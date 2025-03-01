@@ -3220,6 +3220,12 @@
                     "type": "string",
                     "example": ""
                 },
+                "imagesLinks": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
                 "isRecurring": {
                     "type": "boolean",
                     "example": true
@@ -3271,6 +3277,12 @@
                 },
                 "endAt": {
                     "type": "string"
+                },
+                "imageLinks": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
                 },
                 "instances": {
                     "type": "array",
@@ -3434,6 +3446,12 @@
                 "eventStartAt": {
                     "type": "string",
                     "example": ""
+                },
+                "imageLinks": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
                 },
                 "instances": {
                     "type": "array",

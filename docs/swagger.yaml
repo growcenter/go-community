@@ -766,6 +766,10 @@ definitions:
       eventStartAt:
         example: ""
         type: string
+      imagesLinks:
+        items:
+          type: string
+        type: array
       isRecurring:
         example: true
         type: boolean
@@ -803,6 +807,10 @@ definitions:
         type: string
       endAt:
         type: string
+      imageLinks:
+        items:
+          type: string
+        type: array
       instances:
         items:
           $ref: '#/definitions/models.InstancesForRegisteredRecordsResponse'
@@ -913,6 +921,10 @@ definitions:
       eventStartAt:
         example: ""
         type: string
+      imageLinks:
+        items:
+          type: string
+        type: array
       instances:
         items:
           $ref: '#/definitions/models.GetInstancesByEventCodeResponse'

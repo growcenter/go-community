@@ -301,6 +301,7 @@ func (eu *eventUsecase) GetAll(ctx context.Context, roles []string, userTypes []
 			RegisterStartAt:     e.EventRegisterStartAt,
 			RegisterEndAt:       e.EventRegisterEndAt,
 			TotalRemainingSeats: e.TotalRemainingSeats,
+			ImagesLinks:         e.EventImageLinks,
 			AvailabilityStatus:  availableStatus,
 		}
 	}
@@ -517,6 +518,7 @@ func (eu *eventUsecase) GetByCode(ctx context.Context, code string, roles []stri
 		RegisterEndAt:      event.EventRegisterEndAt,
 		LocationType:       event.EventLocationType,
 		LocationName:       event.EventLocationName,
+		ImageLinks:         event.EventImageLinks,
 		AvailabilityStatus: availableStatus,
 	}, instancesRes, nil
 }
@@ -543,6 +545,7 @@ func (eu *eventUsecase) GetRegistered(ctx context.Context, communityIdOrigin str
 			EndAt:              r.EventEndAt,
 			LocationType:       r.EventLocationType,
 			LocationName:       r.EventLocationName,
+			ImageLinks:         r.EventImageLinks,
 			Status:             r.EventStatus,
 		}
 
