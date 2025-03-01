@@ -31,6 +31,7 @@ type Event struct {
 	RegisterEndAt      time.Time
 	LocationType       string
 	LocationName       string
+	ImageLinks         pq.StringArray `gorm:"type:text[]"`
 	Status             string
 	CreatedAt          time.Time
 	UpdatedAt          time.Time
@@ -123,6 +124,7 @@ func (e *GetAllEventsResponse) ToResponse() GetAllEventsResponse {
 		RegisterStartAt:    e.RegisterStartAt,
 		RegisterEndAt:      e.RegisterEndAt,
 		LocationType:       e.LocationType,
+		ImagesLinks:        e.ImagesLinks,
 		AvailabilityStatus: e.AvailabilityStatus,
 	}
 }
@@ -146,6 +148,7 @@ type (
 		InstanceTotalSeats   int
 		TotalRemainingSeats  int            `json:"total_remaining_seats"`
 		EventStatus          string         `json:"event_status"`
+		EventImageLinks      pq.StringArray `gorm:"type:text[]"`
 		InstancesData        pq.StringArray `gorm:"type:text[]"`
 	}
 
@@ -166,6 +169,7 @@ type (
 		RegisterStartAt     time.Time `json:"registerStartAt,omitempty" example:""`
 		RegisterEndAt       time.Time `json:"registerEndAt,omitempty" example:""`
 		TotalRemainingSeats int       `json:"totalRemainingSeats" example:"2"`
+		ImagesLinks         []string  `json:"imagesLinks"`
 		AvailabilityStatus  string    `json:"availabilityStatus,omitempty" example:"available"`
 	}
 )
@@ -190,6 +194,7 @@ func (e *GetEventByCodeResponse) ToResponse() GetEventByCodeResponse {
 		RegisterEndAt:      e.RegisterEndAt,
 		LocationType:       e.LocationType,
 		LocationName:       e.LocationName,
+		ImageLinks:         e.ImageLinks,
 		AvailabilityStatus: e.AvailabilityStatus,
 		Instances:          e.Instances,
 	}
@@ -217,6 +222,7 @@ type (
 		EventStatus             string
 		InstanceTotalSeats      int
 		TotalRemainingSeats     int            `json:"total_remaining_seats"`
+		EventImageLinks         pq.StringArray `gorm:"type:text[]"`
 		InstanceRegisterFlow    pq.StringArray `gorm:"type:text[]"`
 		InstancesData           pq.StringArray `gorm:"type:text[]"`
 	}
@@ -265,6 +271,7 @@ type (
 		RegisterEndAt      time.Time                         `json:"registerEndAt,omitempty" example:""`
 		LocationType       string                            `json:"locationType" example:"offline"`
 		LocationName       string                            `json:"locationName" example:"PIOT 6 Lt. 6"`
+		ImageLinks         []string                          `json:"imageLinks"`
 		AvailabilityStatus string                            `json:"availabilityStatus,omitempty" example:"available"`
 		Instances          []GetInstancesByEventCodeResponse `json:"instances,omitempty"`
 	}
@@ -301,6 +308,7 @@ type (
 		EventEndAt                     time.Time
 		EventLocationType              string
 		EventLocationName              string
+		EventImageLinks                pq.StringArray `gorm:"type:text[]"`
 		EventStatus                    string
 		InstanceCode                   string
 		InstanceTitle                  string
@@ -333,6 +341,7 @@ type (
 		EndAt              time.Time                               `json:"endAt"`
 		LocationType       string                                  `json:"locationType"`
 		LocationName       string                                  `json:"locationName"`
+		ImageLinks         []string                                `json:"imageLinks"`
 		Status             string                                  `json:"status"`
 		Instances          []InstancesForRegisteredRecordsResponse `json:"instances"`
 	}

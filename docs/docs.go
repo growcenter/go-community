@@ -3231,6 +3231,12 @@ const docTemplate = `{
                     "type": "string",
                     "example": ""
                 },
+                "imagesLinks": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
                 "isRecurring": {
                     "type": "boolean",
                     "example": true
@@ -3282,6 +3288,12 @@ const docTemplate = `{
                 },
                 "endAt": {
                     "type": "string"
+                },
+                "imageLinks": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
                 },
                 "instances": {
                     "type": "array",
@@ -3445,6 +3457,12 @@ const docTemplate = `{
                 "eventStartAt": {
                     "type": "string",
                     "example": ""
+                },
+                "imageLinks": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
                 },
                 "instances": {
                     "type": "array",
