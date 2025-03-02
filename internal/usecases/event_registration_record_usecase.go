@@ -601,6 +601,8 @@ func (erru *eventRegistrationRecordUsecase) GetAllCursor(ctx context.Context, pa
 			Name:              v.Name,
 			Identifier:        v.Identifier,
 			CommunityId:       v.CommunityId,
+			Email:             v.Email,
+			PhoneNumber:       v.PhoneNumber,
 			CampusCode:        v.CampusCode,
 			CampusName:        campusName,
 			CoolId:            v.CoolId,
@@ -676,7 +678,7 @@ func (erru *eventRegistrationRecordUsecase) downloadXLSX(data []models.GetDownlo
 	}
 
 	// Define headers
-	headers := []string{"ID", "Name", "Email/Phone Number", "Community ID", "Campus", "COOL", "Department", "Event", "Event Instance", "Description", "Is Using QR", "Register At", "Verified At", "Status"}
+	headers := []string{"ID", "Name", "Email/Phone Number", "Community ID", "Email", "Phone Number", "Campus", "COOL", "Department", "Event", "Event Instance", "Description", "Is Using QR", "Register At", "Verified At", "Status"}
 
 	// Write headers to the first row
 	for i, header := range headers {
@@ -722,16 +724,18 @@ func (erru *eventRegistrationRecordUsecase) downloadXLSX(data []models.GetDownlo
 		f.SetCellValue(sheetName, fmt.Sprintf("B%d", row), user.Name)
 		f.SetCellValue(sheetName, fmt.Sprintf("C%d", row), user.Identifier)
 		f.SetCellValue(sheetName, fmt.Sprintf("D%d", row), user.CommunityId)
-		f.SetCellValue(sheetName, fmt.Sprintf("E%d", row), campusName)
-		f.SetCellValue(sheetName, fmt.Sprintf("F%d", row), user.CoolName)
-		f.SetCellValue(sheetName, fmt.Sprintf("G%d", row), departmentName)
-		f.SetCellValue(sheetName, fmt.Sprintf("H%d", row), user.EventName)
-		f.SetCellValue(sheetName, fmt.Sprintf("I%d", row), user.InstanceName)
-		f.SetCellValue(sheetName, fmt.Sprintf("J%d", row), user.Description)
-		f.SetCellValue(sheetName, fmt.Sprintf("K%d", row), isPersonalQr)
-		f.SetCellValue(sheetName, fmt.Sprintf("L%d", row), user.RegisteredAt)
-		f.SetCellValue(sheetName, fmt.Sprintf("M%d", row), verifiedAt)
-		f.SetCellValue(sheetName, fmt.Sprintf("N%d", row), user.Status)
+		f.SetCellValue(sheetName, fmt.Sprintf("E%d", row), user.Email)
+		f.SetCellValue(sheetName, fmt.Sprintf("F%d", row), user.PhoneNumber)
+		f.SetCellValue(sheetName, fmt.Sprintf("G%d", row), campusName)
+		f.SetCellValue(sheetName, fmt.Sprintf("H%d", row), user.CoolName)
+		f.SetCellValue(sheetName, fmt.Sprintf("I%d", row), departmentName)
+		f.SetCellValue(sheetName, fmt.Sprintf("J%d", row), user.EventName)
+		f.SetCellValue(sheetName, fmt.Sprintf("K%d", row), user.InstanceName)
+		f.SetCellValue(sheetName, fmt.Sprintf("L%d", row), user.Description)
+		f.SetCellValue(sheetName, fmt.Sprintf("M%d", row), isPersonalQr)
+		f.SetCellValue(sheetName, fmt.Sprintf("N%d", row), user.RegisteredAt)
+		f.SetCellValue(sheetName, fmt.Sprintf("O%d", row), verifiedAt)
+		f.SetCellValue(sheetName, fmt.Sprintf("P%d", row), user.Status)
 	}
 
 	buffer, err := f.WriteToBuffer()
@@ -747,7 +751,7 @@ func (erru *eventRegistrationRecordUsecase) downloadCSV(data []models.GetDownloa
 	writer := csv.NewWriter(buffer)
 
 	// Define headers
-	headers := []string{"ID", "Name", "Email/Phone Number", "Community ID", "Campus", "COOL", "Department", "Event", "Event Instance", "Description", "Is Using QR", "Register At", "Verified At", "Status"}
+	headers := []string{"ID", "Name", "Email/Phone Number", "Community ID", "Email", "Phone Number", "Campus", "COOL", "Department", "Event", "Event Instance", "Description", "Is Using QR", "Register At", "Verified At", "Status"}
 	if err := writer.Write(headers); err != nil {
 		return nil, "", err
 	}
@@ -787,6 +791,8 @@ func (erru *eventRegistrationRecordUsecase) downloadCSV(data []models.GetDownloa
 			user.Name,
 			user.Identifier,
 			user.CommunityId,
+			user.Email,
+			user.PhoneNumber,
 			campusName,
 			user.CoolName,
 			departmentName,

@@ -174,6 +174,8 @@ type (
 		Name              string
 		Identifier        string
 		CommunityId       string
+		Email             string
+		PhoneNumber       string
 		CampusCode        string
 		Department        string
 		CoolId            int
@@ -211,6 +213,8 @@ type (
 		Name              string    `json:"name"`
 		Identifier        string    `json:"identifier"`
 		CommunityId       string    `json:"communityId"`
+		Email             string    `json:"email"`
+		PhoneNumber       string    `json:"phoneNumber"`
 		CampusCode        string    `json:"campusCode"`
 		CampusName        string    `json:"campusName"`
 		DepartmentCode    string    `json:"departmentCode"`
@@ -242,6 +246,8 @@ type (
 		Name              string
 		Identifier        string
 		CommunityId       string
+		Email             string
+		PhoneNumber       string
 		CampusCode        string
 		Department        string
 		CoolId            int

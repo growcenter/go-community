@@ -103,6 +103,8 @@ var (
 			er.name,
 			er.identifier,
 			er.community_id,
+			coalesce(u.email, '') AS email,
+			coalesce(u.phone_number, '') AS phone_number,
 			coalesce(u.campus_code, '') AS campus_code,
 			coalesce(u.department, '') AS department,
 			coalesce(u.cool_id, 0) AS cool_id,
@@ -126,7 +128,7 @@ var (
         FROM event_registration_records er
         	LEFT JOIN events e ON er.event_code = e.code
 			LEFT JOIN event_instances i ON er.instance_code = i.code
-			LEFT JOIN users u ON er.community_id_origin = u.community_id
+			LEFT JOIN users u ON er.community_id = u.community_id
 			LEFT JOIN cools c ON u.cool_id = c.id
         WHERE er.deleted_at IS NULL		
 	`
@@ -146,6 +148,8 @@ var (
 			er.name,
 			er.identifier,
 			er.community_id,
+			coalesce(u.email, '') AS email,
+			coalesce(u.phone_number, '') AS phone_number,
 			coalesce(u.campus_code, '') AS campus_code,
 			coalesce(u.department, '') AS department,
 			coalesce(u.cool_id, 0) AS cool_id,
@@ -169,7 +173,7 @@ var (
         FROM event_registration_records er
         	LEFT JOIN events e ON er.event_code = e.code
 			LEFT JOIN event_instances i ON er.instance_code = i.code
-			LEFT JOIN users u ON er.community_id_origin = u.community_id
+			LEFT JOIN users u ON er.community_id = u.community_id
 			LEFT JOIN cools c ON u.cool_id = c.id
         WHERE er.deleted_at IS NULL	
 	`
