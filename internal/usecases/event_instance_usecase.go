@@ -63,13 +63,6 @@ func (eiu *eventInstanceUsecase) Create(ctx context.Context, request models.Crea
 	instanceCode := fmt.Sprintf("%s-%s", request.EventCode, generator.GenerateHashCode(code, 7))
 
 	if instanceStart.After(instanceEnd) || instanceRegisterStart.After(instanceRegisterEnd) {
-		if instanceStart.After(instanceEnd) {
-
-		}
-
-		if instanceRegisterStart.After(instanceRegisterEnd) {
-
-		}
 		return nil, models.ErrorStartDateLater
 	}
 
@@ -115,6 +108,17 @@ func (eiu *eventInstanceUsecase) Create(ctx context.Context, request models.Crea
 
 	if err := eiu.r.EventInstance.Create(ctx, &instance); err != nil {
 		return nil, err
+	}
+
+	if request.IsUpdateEventTime {
+		eventExist.EventStartAt = instanceStart
+		eventExist.EventEndAt = instanceEnd
+		eventExist.RegisterStartAt = instanceRegisterStart
+		eventExist.RegisterEndAt = instanceRegisterEnd
+
+		if err := eiu.r.Event.Update(ctx, &eventExist); err != nil {
+			return nil, err
+		}
 	}
 
 	res := models.CreateInstanceResponse{
