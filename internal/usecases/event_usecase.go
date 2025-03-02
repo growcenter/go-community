@@ -156,13 +156,6 @@ func (eu *eventUsecase) Create(ctx context.Context, request models.CreateEventRe
 		instanceCode := fmt.Sprintf("%s-%s", eventCode, generator.GenerateHashCode(code, 7))
 
 		if instanceStart.After(instanceEnd) || instanceRegisterStart.After(instanceRegisterEnd) {
-			if instanceStart.After(instanceEnd) {
-
-			}
-
-			if instanceRegisterStart.After(instanceRegisterEnd) {
-
-			}
 			return nil, models.ErrorStartDateLater
 		}
 
@@ -282,6 +275,10 @@ func (eu *eventUsecase) GetAll(ctx context.Context, roles []string, userTypes []
 		availableStatus, err := models.DefineAvailabilityStatus(e)
 		if err != nil {
 			return nil, err
+		}
+
+		if e.InstanceTotalSeats == 0 {
+			e.TotalRemainingSeats = 0
 		}
 
 		list[i] = models.GetAllEventsResponse{

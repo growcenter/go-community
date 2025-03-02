@@ -144,5 +144,6 @@ type (
 		RegisterFlow      string `json:"registerFlow" validate:"oneof=personal-qr event-qr both-qr none"`
 		CheckType         string `json:"checkType" validate:"omitempty,oneof=check-in check-out both none"`
 		TotalSeats        int    `json:"totalSeats"`
+		IsUpdateEventTime bool   `json:"isUpdateEventTime"`
 	}
 )

@@ -245,6 +245,8 @@ definitions:
         type: boolean
       isOnePerTicket:
         type: boolean
+      isUpdateEventTime:
+        type: boolean
       locationName:
         type: string
       locationType:

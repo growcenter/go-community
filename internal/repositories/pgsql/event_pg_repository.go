@@ -17,6 +17,7 @@ type EventRepository interface {
 	GetRegistered(ctx context.Context, communityIdOrigin string) (output []models.GetAllRegisteredUserDBOutput, err error)
 	GetTitles(ctx context.Context) (output []models.GetEventTitlesDBOutput, err error)
 	GetSummary(ctx context.Context, code string) (output *models.GetEventSummaryDBOutput, err error)
+	Update(ctx context.Context, event *models.Event) (err error)
 }
 
 type eventRepository struct {
@@ -136,4 +137,12 @@ func (er *eventRepository) GetSummary(ctx context.Context, code string) (output 
 	}
 
 	return output, nil
+}
+
+func (er *eventRepository) Update(ctx context.Context, event *models.Event) (err error) {
+	defer func() {
+		LogRepository(ctx, err)
+	}()
+
+	return er.db.Save(&event).Error
 }

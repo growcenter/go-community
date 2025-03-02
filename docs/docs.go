@@ -2505,6 +2505,9 @@ const docTemplate = `{
                 "isOnePerTicket": {
                     "type": "boolean"
                 },
+                "isUpdateEventTime": {
+                    "type": "boolean"
+                },
                 "locationName": {
                     "type": "string"
                 },
