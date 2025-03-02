@@ -77,7 +77,7 @@ func (erru *eventRegistrationRecordUsecase) createAtomic(ctx context.Context, re
 		if err != nil {
 			return nil, err
 		}
-		name = nameRegister.Name
+		name = common.StringTrimSpaceAndUpper(nameRegister.Name)
 	} else {
 		registerStatus = models.MapRegisterStatus[models.REGISTER_STATUS_PENDING]
 		communityIdOrigin = value.CommunityId
@@ -143,7 +143,11 @@ func (erru *eventRegistrationRecordUsecase) createAtomic(ctx context.Context, re
 				return models.ErrorRegisterQuotaNotAvailable
 			}
 
-			if (instance.TotalRemainingSeats - instance.BookedSeats) <= 0 {
+			if (instance.TotalRemainingSeats - countTotalRegistrants) <= 0 {
+				return models.ErrorRegisterQuotaNotAvailable
+			}
+
+			if (instance.TotalSeats - instance.BookedSeats) < 0 {
 				return models.ErrorRegisterQuotaNotAvailable
 			}
 		}
