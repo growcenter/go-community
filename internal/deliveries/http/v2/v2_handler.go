@@ -20,6 +20,4 @@ func NewV2Handler(g *echo.Group, u *usecases.Usecases, c *config.Configuration, 
 	NewRoleHandler(v2, u)
 	NewConfigHandler(v2, c)
 	NewCoolHandler(v2, u)
-
-	//v1noGuard := g.Group("/v1")
 }
