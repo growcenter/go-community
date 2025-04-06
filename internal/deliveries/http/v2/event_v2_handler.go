@@ -21,8 +21,9 @@ func NewEventHandler(api *echo.Group, u *usecases.Usecases, c *config.Configurat
 
 	// Define campus routes
 	endpoint := api.Group("/events")
+
 	endpointUserAuth := endpoint.Group("")
-	endpointUserAuth.Use(middleware.UserV2Middleware(c))
+	endpointUserAuth.Use(middleware.UserMiddleware(c, u, nil))
 	endpointUserAuth.GET("", handler.GetAll)
 	endpointUserAuth.GET("/:code", handler.GetByCode)
 	endpointUserAuth.POST("/registers", handler.Register)
@@ -31,7 +32,7 @@ func NewEventHandler(api *echo.Group, u *usecases.Usecases, c *config.Configurat
 	endpointUserAuth.GET("/attendance", handler.GetEventAttendance)
 
 	endpointUserInternal := api.Group("/internal/events")
-	endpointUserInternal.Use(middleware.RoleUserMiddleware(c, []string{"event-internal-view", "event-internal-edit"}))
+	endpointUserInternal.Use(middleware.UserMiddleware(c, u, []string{"event-internal-view", "event-internal-edit"}))
 	endpointUserInternal.POST("", handler.Create)
 	endpointUserInternal.GET("", handler.GetTitles)
 	endpointUserInternal.GET("/:eventCode/summary", handler.GetSummary)
@@ -51,7 +52,7 @@ func NewEventHandler(api *echo.Group, u *usecases.Usecases, c *config.Configurat
 // @Security BearerAuth
 // @Success 201 {object} models.CreateEventResponse{instances=models.CreateInstanceResponse} "Response indicates that the request succeeded and the resources has been fetched and transmitted in the message body"
 // @Failure 400 {object} models.ErrorResponse "Bad Request"
-// @Failure 422 {object} models.ErrorValidationResponse{errors=models.ErrorValidateResponse} "Validation error. This can happen if there is an error validation while create account"
+// @Failure 422 {object} models.ErrorResponse{errors=models.ErrorValidateResponse} "Validation error. This can happen if there is an error validation while create account"
 // @Router /v2/internal/events [post]
 func (eh *EventHandler) Create(ctx echo.Context) error {
 	var request models.CreateEventRequest
@@ -81,7 +82,7 @@ func (eh *EventHandler) Create(ctx echo.Context) error {
 // @Param X-API-Key header string true "mandatory header to access endpoint"
 // @Success 200 {object} models.List{data=[]models.GetAllEventsResponse} "Response indicates that the request succeeded and the resources has been fetched and transmitted in the message body"
 // @Failure 400 {object} models.ErrorResponse "Bad Request"
-// @Failure 422 {object} models.ErrorValidationResponse{errors=models.ErrorValidateResponse} "Validation error. This can happen if there is an error validation while create account"
+// @Failure 422 {object} models.ErrorResponse{errors=models.ErrorValidateResponse} "Validation error. This can happen if there is an error validation while create account"
 // @Router /v2/events [get]
 func (eh *EventHandler) GetAll(ctx echo.Context) error {
 	events, err := eh.usecase.Event.GetAll(ctx.Request().Context(), ctx.Get("roles").([]string), ctx.Get("userTypes").([]string))
@@ -103,7 +104,7 @@ func (eh *EventHandler) GetAll(ctx echo.Context) error {
 // @Security BearerAuth
 // @Success 200 {object} models.ListWithDetail{details=models.GetEventByCodeResponse,data=[]models.GetInstancesByEventCodeResponse} "Response indicates that the request succeeded and the resources has been fetched and transmitted in the message body"
 // @Failure 400 {object} models.ErrorResponse "Bad Request"
-// @Failure 422 {object} models.ErrorValidationResponse{errors=models.ErrorValidateResponse} "Validation error. This can happen if there is an error validation while create account"
+// @Failure 422 {object} models.ErrorResponse{errors=models.ErrorValidateResponse} "Validation error. This can happen if there is an error validation while create account"
 // @Router /v2/events/{code} [get]
 func (eh *EventHandler) GetByCode(ctx echo.Context) error {
 	parameter := models.GetEventByCodeParameter{
@@ -133,7 +134,7 @@ func (eh *EventHandler) GetByCode(ctx echo.Context) error {
 // @Security BearerAuth
 // @Success 201 {object} models.CreateEventRegistrationRecordResponse{registrants=models.CreateOtherEventRegistrationRecordRequest} "Response indicates that the request succeeded and the resources has been fetched and transmitted in the message body"
 // @Failure 400 {object} models.ErrorResponse "Bad Request"
-// @Failure 422 {object} models.ErrorValidationResponse{errors=models.ErrorValidateResponse} "Validation error. This can happen if there is an error validation while create account"
+// @Failure 422 {object} models.ErrorResponse{errors=models.ErrorValidateResponse} "Validation error. This can happen if there is an error validation while create account"
 // @Router /v2/events/registers [post]
 func (eh *EventHandler) Register(ctx echo.Context) error {
 	var request models.CreateEventRegistrationRecordRequest
@@ -168,11 +169,11 @@ func (eh *EventHandler) Register(ctx echo.Context) error {
 // @Security BearerAuth
 // @Success 200 {object} models.GetAllRegisteredUserResponse{instances=[]models.InstancesForRegisteredRecordsResponse} "Response indicates that the request succeeded and the resources has been fetched and transmitted in the message body"
 // @Failure 400 {object} models.ErrorResponse "Bad Request"
-// @Failure 422 {object} models.ErrorValidationResponse{errors=models.ErrorValidateResponse} "Validation error. This can happen if there is an error validation while create account"
+// @Failure 422 {object} models.ErrorResponse{errors=models.ErrorValidateResponse} "Validation error. This can happen if there is an error validation while create account"
 // @Router /v2/events/registers [get]
 func (eh *EventHandler) GetAllRegistered(ctx echo.Context) error {
 	parameter := models.GetAllRegisteredUserParameter{
-		CommunityId: ctx.Get("communityId").(string),
+		CommunityId: ctx.Get("id").(string),
 	}
 
 	if err := validator.Validate(parameter); err != nil {
@@ -198,7 +199,7 @@ func (eh *EventHandler) GetAllRegistered(ctx echo.Context) error {
 // @Param X-API-Key header string true "mandatory header to access endpoint"
 // @Success 201 {object} models.UpdateRegistrationStatusResponse "Response indicates that the request succeeded and the resources has been fetched and transmitted in the message body"
 // @Failure 400 {object} models.ErrorResponse "Bad Request"
-// @Failure 422 {object} models.ErrorValidationResponse{errors=models.ErrorValidateResponse} "Validation error. This can happen if there is an error validation while create account"
+// @Failure 422 {object} models.ErrorResponse{errors=models.ErrorValidateResponse} "Validation error. This can happen if there is an error validation while create account"
 // @Router /v2/events/registers/{id}/status [patch]
 func (eh *EventHandler) UpdateStatus(ctx echo.Context) error {
 	requestParam := models.UpdateRegistrationStatusParameter{
@@ -241,7 +242,7 @@ func (eh *EventHandler) UpdateStatus(ctx echo.Context) error {
 // @Security BearerAuth
 // @Success 200 {object} models.List{data=[]models.GetEventTitlesResponse} "Response indicates that the request succeeded and the resources has been fetched and transmitted in the message body"
 // @Failure 400 {object} models.ErrorResponse "Bad Request"
-// @Failure 422 {object} models.ErrorValidationResponse{errors=models.ErrorValidateResponse} "Validation error. This can happen if there is an error validation while create account"
+// @Failure 422 {object} models.ErrorResponse{errors=models.ErrorValidateResponse} "Validation error. This can happen if there is an error validation while create account"
 // @Router /v2/events/registers [get]
 func (eh *EventHandler) GetTitles(ctx echo.Context) error {
 	res, err := eh.usecase.Event.GetTitles(ctx.Request().Context())
@@ -263,7 +264,7 @@ func (eh *EventHandler) GetTitles(ctx echo.Context) error {
 // @Security BearerAuth
 // @Success 200 {object} models.ListWithDetail{details=models.GetEventSummaryResponse,data=[]models.GetInstanceSummaryResponse} "Response indicates that the request succeeded and the resources has been fetched and transmitted in the message body"
 // @Failure 400 {object} models.ErrorResponse "Bad Request"
-// @Failure 422 {object} models.ErrorValidationResponse{errors=models.ErrorValidateResponse} "Validation error. This can happen if there is an error validation while create account"
+// @Failure 422 {object} models.ErrorResponse{errors=models.ErrorValidateResponse} "Validation error. This can happen if there is an error validation while create account"
 // @Router /v2/internal/events/{eventCode}/summary [get]
 func (eh *EventHandler) GetSummary(ctx echo.Context) error {
 	detail, data, err := eh.usecase.Event.GetSummary(ctx.Request().Context(), ctx.Param("eventCode"))
@@ -285,7 +286,7 @@ func (eh *EventHandler) GetSummary(ctx echo.Context) error {
 // @Security BearerAuth
 // @Success 201 {object} models.CreateInstanceResponse "Response indicates that the request succeeded and the resources has been fetched and transmitted in the message body"
 // @Failure 400 {object} models.ErrorResponse "Bad Request"
-// @Failure 422 {object} models.ErrorValidationResponse{errors=models.ErrorValidateResponse} "Validation error. This can happen if there is an error validation while create account"
+// @Failure 422 {object} models.ErrorResponse{errors=models.ErrorValidateResponse} "Validation error. This can happen if there is an error validation while create account"
 // @Router /v2/internal/events/instances [post]
 func (eh *EventHandler) CreateInstance(ctx echo.Context) error {
 	var request models.CreateInstanceExistingEventRequest

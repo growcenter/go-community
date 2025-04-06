@@ -33,7 +33,7 @@ var (
 	//       e.code, e.title, e.topics, e.location_type, e.allowed_for, e.allowed_roles, e.allowed_users, e.allowed_campuses, e.is_recurring, e.recurrence, e.event_start_at, e.event_end_at, e.register_start_at, e.register_end_at, e.status, ei.is_required, ei.total_seats
 	//`
 
-	queryGetAllEventsByRolesAndStatus = `
+	queryGetAllEventsByRolesAndStatusAndRange1Year = `
 	SELECT
 		e.code AS event_code,
 		e.title AS event_title,
@@ -69,6 +69,48 @@ var (
 				)
 			)
 	  AND e.status = ?
+	  AND e.event_start_at >= DATE_TRUNC('year', CURRENT_DATE) AND e.event_start_at < DATE_TRUNC('year', CURRENT_DATE) + INTERVAL '1 year'
+	GROUP BY
+		e.code, e.title, e.topics, e.location_type, e.allowed_for, e.allowed_roles, e.allowed_users, e.allowed_campuses, e.is_recurring, e.recurrence, e.event_start_at, e.event_end_at, e.register_start_at, e.register_end_at, e.status, e.image_links;
+`
+
+	queryGetAllEventsByRolesAndStatusAndRangeEventTime = `
+	SELECT
+		e.code AS event_code,
+		e.title AS event_title,
+		e.topics AS event_topics,
+		e.location_type AS event_location_type,
+		e.allowed_for AS event_allowed_for,
+		e.allowed_roles AS event_allowed_roles,
+		e.allowed_users AS event_allowed_users,
+		e.allowed_campuses AS event_allowed_campuses,
+		e.is_recurring AS event_is_recurring,
+		e.recurrence AS event_recurrence,
+		e.event_start_at AS event_start_at,
+		e.event_end_at AS event_end_at,
+		e.register_start_at AS event_register_start_at,
+		e.register_end_at AS event_register_end_at,
+		COALESCE(e.image_links, ARRAY[]::TEXT[]) AS event_image_links, -- Default to empty array
+		e.status AS event_status,
+		COALESCE(SUM(COALESCE(ei.total_seats, 0) - COALESCE(ei.booked_seats, 0)), 0) AS total_remaining_seats,
+		COALESCE(MAX(ei.total_seats), 0) AS instance_total_seats, -- Ensure no duplicates here
+		ARRAY_AGG(
+				ROW(ei.total_seats, ei.booked_seats, ei.register_flow)
+		) AS instances_data -- Combine all instance data into a JSON array
+	FROM
+		events e
+			LEFT JOIN
+		event_instances ei ON e.code = ei.event_code
+	WHERE
+		(
+			(e.allowed_roles && ?::text[] OR e.allowed_users && ?::text[])
+				OR
+			(
+				e.allowed_for = 'public'
+				)
+			)
+	  AND e.status = ?
+	  AND (CURRENT_DATE < e.event_start_at OR CURRENT_DATE > e.event_end_at)
 	GROUP BY
 		e.code, e.title, e.topics, e.location_type, e.allowed_for, e.allowed_roles, e.allowed_users, e.allowed_campuses, e.is_recurring, e.recurrence, e.event_start_at, e.event_end_at, e.register_start_at, e.register_end_at, e.status, e.image_links;
 `
@@ -170,3 +212,11 @@ var (
 			e.code, e.title, e.allowed_for, COALESCE(e.allowed_roles, ARRAY[]::TEXT[]), COALESCE(e.allowed_users, ARRAY[]::TEXT[]), COALESCE(e.allowed_campuses, ARRAY[]::TEXT[]), e.status
 `
 )
+
+func BuildQueryGetAllEvents(isNotGeneral bool) string {
+	if isNotGeneral {
+		return queryGetAllEventsByRolesAndStatusAndRange1Year
+	}
+
+	return queryGetAllEventsByRolesAndStatusAndRangeEventTime
+}

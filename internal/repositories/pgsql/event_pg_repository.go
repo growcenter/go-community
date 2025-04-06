@@ -11,7 +11,7 @@ type EventRepository interface {
 	Create(ctx context.Context, event *models.Event) (err error)
 	GetByCode(ctx context.Context, code string) (campus models.Event, err error)
 	GetAll(ctx context.Context) (campus []models.Event, err error)
-	GetAllByRolesAndUserTypes(ctx context.Context, roles []string, uTypes []string, status string) (output []models.GetAllEventsDBOutput, err error)
+	GetAllByRolesAndUserTypes(ctx context.Context, roles []string, uTypes []string, isTypeNotGeneral bool, status string) (output []models.GetAllEventsDBOutput, err error)
 	CheckByCode(ctx context.Context, code string) (dataExist bool, err error)
 	GetOneByCode(ctx context.Context, code string) (output *models.GetEventByCodeDBOutput, err error)
 	GetRegistered(ctx context.Context, communityIdOrigin string) (output []models.GetAllRegisteredUserDBOutput, err error)
@@ -74,17 +74,19 @@ func (er *eventRepository) CheckByCode(ctx context.Context, code string) (dataEx
 	return dataExist, nil
 }
 
-func (er *eventRepository) GetAllByRolesAndUserTypes(ctx context.Context, roles []string, uTypes []string, status string) (output []models.GetAllEventsDBOutput, err error) {
+func (er *eventRepository) GetAllByRolesAndUserTypes(ctx context.Context, roles []string, uTypes []string, isTypeNotGeneral bool, status string) (output []models.GetAllEventsDBOutput, err error) {
 	defer func() {
 		LogRepository(ctx, err)
 	}()
 
-	err = er.db.Raw(queryGetAllEventsByRolesAndStatus, pq.Array(roles), pq.Array(uTypes), status).Scan(&output).Error
+	query := BuildQueryGetAllEvents(isTypeNotGeneral)
+	err = er.db.Raw(query, pq.Array(roles), pq.Array(uTypes), status).Scan(&output).Error
 	if err != nil {
 		return nil, err
 	}
 
 	return output, nil
+
 }
 
 func (er *eventRepository) GetOneByCode(ctx context.Context, code string) (output *models.GetEventByCodeDBOutput, err error) {

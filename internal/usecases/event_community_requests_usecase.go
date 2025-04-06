@@ -14,14 +14,14 @@ type EventCommunityRequestUsecase interface {
 
 type eventCommunityRequestUsecase struct {
 	repo pgsql.EventCommunityRequestRepository
-	eventUserRepo pgsql.EventUserRepository
+	user pgsql.UserRepository
 }
 
 // NewEventCommunityRequestUsecase creates and returns a new eventCommunityRequestUsecase instance
-func NewEventCommunityRequestUsecase(repo pgsql.EventCommunityRequestRepository, eventUserRepo pgsql.EventUserRepository) *eventCommunityRequestUsecase {
+func NewEventCommunityRequestUsecase(repo pgsql.EventCommunityRequestRepository, user pgsql.UserRepository) *eventCommunityRequestUsecase {
 	return &eventCommunityRequestUsecase{
 		repo: repo,
-		eventUserRepo: eventUserRepo,
+		user: user,
 	}
 }
 
@@ -31,17 +31,18 @@ func (ucr *eventCommunityRequestUsecase) Create(ctx context.Context, request *mo
 		LogService(ctx, nil) // You can improve logging here
 	}()
 
-	if request.Email == "" || request.PhoneNumber == ""{
+	if request.Email == "" || request.PhoneNumber == "" {
 		return nil, models.ErrorEmailPhoneNumberEmpty
 	}
 
-	user,err := ucr.eventUserRepo.GetByAccountNumber(ctx,request.AccountNumber)
-	if  err != nil {
+	user, err := ucr.user.GetByCommunityId(ctx, request.AccountNumber)
+	if err != nil {
 		return nil, err
-	} 
+	}
 
 	if user.ID == 0 {
-		return nil, models.ErrorUserNotFound}
+		return nil, models.ErrorUserNotFound
+	}
 
 	// Create the new request tied to the account_number
 	newRequest := models.EventCommunityRequest{
@@ -51,7 +52,7 @@ func (ucr *eventCommunityRequestUsecase) Create(ctx context.Context, request *mo
 		PhoneNumber:        request.PhoneNumber,
 		RequestInformation: request.RequestInformation,
 		IsNeedContact:      request.IsNeedContact,
-		AccountNumber:      request.AccountNumber, 
+		AccountNumber:      request.AccountNumber,
 	}
 
 	// Save the new request to the database

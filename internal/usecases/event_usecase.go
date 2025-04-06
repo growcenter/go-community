@@ -25,16 +25,18 @@ type EventUsecase interface {
 }
 
 type eventUsecase struct {
-	cfg *config.Configuration
-	a   authorization.Auth
-	r   pgsql.PostgreRepositories
+	cfg  *config.Configuration
+	a    authorization.Auth
+	r    pgsql.PostgreRepositories
+	flag FeatureFlagUsecase
 }
 
-func NewEventUsecase(cfg config.Configuration, a authorization.Auth, r pgsql.PostgreRepositories) *eventUsecase {
+func NewEventUsecase(cfg config.Configuration, a authorization.Auth, r pgsql.PostgreRepositories, flag FeatureFlagUsecase) *eventUsecase {
 	return &eventUsecase{
-		cfg: &cfg,
-		a:   a,
-		r:   r,
+		cfg:  &cfg,
+		a:    a,
+		r:    r,
+		flag: flag,
 	}
 }
 
@@ -50,8 +52,6 @@ func (eu *eventUsecase) Create(ctx context.Context, request models.CreateEventRe
 
 	eventStart, _ := time.Parse(time.RFC3339, request.EventStartAt)
 	eventEnd, _ := time.Parse(time.RFC3339, request.EventEndAt)
-	registerStart, _ := time.Parse(time.RFC3339, request.EventStartAt)
-	registerEnd, _ := time.Parse(time.RFC3339, request.EventEndAt)
 
 	code := fmt.Sprintf("event-%d-%d-%d", timeNowNano.UnixNano(), eventStart.UnixNano(), eventEnd.UnixNano())
 	eventCode := generator.GenerateHashCode(code, 7)
@@ -111,7 +111,7 @@ func (eu *eventUsecase) Create(ctx context.Context, request models.CreateEventRe
 		return nil, models.ErrorViolateAllowedForPrivate
 	}
 
-	if eventStart.After(eventEnd) || registerStart.After(registerEnd) {
+	if eventStart.After(eventEnd) {
 		return nil, models.ErrorStartDateLater
 	}
 
@@ -129,8 +129,6 @@ func (eu *eventUsecase) Create(ctx context.Context, request models.CreateEventRe
 		Recurrence:         request.Recurrence,
 		EventStartAt:       eventStart,
 		EventEndAt:         eventEnd,
-		RegisterStartAt:    registerStart,
-		RegisterEndAt:      registerEnd,
 		LocationType:       request.LocationType,
 		LocationName:       request.LocationName,
 		Status:             models.MapStatus[models.STATUS_ACTIVE],
@@ -265,151 +263,82 @@ func (eu *eventUsecase) GetAll(ctx context.Context, roles []string, userTypes []
 		LogService(ctx, err)
 	}()
 
-	events, err := eu.r.Event.GetAllByRolesAndUserTypes(ctx, roles, userTypes, models.MapStatus[models.STATUS_ACTIVE])
+	userTypeInfos, err := eu.r.UserType.GetByArray(ctx, userTypes)
+	if err != nil {
+		return nil, err
+	}
+
+	isNotGeneral := common.ContainsValueInModel(userTypeInfos, func(userType models.UserType) bool {
+		return userType.Category == "internal" || userType.Category == "cool"
+	})
+
+	events, err := eu.r.Event.GetAllByRolesAndUserTypes(ctx, roles, userTypes, isNotGeneral, models.MapStatus[models.STATUS_ACTIVE])
+	if err != nil {
+		return nil, err
+	}
+
+	enableUniversalFlag, err := eu.flag.IsFeatureEnabled(ctx, "event_be_universaleventaccess", "")
 	if err != nil {
 		return nil, err
 	}
 
 	list := make([]models.GetAllEventsResponse, len(events))
+	if !enableUniversalFlag {
+		for i, e := range events {
+			availableStatus, err := models.DefineAvailabilityStatus(e)
+			if err != nil {
+				return nil, err
+			}
+
+			if e.InstanceTotalSeats == 0 {
+				e.TotalRemainingSeats = 0
+			}
+
+			list[i] = models.GetAllEventsResponse{
+				Type:                models.TYPE_EVENT,
+				Code:                e.EventCode,
+				Title:               e.EventTitle,
+				Topics:              e.EventTopics,
+				LocationType:        e.EventLocationType,
+				AllowedFor:          e.EventAllowedFor,
+				AllowedUsers:        e.EventAllowedUsers,
+				AllowedRoles:        e.EventAllowedRoles,
+				AllowedCampuses:     e.EventAllowedCampuses,
+				IsRecurring:         e.EventIsRecurring,
+				Recurrence:          e.EventRecurrence,
+				EventStartAt:        e.EventStartAt,
+				EventEndAt:          e.EventEndAt,
+				RegisterStartAt:     &e.EventRegisterStartAt,
+				RegisterEndAt:       &e.EventRegisterEndAt,
+				TotalRemainingSeats: e.TotalRemainingSeats,
+				ImagesLinks:         e.EventImageLinks,
+				AvailabilityStatus:  availableStatus,
+			}
+		}
+
+		return &list, nil
+	}
+
 	for i, e := range events {
-		availableStatus, err := models.DefineAvailabilityStatus(e)
-		if err != nil {
-			return nil, err
-		}
-
-		if e.InstanceTotalSeats == 0 {
-			e.TotalRemainingSeats = 0
-		}
-
 		list[i] = models.GetAllEventsResponse{
-			Type:                models.TYPE_EVENT,
-			Code:                e.EventCode,
-			Title:               e.EventTitle,
-			Topics:              e.EventTopics,
-			LocationType:        e.EventLocationType,
-			AllowedFor:          e.EventAllowedFor,
-			AllowedUsers:        e.EventAllowedUsers,
-			AllowedRoles:        e.EventAllowedRoles,
-			AllowedCampuses:     e.EventAllowedCampuses,
-			IsRecurring:         e.EventIsRecurring,
-			Recurrence:          e.EventRecurrence,
-			EventStartAt:        e.EventStartAt,
-			EventEndAt:          e.EventEndAt,
-			RegisterStartAt:     e.EventRegisterStartAt,
-			RegisterEndAt:       e.EventRegisterEndAt,
-			TotalRemainingSeats: e.TotalRemainingSeats,
-			ImagesLinks:         e.EventImageLinks,
-			AvailabilityStatus:  availableStatus,
+			Type:            models.TYPE_EVENT,
+			Code:            e.EventCode,
+			Title:           e.EventTitle,
+			Topics:          e.EventTopics,
+			LocationType:    e.EventLocationType,
+			AllowedFor:      e.EventAllowedFor,
+			AllowedUsers:    e.EventAllowedUsers,
+			AllowedRoles:    e.EventAllowedRoles,
+			AllowedCampuses: e.EventAllowedCampuses,
+			EventStartAt:    e.EventStartAt,
+			EventEndAt:      e.EventEndAt,
+			ImagesLinks:     e.EventImageLinks,
 		}
 	}
 
 	return &list, nil
-}
 
-//func (eu *eventUsecase) GetByCode(ctx context.Context, code string, roles []string, userTypes []string) (response *models.GetEventByCodeResponse, err error) {
-//	defer func() {
-//		LogService(ctx, err)
-//	}()
-//
-//	event, err := eu.r.Event.GetOneByCode(ctx, code)
-//	if err != nil {
-//		if errors.Is(err, gorm.ErrRecordNotFound) {
-//			return nil, models.ErrorDataNotFound
-//		}
-//		return nil, err
-//	}
-//
-//	if event.EventCode == "" || event.EventStatus != "active" {
-//		return nil, models.ErrorDataNotFound
-//	}
-//
-//	if event.EventAllowedFor != "public" {
-//		isAllowedRoles := common.CheckOneDataInList(event.EventAllowedRoles, roles)
-//		isAllowedUsers := common.CheckOneDataInList(event.EventAllowedUsers, userTypes)
-//
-//		if !isAllowedRoles && !isAllowedUsers {
-//			return nil, models.ErrorForbiddenRole
-//		}
-//	}
-//
-//	availableStatus, err := models.DefineAvailabilityStatus(event)
-//	if err != nil {
-//		return nil, err
-//	}
-//
-//	switch {
-//	case code != event.EventCode:
-//		return nil, models.ErrorEventNotValid
-//	case availableStatus == models.MapAvailabilityStatus[models.AVAILABILITY_STATUS_UNAVAILABLE]:
-//		return nil, models.ErrorEventNotAvailable
-//	case availableStatus == models.MapAvailabilityStatus[models.AVAILABILITY_STATUS_FULL]:
-//		return nil, models.ErrorRegisterQuotaNotAvailable
-//	case availableStatus == models.MapAvailabilityStatus[models.AVAILABILITY_STATUS_SOON]:
-//		return nil, models.ErrorCannotRegisterYet
-//	}
-//
-//	instances, err := eu.r.EventInstance.GetManyByEventCode(ctx, event.EventCode, models.MapStatus[models.STATUS_ACTIVE])
-//	if err != nil {
-//		return nil, err
-//	}
-//
-//	if instances == nil {
-//		return nil, models.ErrorDataNotFound
-//	}
-//
-//	instancesRes := make([]models.GetInstancesByEventCodeResponse, len(*instances))
-//	for i, p := range *instances {
-//		instanceAvailableStatus, err := models.DefineAvailabilityStatus(p)
-//		if err != nil {
-//			return nil, err
-//		}
-//
-//		instancesRes[i] = models.GetInstancesByEventCodeResponse{
-//			Type:                models.TYPE_EVENT_INSTANCE,
-//			Code:                p.InstanceCode,
-//			Title:               p.InstanceTitle,
-//			Description:         p.InstanceDescription,
-//			InstanceStartAt:     p.InstanceStartAt,
-//			InstanceEndAt:       p.InstanceEndAt,
-//			RegisterStartAt:     p.InstanceRegisterStartAt,
-//			RegisterEndAt:       p.InstanceRegisterEndAt,
-//			LocationType:        p.InstanceLocationType,
-//			LocationName:        p.InstanceLocationName,
-//			MaxPerTransaction:   p.InstanceMaxPerTransaction,
-//			IsOnePerTicket:      p.InstanceIsOnePerTicket,
-//			IsOnePerAccount:     p.InstanceIsOnePerAccount,
-//			RegisterFlow:        p.InstanceRegisterFlow,
-//			CheckType:           p.InstanceCheckType,
-//			TotalSeats:          p.InstanceTotalSeats,
-//			BookedSeats:         p.InstanceBookedSeats,
-//			TotalRemainingSeats: p.TotalRemainingSeats,
-//			AvailabilityStatus:  instanceAvailableStatus,
-//		}
-//	}
-//
-//	return &models.GetEventByCodeResponse{
-//		Type:               models.TYPE_EVENT,
-//		Code:               event.EventCode,
-//		Title:              event.EventTitle,
-//		Topics:             event.EventTopics,
-//		Description:        event.EventDescription,
-//		TermsAndConditions: event.EventTermsAndConditions,
-//		AllowedFor:         event.EventAllowedFor,
-//		AllowedUsers:       event.EventAllowedUsers,
-//		AllowedRoles:       event.EventAllowedRoles,
-//		AllowedCampuses:    event.EventAllowedCampuses,
-//		IsRecurring:        event.EventIsRecurring,
-//		Recurrence:         event.EventRecurrence,
-//		EventStartAt:       event.EventStartAt,
-//		EventEndAt:         event.EventEndAt,
-//		RegisterStartAt:    event.EventRegisterStartAt,
-//		RegisterEndAt:      event.EventRegisterEndAt,
-//		LocationType:       event.EventLocationType,
-//		LocationName:       event.EventLocationName,
-//		AvailabilityStatus: availableStatus,
-//		Instances:          instancesRes,
-//	}, nil
-//}
+}
 
 func (eu *eventUsecase) GetByCode(ctx context.Context, code string, roles []string, userTypes []string) (detail *models.GetEventByCodeResponse, data []models.GetInstancesByEventCodeResponse, err error) {
 	defer func() {
@@ -424,37 +353,43 @@ func (eu *eventUsecase) GetByCode(ctx context.Context, code string, roles []stri
 		return nil, nil, err
 	}
 
-	if event == nil {
+	switch {
+	case event == nil:
 		return nil, nil, models.ErrorDataNotFound
-	}
-
-	if event.EventCode == "" || event.EventStatus != "active" {
+	case event.EventCode == "" || event.EventStatus != "active":
 		return nil, nil, models.ErrorDataNotFound
-	}
-
-	if event.EventAllowedFor != "public" {
+	case event.EventAllowedFor != "public":
 		isAllowedRoles := common.CheckOneDataInList(event.EventAllowedRoles, roles)
 		isAllowedUsers := common.CheckOneDataInList(event.EventAllowedUsers, userTypes)
 
 		if !isAllowedRoles && !isAllowedUsers {
 			return nil, nil, models.ErrorForbiddenRole
 		}
+	case code != event.EventCode:
+		return nil, nil, models.ErrorEventNotValid
 	}
 
-	availableStatus, err := models.DefineAvailabilityStatus(event)
+	enableUniversalFlag, err := eu.flag.IsFeatureEnabled(ctx, "event_be_universaleventaccess", "")
 	if err != nil {
 		return nil, nil, err
 	}
 
-	switch {
-	case code != event.EventCode:
-		return nil, nil, models.ErrorEventNotValid
-	case availableStatus == models.MapAvailabilityStatus[models.AVAILABILITY_STATUS_UNAVAILABLE]:
-		return nil, nil, models.ErrorEventNotAvailable
-	case availableStatus == models.MapAvailabilityStatus[models.AVAILABILITY_STATUS_FULL]:
-		return nil, nil, models.ErrorRegisterQuotaNotAvailable
-	case availableStatus == models.MapAvailabilityStatus[models.AVAILABILITY_STATUS_SOON]:
-		return nil, nil, models.ErrorCannotRegisterYet
+	if !enableUniversalFlag {
+		availableStatus, err := models.DefineAvailabilityStatus(event)
+		if err != nil {
+			return nil, nil, err
+		}
+
+		switch {
+		case code != event.EventCode:
+			return nil, nil, models.ErrorEventNotValid
+		case availableStatus == models.MapAvailabilityStatus[models.AVAILABILITY_STATUS_UNAVAILABLE]:
+			return nil, nil, models.ErrorEventNotAvailable
+		case availableStatus == models.MapAvailabilityStatus[models.AVAILABILITY_STATUS_FULL]:
+			return nil, nil, models.ErrorRegisterQuotaNotAvailable
+		case availableStatus == models.MapAvailabilityStatus[models.AVAILABILITY_STATUS_SOON]:
+			return nil, nil, models.ErrorCannotRegisterYet
+		}
 	}
 
 	instances, err := eu.r.EventInstance.GetManyByEventCode(ctx, event.EventCode, models.MapStatus[models.STATUS_ACTIVE])
@@ -466,7 +401,65 @@ func (eu *eventUsecase) GetByCode(ctx context.Context, code string, roles []stri
 		return nil, nil, models.ErrorDataNotFound
 	}
 
+	enableShowDescriptionFlag, err := eu.flag.IsFeatureEnabled(ctx, "event_be_showdecriptionatinstance", "")
+	if err != nil {
+		return nil, nil, err
+	}
+
 	instancesRes := make([]models.GetInstancesByEventCodeResponse, len(*instances))
+	if !enableShowDescriptionFlag {
+		for i, p := range *instances {
+			instanceAvailableStatus, err := models.DefineAvailabilityStatus(p)
+			if err != nil {
+				return nil, nil, err
+			}
+
+			instancesRes[i] = models.GetInstancesByEventCodeResponse{
+				Type:                models.TYPE_EVENT_INSTANCE,
+				Code:                p.InstanceCode,
+				Title:               p.InstanceTitle,
+				Description:         "",
+				InstanceStartAt:     p.InstanceStartAt,
+				InstanceEndAt:       p.InstanceEndAt,
+				RegisterStartAt:     p.InstanceRegisterStartAt,
+				RegisterEndAt:       p.InstanceRegisterEndAt,
+				LocationType:        p.InstanceLocationType,
+				LocationName:        p.InstanceLocationName,
+				MaxPerTransaction:   p.InstanceMaxPerTransaction,
+				IsOnePerTicket:      p.InstanceIsOnePerTicket,
+				IsOnePerAccount:     p.InstanceIsOnePerAccount,
+				RegisterFlow:        p.InstanceRegisterFlow,
+				CheckType:           p.InstanceCheckType,
+				TotalSeats:          p.InstanceTotalSeats,
+				BookedSeats:         p.InstanceBookedSeats,
+				TotalRemainingSeats: p.TotalRemainingSeats,
+				AvailabilityStatus:  instanceAvailableStatus,
+			}
+		}
+
+		return &models.GetEventByCodeResponse{
+			Type:               models.TYPE_EVENT,
+			Code:               event.EventCode,
+			Title:              event.EventTitle,
+			Topics:             event.EventTopics,
+			Description:        event.EventDescription,
+			TermsAndConditions: event.EventTermsAndConditions,
+			AllowedFor:         event.EventAllowedFor,
+			AllowedUsers:       event.EventAllowedUsers,
+			AllowedRoles:       event.EventAllowedRoles,
+			AllowedCampuses:    event.EventAllowedCampuses,
+			IsRecurring:        event.EventIsRecurring,
+			Recurrence:         event.EventRecurrence,
+			EventStartAt:       event.EventStartAt,
+			EventEndAt:         event.EventEndAt,
+			RegisterStartAt:    event.EventRegisterStartAt,
+			RegisterEndAt:      event.EventRegisterEndAt,
+			LocationType:       event.EventLocationType,
+			LocationName:       event.EventLocationName,
+			ImageLinks:         event.EventImageLinks,
+		}, instancesRes, nil
+	}
+
 	for i, p := range *instances {
 		instanceAvailableStatus, err := models.DefineAvailabilityStatus(p)
 		if err != nil {
@@ -516,7 +509,6 @@ func (eu *eventUsecase) GetByCode(ctx context.Context, code string, roles []stri
 		LocationType:       event.EventLocationType,
 		LocationName:       event.EventLocationName,
 		ImageLinks:         event.EventImageLinks,
-		AvailabilityStatus: availableStatus,
 	}, instancesRes, nil
 }
 

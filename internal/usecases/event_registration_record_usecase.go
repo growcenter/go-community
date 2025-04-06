@@ -80,7 +80,7 @@ func (erru *eventRegistrationRecordUsecase) createAtomic(ctx context.Context, re
 		name = common.StringTrimSpaceAndUpper(nameRegister.Name)
 	} else {
 		registerStatus = models.MapRegisterStatus[models.REGISTER_STATUS_PENDING]
-		communityIdOrigin = value.CommunityId
+		communityIdOrigin = value.Id
 		verifiedAt = sql.NullTime{
 			Valid: false,
 		}
@@ -378,6 +378,20 @@ func (erru *eventRegistrationRecordUsecase) validateCreate(ctx context.Context, 
 		if instance.InstanceMaxPerTransaction > 0 && ((int(countRegistered) + countTotalRegistrants) > instance.InstanceMaxPerTransaction) {
 			return models.ErrorExceedMaxSeating
 		}
+
+		fmt.Println(":dkldld")
+
+		if request.IsPersonalQR && request.CommunityId != "" {
+			countRegistered, err := erru.r.EventRegistrationRecord.CountByCommunityIdOriginAndInstanceCode(ctx, common.StringTrimSpaceAndLower(request.CommunityId), common.StringTrimSpaceAndLower(request.InstanceCode))
+			if err != nil {
+				return err
+			}
+
+			if instance.InstanceMaxPerTransaction > 0 && ((int(countRegistered) + countTotalRegistrants) > instance.InstanceMaxPerTransaction) {
+				return models.ErrorExceedMaxSeating
+			}
+
+		}
 	}
 
 	return nil
@@ -442,7 +456,7 @@ func (erru *eventRegistrationRecordUsecase) UpdateStatus(ctx context.Context, re
 		record.Reason = requestBody.Reason
 		verifiedAt, _ := common.ParseStringToDatetime(time.RFC3339, requestBody.UpdatedAt, common.GetLocation())
 		record.VerifiedAt = sql.NullTime{Valid: true, Time: verifiedAt}
-		record.UpdatedBy = value.CommunityId
+		record.UpdatedBy = value.Id
 
 		if err := r.EventRegistrationRecord.Update(ctx, record); err != nil {
 			return err
@@ -483,7 +497,7 @@ func (erru *eventRegistrationRecordUsecase) UpdateStatus(ctx context.Context, re
 			EventTitle:    instance.EventTitle,
 			InstanceCode:  record.InstanceCode,
 			InstanceTitle: instance.EventInstanceTitle,
-			UpdatedBy:     value.CommunityId,
+			UpdatedBy:     value.Id,
 			VerifiedAt:    verifiedAt,
 		}
 

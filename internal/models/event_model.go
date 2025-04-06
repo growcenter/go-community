@@ -153,24 +153,24 @@ type (
 	}
 
 	GetAllEventsResponse struct {
-		Type                string    `json:"type" example:"Event"`
-		Code                string    `json:"code" example:"2024-HOMEBASE"`
-		Title               string    `json:"title" example:"Homebase"`
-		Topics              []string  `json:"topics"`
-		LocationType        string    `json:"locationType" example:"offline"`
-		AllowedFor          string    `json:"allowedFor" example:"public"`
-		AllowedUsers        []string  `json:"allowedUsers,omitempty"`
-		AllowedRoles        []string  `json:"allowedRoles,omitempty"`
-		AllowedCampuses     []string  `json:"allowedCampuses,omitempty"`
-		IsRecurring         bool      `json:"isRecurring" example:"true"`
-		Recurrence          string    `json:"recurrence,omitempty" example:"monthly"`
-		EventStartAt        time.Time `json:"eventStartAt,omitempty" example:""`
-		EventEndAt          time.Time `json:"eventEndAt,omitempty" example:""`
-		RegisterStartAt     time.Time `json:"registerStartAt,omitempty" example:""`
-		RegisterEndAt       time.Time `json:"registerEndAt,omitempty" example:""`
-		TotalRemainingSeats int       `json:"totalRemainingSeats" example:"2"`
-		ImagesLinks         []string  `json:"imagesLinks"`
-		AvailabilityStatus  string    `json:"availabilityStatus,omitempty" example:"available"`
+		Type                string     `json:"type" example:"Event"`
+		Code                string     `json:"code" example:"2024-HOMEBASE"`
+		Title               string     `json:"title" example:"Homebase"`
+		Topics              []string   `json:"topics"`
+		LocationType        string     `json:"locationType" example:"offline"`
+		AllowedFor          string     `json:"allowedFor" example:"public"`
+		AllowedUsers        []string   `json:"allowedUsers"`
+		AllowedRoles        []string   `json:"allowedRoles"`
+		AllowedCampuses     []string   `json:"allowedCampuses,omitempty"`
+		IsRecurring         bool       `json:"isRecurring,omitempty" example:"true"`
+		Recurrence          string     `json:"recurrence,omitempty" example:"monthly"`
+		EventStartAt        time.Time  `json:"eventStartAt" example:""`
+		EventEndAt          time.Time  `json:"eventEndAt" example:""`
+		RegisterStartAt     *time.Time `json:"registerStartAt,omitempty" example:""`
+		RegisterEndAt       *time.Time `json:"registerEndAt,omitempty" example:""`
+		TotalRemainingSeats int        `json:"totalRemainingSeats,omitempty" example:"2"`
+		ImagesLinks         []string   `json:"imagesLinks"`
+		AvailabilityStatus  string     `json:"availabilityStatus,omitempty" example:"available"`
 	}
 )
 
@@ -491,6 +491,7 @@ const (
 	AVAILABILITY_STATUS_UNAVAILABLE
 	AVAILABILITY_STATUS_FULL
 	AVAILABILITY_STATUS_SOON
+	AVAILABILITY_STATUS_WALKIN
 )
 
 const (
@@ -498,6 +499,7 @@ const (
 	AvailibilityStatusUnavailable = "unavailable"
 	AvailibilityStatusFull        = "full"
 	AvailibilityStatusSoon        = "soon"
+	AvailibilityStatusWalkin      = "walkin"
 )
 
 var (
@@ -506,6 +508,7 @@ var (
 		AVAILABILITY_STATUS_UNAVAILABLE: AvailibilityStatusUnavailable,
 		AVAILABILITY_STATUS_FULL:        AvailibilityStatusFull,
 		AVAILABILITY_STATUS_SOON:        AvailibilityStatusSoon,
+		AVAILABILITY_STATUS_WALKIN:      AvailibilityStatusWalkin,
 	}
 )
 
@@ -555,6 +558,8 @@ func DefineAvailabilityStatus(event interface{}) (string, error) {
 	}
 
 	switch {
+	case totalSeats == 0 && countInstanceRegisterFlows == 0:
+		return MapAvailabilityStatus[AVAILABILITY_STATUS_WALKIN], nil
 	case totalRemainingSeats <= 0 && countInstanceRegisterFlows < len(instanceRegisterFlows):
 		return MapAvailabilityStatus[AVAILABILITY_STATUS_AVAILABLE], nil
 	//case totalRemainingSeats <= 0 && countInstanceRegisterFlows == len(instanceRegisterFlows) && eventAllowedFor != "private" && totalSeats > 0:

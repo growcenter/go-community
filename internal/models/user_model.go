@@ -830,3 +830,9 @@ type (
 		IsExist     bool   `json:"isExist"`
 	}
 )
+
+type GetRBACByCommunityIdDBOutput struct {
+	CommunityId string
+	UserTypes   pq.StringArray `gorm:"type:text[]"`
+	Roles       pq.StringArray `gorm:"type:text[]"`
+}

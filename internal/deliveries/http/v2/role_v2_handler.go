@@ -1,7 +1,9 @@
 package v2
 
 import (
+	"go-community/internal/config"
 	"go-community/internal/deliveries/http/common/response"
+	"go-community/internal/deliveries/http/middleware"
 	"go-community/internal/models"
 	"go-community/internal/pkg/validator"
 	"go-community/internal/usecases"
@@ -12,13 +14,15 @@ import (
 
 type RoleHandler struct {
 	usecase *usecases.Usecases
+	config  *config.Configuration
 }
 
-func NewRoleHandler(api *echo.Group, u *usecases.Usecases) {
-	handler := &RoleHandler{usecase: u}
+func NewRoleHandler(api *echo.Group, u *usecases.Usecases, c *config.Configuration) {
+	handler := &RoleHandler{usecase: u, config: c}
 
 	// Define campus routes
 	endpoint := api.Group("/roles")
+	endpoint.Use(middleware.UserMiddleware(c, u, []string{"event-internal-view", "event-internal-edit"}))
 	endpoint.POST("", handler.Create)
 	endpoint.GET("", handler.GetAllRoles)
 }
@@ -33,7 +37,7 @@ func NewRoleHandler(api *echo.Group, u *usecases.Usecases) {
 // @Param X-API-Key header string true "mandatory header to access endpoint"
 // @Success 201 {object} models.RoleResponse "Response indicates that the request succeeded and the resources has been fetched and transmitted in the message body"
 // @Failure 400 {object} models.ErrorResponse "Bad Request"
-// @Failure 422 {object} models.ErrorValidationResponse{errors=models.ErrorValidateResponse} "Validation error. This can happen if there is an error validation while create account"
+// @Failure 422 {object} models.ErrorResponse{errors=models.ErrorValidateResponse} "Validation error. This can happen if there is an error validation while create account"
 // @Router /v2/roles [post]
 func (rh *RoleHandler) Create(ctx echo.Context) error {
 	// Bind the JSON Request in order to get the usecase work
@@ -66,7 +70,7 @@ func (rh *RoleHandler) Create(ctx echo.Context) error {
 // @Param X-API-Key header string true "mandatory header to access endpoint"
 // @Success 200 {object} models.List{data=[]models.RoleResponse} "Response indicates that the request succeeded and the resources has been fetched and transmitted in the message body"
 // @Failure 400 {object} models.ErrorResponse "Bad Request"
-// @Failure 422 {object} models.ErrorValidationResponse{errors=models.ErrorValidateResponse} "Validation error. This can happen if there is an error validation while create account"
+// @Failure 422 {object} models.ErrorResponse{errors=models.ErrorValidateResponse} "Validation error. This can happen if there is an error validation while create account"
 // @Router /v2/roles [get]
 func (rh *RoleHandler) GetAllRoles(ctx echo.Context) error {
 	data, err := rh.usecase.Role.GetAll(ctx.Request().Context())

@@ -48,11 +48,12 @@ type (
 		State        string `mapstructure:"state"`
 	}
 	Auth struct {
-		BearerSecret    string `mapstructure:"bearer_secret"`
-		BearerDuration  int    `mapstructure:"bearer_duration"`
-		APIKey          string `mapstructure:"api_key"`
-		RefreshSecret   string `mapstructure:"refresh_secret"`
-		RefreshDuration int    `mapstructure:"refresh_duration"`
+		BearerSecret    map[string]string `mapstructure:"bearer_secret"`
+		BearerDuration  int               `mapstructure:"bearer_duration"`
+		RefreshSecret   map[string]string `mapstructure:"refresh_secret"`
+		RefreshDuration int               `mapstructure:"refresh_duration"`
+		APIKey          string            `mapstructure:"api_key"`
+		ClientId        map[string]bool   `mapstructure:"client_id"`
 	}
 )
 

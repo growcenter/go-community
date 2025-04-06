@@ -2,6 +2,7 @@ package common
 
 import (
 	"fmt"
+	"github.com/google/uuid"
 	"github.com/spf13/viper"
 	"golang.org/x/text/cases"
 	"golang.org/x/text/language"
@@ -139,4 +140,9 @@ func GetUniqueFieldValuesFromModel(data interface{}, fieldName string) ([]string
 	}
 
 	return result, nil
+}
+
+func IsValidUUID(input string) bool {
+	_, err := uuid.Parse(input)
+	return err == nil
 }

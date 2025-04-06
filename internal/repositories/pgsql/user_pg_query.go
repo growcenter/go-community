@@ -29,6 +29,9 @@ var (
 	queryGetUserNameByIdentifier = `SELECT name, community_id
 	FROM users WHERE email = ? OR phone_number = ? LIMIT 1`
 
+	queryGetRBACByCommunityId = `SELECT community_id, roles, user_types
+	FROM users WHERE community_id = ? LIMIT 1`
+
 	queryGetUserNameByCommunityId = `SELECT name, community_id
 	FROM users WHERE community_id = ? LIMIT 1`
 
