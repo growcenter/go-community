@@ -21,16 +21,13 @@ type Usecases struct {
 	CoolCategory            coolCategoryUsecase
 	Location                locationUsecase
 	User                    userUsecase
-	EventUser               eventUserUsecase
-	EventGeneral            eventGeneralUsecase
-	EventSession            eventSessionUsecase
-	EventRegistration       eventRegistrationUsecase
 	EventCommunityRequest   eventCommunityRequestUsecase
 	Role                    roleUsecase
 	UserType                userTypeUsecase
 	Event                   eventUsecase
 	EventRegistrationRecord eventRegistrationRecordUsecase
 	EventInstance           eventInstanceUsecase
+	FeatureFlag             featureFlagUsecase
 }
 
 func New(d Dependencies) *Usecases {
@@ -40,15 +37,12 @@ func New(d Dependencies) *Usecases {
 		CoolCategory:            *NewCoolCategoryUsecase(d.Repository.CoolCategory),
 		Location:                *NewLocationUsecase(d.Repository.Location, d.Repository.Campus),
 		User:                    *NewUserUsecase(d.Repository.User, d.Repository.UserRelation, d.Repository.Campus, d.Repository.CoolCategory, d.Repository.Cool, d.Repository.UserType, d.Repository.Role, *d.Repository, *d.Config, *d.Authorization, d.Salt),
-		EventUser:               *NewEventUserUsecase(d.Repository.EventUser, *d.Google, *d.Authorization, d.Salt),
-		EventGeneral:            *NewEventGeneralUsecase(d.Repository.EventGeneral),
-		EventSession:            *NewEventSessionUsecase(d.Repository.EventSession, d.Repository.EventGeneral),
-		EventRegistration:       *NewEventRegistrationUsecase(d.Repository.EventRegistration, d.Repository.EventGeneral, d.Repository.EventSession, d.Repository.EventUser),
-		EventCommunityRequest:   *NewEventCommunityRequestUsecase(d.Repository.EventCommunityRequest, d.Repository.EventUser),
+		EventCommunityRequest:   *NewEventCommunityRequestUsecase(d.Repository.EventCommunityRequest, d.Repository.User),
 		Role:                    *NewRoleUsecase(d.Repository.Role),
 		UserType:                *NewUserTypeUsecase(*d.Repository),
-		Event:                   *NewEventUsecase(*d.Config, *d.Authorization, *d.Repository),
+		Event:                   *NewEventUsecase(*d.Config, *d.Authorization, *d.Repository, &featureFlagUsecase{r: *d.Repository}),
 		EventRegistrationRecord: *NewEventRegistrationRecordUsecase(*d.Repository, *d.Config),
 		EventInstance:           *NewEventInstanceUsecase(*d.Config, *d.Authorization, *d.Repository),
+		FeatureFlag:             *NewFeatureFlagUsecase(*d.Repository),
 	}
 }

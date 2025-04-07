@@ -80,7 +80,7 @@ func (erru *eventRegistrationRecordUsecase) createAtomic(ctx context.Context, re
 		name = common.StringTrimSpaceAndUpper(nameRegister.Name)
 	} else {
 		registerStatus = models.MapRegisterStatus[models.REGISTER_STATUS_PENDING]
-		communityIdOrigin = value.CommunityId
+		communityIdOrigin = value.Id
 		verifiedAt = sql.NullTime{
 			Valid: false,
 		}
@@ -245,10 +245,10 @@ func (erru *eventRegistrationRecordUsecase) validateCreate(ctx context.Context, 
 	//	return models.ErrorCannotRegisterYet
 	//case common.Now().After(event.EventRegisterEndAt.In(common.GetLocation())):
 	//	return models.ErrorRegistrationTimeDisabled
-	case registerAt.Before(event.EventRegisterStartAt.In(common.GetLocation())):
-		return models.ErrorCannotRegisterYet
-	case registerAt.After(event.EventRegisterEndAt.In(common.GetLocation())):
-		return models.ErrorRegistrationTimeDisabled
+	//case registerAt.Before(event.EventRegisterStartAt.In(common.GetLocation())):
+	//	return models.ErrorCannotRegisterYet
+	//case registerAt.After(event.EventRegisterEndAt.In(common.GetLocation())):
+	//	return models.ErrorRegistrationTimeDisabled
 	//case request.IsPersonalQR && event.EventAllowedFor != "public":
 	//	isAllowedRoles := common.CheckOneDataInList(event.EventAllowedRoles, value.Roles)
 	//	isAllowedUsers := common.CheckOneDataInList(event.EventAllowedUsers, value.UserTypes)
@@ -271,12 +271,12 @@ func (erru *eventRegistrationRecordUsecase) validateCreate(ctx context.Context, 
 		if !isAllowedRoles && !isAllowedUsers {
 			return models.ErrorForbiddenRole
 		}
-	case eventAvailableStatus == models.MapAvailabilityStatus[models.AVAILABILITY_STATUS_UNAVAILABLE]:
-		return models.ErrorEventNotAvailable
+	//case eventAvailableStatus == models.MapAvailabilityStatus[models.AVAILABILITY_STATUS_UNAVAILABLE]:
+	//	return models.ErrorEventNotAvailable
 	case eventAvailableStatus == models.MapAvailabilityStatus[models.AVAILABILITY_STATUS_FULL]:
 		return models.ErrorRegisterQuotaNotAvailable
-	case eventAvailableStatus == models.MapAvailabilityStatus[models.AVAILABILITY_STATUS_SOON]:
-		return models.ErrorCannotRegisterYet
+		//case eventAvailableStatus == models.MapAvailabilityStatus[models.AVAILABILITY_STATUS_SOON]:
+		//	return models.ErrorCannotRegisterYet
 	}
 
 	instance, err := erru.r.EventInstance.GetOneByCode(ctx, request.InstanceCode, models.MapStatus[models.STATUS_ACTIVE])
@@ -300,9 +300,12 @@ func (erru *eventRegistrationRecordUsecase) validateCreate(ctx context.Context, 
 		return models.ErrorCannotUsePersonalQR
 	//case instanceAvailableStatus == models.MapAvailabilityStatus[models.AVAILABILITY_STATUS_UNAVAILABLE]:
 	//	return models.ErrorEventNotAvailable
-	case registerAt.After(event.EventRegisterEndAt.In(common.GetLocation())):
-		return models.ErrorRegistrationTimeDisabled
+	//
 	case registerAt.After(instance.InstanceRegisterEndAt.In(common.GetLocation())):
+		return models.ErrorRegistrationTimeDisabled
+	case request.IsPersonalQR && common.Now().Before(instance.InstanceAllowVerifyAt.In(common.GetLocation())):
+		return models.ErrorCannotRegisterYet
+	case request.IsPersonalQR && registerAt.After(instance.InstanceDisallowVerifyAt.In(common.GetLocation())):
 		return models.ErrorRegistrationTimeDisabled
 	case ((instance.TotalRemainingSeats - countTotalRegistrants) <= 0) && instance.InstanceRegisterFlow != models.MapRegisterFlow[models.REGISTER_FLOW_NONE] && event.EventIsRecurring == false && instance.InstanceTotalSeats > 0:
 		return models.ErrorRegisterQuotaNotAvailable
@@ -378,6 +381,18 @@ func (erru *eventRegistrationRecordUsecase) validateCreate(ctx context.Context, 
 		if instance.InstanceMaxPerTransaction > 0 && ((int(countRegistered) + countTotalRegistrants) > instance.InstanceMaxPerTransaction) {
 			return models.ErrorExceedMaxSeating
 		}
+
+		if request.IsPersonalQR && request.CommunityId != "" {
+			countRegistered, err := erru.r.EventRegistrationRecord.CountByCommunityIdOriginAndInstanceCode(ctx, common.StringTrimSpaceAndLower(request.CommunityId), common.StringTrimSpaceAndLower(request.InstanceCode))
+			if err != nil {
+				return err
+			}
+
+			if instance.InstanceMaxPerTransaction > 0 && ((int(countRegistered) + countTotalRegistrants) > instance.InstanceMaxPerTransaction) {
+				return models.ErrorExceedMaxSeating
+			}
+
+		}
 	}
 
 	return nil
@@ -413,6 +428,24 @@ func (erru *eventRegistrationRecordUsecase) UpdateStatus(ctx context.Context, re
 		return nil, models.ErrorDataNotFound
 	}
 
+	instance, err := erru.r.EventInstance.GetSeatsNamesByCode(ctx, record.InstanceCode)
+	if err != nil {
+		return nil, err
+	}
+
+	if instance == nil {
+		return nil, models.ErrorDataNotFound
+	}
+
+	verifiedAt, _ := common.ParseStringToDatetime(time.RFC3339, requestBody.UpdatedAt, common.GetLocation())
+	if requestBody.Status == models.MapRegisterStatus[models.REGISTER_STATUS_SUCCESS] && verifiedAt.Before(instance.InstanceAllowVerifyAt.In(common.GetLocation())) {
+		return nil, models.ErrorCannotRegisterYet
+	}
+
+	if requestBody.Status == models.MapRegisterStatus[models.REGISTER_STATUS_SUCCESS] && verifiedAt.After(instance.InstanceDisallowVerifyAt.In(common.GetLocation())) {
+		return nil, models.ErrorRegistrationTimeDisabled
+	}
+
 	switch record.Status {
 	case models.MapRegisterStatus[models.REGISTER_STATUS_SUCCESS]:
 		return nil, models.ErrorAlreadyVerified
@@ -440,21 +473,11 @@ func (erru *eventRegistrationRecordUsecase) UpdateStatus(ctx context.Context, re
 	err = erru.r.Transaction.Atomic(ctx, func(ctx context.Context, r *pgsql.PostgreRepositories) error {
 		record.Status = requestBody.Status
 		record.Reason = requestBody.Reason
-		verifiedAt, _ := common.ParseStringToDatetime(time.RFC3339, requestBody.UpdatedAt, common.GetLocation())
 		record.VerifiedAt = sql.NullTime{Valid: true, Time: verifiedAt}
-		record.UpdatedBy = value.CommunityId
+		record.UpdatedBy = value.Id
 
 		if err := r.EventRegistrationRecord.Update(ctx, record); err != nil {
 			return err
-		}
-
-		instance, err := r.EventInstance.GetSeatsNamesByCode(ctx, record.InstanceCode)
-		if err != nil {
-			return err
-		}
-
-		if instance == nil {
-			return models.ErrorDataNotFound
 		}
 
 		switch requestBody.Status {
@@ -483,7 +506,7 @@ func (erru *eventRegistrationRecordUsecase) UpdateStatus(ctx context.Context, re
 			EventTitle:    instance.EventTitle,
 			InstanceCode:  record.InstanceCode,
 			InstanceTitle: instance.EventInstanceTitle,
-			UpdatedBy:     value.CommunityId,
+			UpdatedBy:     value.Id,
 			VerifiedAt:    verifiedAt,
 		}
 

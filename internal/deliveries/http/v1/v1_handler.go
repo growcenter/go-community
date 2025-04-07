@@ -11,7 +11,7 @@ import (
 
 func NewV1Handler(g *echo.Group, u *usecases.Usecases, c *config.Configuration, a *authorization.Auth) {
 	v1 := g.Group("/v1")
-	v1.Use(middleware.InternalMiddleware(c))
+	v1.Use(middleware.GeneralMiddleware(c, u))
 
 	// Initialize handlers
 	NewCampusHandler(v1, u)

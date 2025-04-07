@@ -20,6 +20,7 @@ type EventInstanceRepository interface {
 	UpdateScannedSeatsByCode(ctx context.Context, code string, event *models.GetSeatsAndNamesByInstanceCodeDBOutput) (err error)
 	UpdateSeatsByCode(ctx context.Context, code string, event *models.GetSeatsAndNamesByInstanceCodeDBOutput) (err error)
 	GetSummary(ctx context.Context, eventCode string) (output []models.GetInstanceSummaryDBOutput, err error)
+	CheckByCode(ctx context.Context, code string) (dataExist bool, err error)
 }
 
 type eventInstanceRepository struct {
@@ -163,4 +164,17 @@ func (eir *eventInstanceRepository) GetSummary(ctx context.Context, eventCode st
 	}
 
 	return output, nil
+}
+
+func (eir *eventInstanceRepository) CheckByCode(ctx context.Context, code string) (dataExist bool, err error) {
+	defer func() {
+		LogRepository(ctx, err)
+	}()
+
+	err = eir.db.Raw(queryCheckEventInstanceByCode, code).Scan(&dataExist).Error
+	if err != nil {
+		return false, err
+	}
+
+	return dataExist, nil
 }

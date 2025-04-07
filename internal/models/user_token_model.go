@@ -74,14 +74,13 @@ type UserTokenResponse struct {
 }
 
 type TokenValues struct {
-	CommunityId string   `json:"communityId"`
-	UserTypes   []string `json:"userTypes"`
-	Roles       []string `json:"roles"`
-	Status      string   `json:"status"`
+	Id        string   `json:"id"`
+	UserTypes []string `json:"userTypes"`
+	Roles     []string `json:"roles"`
 }
 
 func GetValueFromToken(ctx echo.Context) (TokenValues, error) {
-	communityId, ok := ctx.Get("communityId").(string)
+	id, ok := ctx.Get("id").(string)
 	if !ok {
 		return TokenValues{}, echo.ErrInternalServerError
 	}
@@ -96,15 +95,9 @@ func GetValueFromToken(ctx echo.Context) (TokenValues, error) {
 		return TokenValues{}, echo.ErrInternalServerError
 	}
 
-	status, ok := ctx.Get("status").(string)
-	if !ok {
-		return TokenValues{}, echo.ErrInternalServerError
-	}
-
 	return TokenValues{
-		CommunityId: communityId,
-		UserTypes:   userTypes,
-		Roles:       roles,
-		Status:      status,
+		Id:        id,
+		UserTypes: userTypes,
+		Roles:     roles,
 	}, nil
 }

@@ -13,7 +13,7 @@ import (
 )
 
 type EventInstanceUsecase interface {
-	Create(ctx context.Context, request models.CreateEventRequest) (response *models.CreateEventResponse, err error)
+	Create(ctx context.Context, request models.CreateInstanceExistingEventRequest) (response *models.CreateInstanceResponse, err error)
 }
 
 type eventInstanceUsecase struct {
@@ -58,11 +58,13 @@ func (eiu *eventInstanceUsecase) Create(ctx context.Context, request models.Crea
 	instanceEnd, _ := time.Parse(time.RFC3339, request.InstanceEndAt)
 	instanceRegisterStart, _ := time.Parse(time.RFC3339, request.RegisterStartAt)
 	instanceRegisterEnd, _ := time.Parse(time.RFC3339, request.RegisterEndAt)
+	instanceAllowVerifyAt, _ := time.Parse(time.RFC3339, request.AllowVerifyAt)
+	instanceDisallowVerifyAt, _ := time.Parse(time.RFC3339, request.DisallowVerifyAt)
 	numberForCode := int(countInstance) + 1
 	code := fmt.Sprintf("instance-%s-%d-%d", request.EventCode, numberForCode, timeNowNano.UnixNano())
 	instanceCode := fmt.Sprintf("%s-%s", request.EventCode, generator.GenerateHashCode(code, 7))
 
-	if instanceStart.After(instanceEnd) || instanceRegisterStart.After(instanceRegisterEnd) {
+	if instanceStart.After(instanceEnd) || instanceRegisterStart.After(instanceRegisterEnd) || instanceAllowVerifyAt.After(instanceDisallowVerifyAt) {
 		return nil, models.ErrorStartDateLater
 	}
 
@@ -95,6 +97,8 @@ func (eiu *eventInstanceUsecase) Create(ctx context.Context, request models.Crea
 		InstanceEndAt:     instanceEnd,
 		RegisterStartAt:   instanceRegisterStart,
 		RegisterEndAt:     instanceRegisterEnd,
+		AllowVerifyAt:     instanceAllowVerifyAt,
+		DisallowVerifyAt:  instanceDisallowVerifyAt,
 		LocationType:      request.LocationType,
 		LocationName:      request.LocationName,
 		MaxPerTransaction: request.MaxPerTransaction,
@@ -131,6 +135,8 @@ func (eiu *eventInstanceUsecase) Create(ctx context.Context, request models.Crea
 		InstanceEndAt:     instanceEnd,
 		RegisterStartAt:   instanceRegisterStart,
 		RegisterEndAt:     instanceRegisterEnd,
+		AllowVerifyAt:     instanceAllowVerifyAt,
+		DisallowVerifyAt:  instanceDisallowVerifyAt,
 		LocationType:      request.LocationType,
 		LocationName:      request.LocationName,
 		MaxPerTransaction: request.MaxPerTransaction,

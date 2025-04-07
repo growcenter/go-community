@@ -226,6 +226,8 @@ definitions:
     type: object
   models.CreateInstanceExistingEventRequest:
     properties:
+      allowVerifyAt:
+        type: string
       checkType:
         enum:
         - check-in
@@ -234,6 +236,8 @@ definitions:
         - none
         type: string
       description:
+        type: string
+      disallowVerifyAt:
         type: string
       eventCode:
         type: string
@@ -273,6 +277,8 @@ definitions:
       totalSeats:
         type: integer
     required:
+    - allowVerifyAt
+    - disallowVerifyAt
     - eventCode
     - instanceEndAt
     - instanceStartAt
@@ -284,6 +290,8 @@ definitions:
     type: object
   models.CreateInstanceRequest:
     properties:
+      allowVerifyAt:
+        type: string
       checkType:
         enum:
         - check-in
@@ -292,6 +300,8 @@ definitions:
         - none
         type: string
       description:
+        type: string
+      disallowVerifyAt:
         type: string
       instanceEndAt:
         type: string
@@ -327,6 +337,8 @@ definitions:
       totalSeats:
         type: integer
     required:
+    - allowVerifyAt
+    - disallowVerifyAt
     - instanceEndAt
     - instanceStartAt
     - locationName
@@ -337,9 +349,13 @@ definitions:
     type: object
   models.CreateInstanceResponse:
     properties:
+      allowVerifyAt:
+        type: string
       checkType:
         type: string
       description:
+        type: string
+      disallowVerifyAt:
         type: string
       eventCode:
         type: string
@@ -708,13 +724,13 @@ definitions:
   models.ErrorResponse:
     properties:
       code:
-        example: 400
         type: integer
+      errors: {}
       message:
-        example: value cannot be blabla
         type: string
+      metadata:
+        $ref: '#/definitions/models.Metadata'
       status:
-        example: INVALID_VALUES
         type: string
     type: object
   models.ErrorValidateResponse:
@@ -727,16 +743,6 @@ definitions:
         type: string
       message:
         example: field is missing
-        type: string
-    type: object
-  models.ErrorValidationResponse:
-    properties:
-      code:
-        example: 422
-        type: integer
-      errors: {}
-      message:
-        example: Validation failed for one or more fields.
         type: string
     type: object
   models.GetAllEventsResponse:
@@ -1070,6 +1076,9 @@ definitions:
       LocationName:
         example: PIOT 6 Lt. 6
         type: string
+      allowVerifyAt:
+        example: ""
+        type: string
       availabilityStatus:
         example: available
         type: string
@@ -1083,6 +1092,9 @@ definitions:
         type: string
       description:
         example: Homebase
+        type: string
+      disallowVerifyAt:
+        example: ""
         type: string
       instanceEndAt:
         example: ""
@@ -1358,6 +1370,13 @@ definitions:
         items:
           type: string
         type: array
+    type: object
+  models.Metadata:
+    properties:
+      requestId:
+        type: string
+      timestamp:
+        type: string
     type: object
   models.Pagination:
     properties:
@@ -1893,7 +1912,7 @@ paths:
             while create account
           schema:
             allOf:
-            - $ref: '#/definitions/models.ErrorValidationResponse'
+            - $ref: '#/definitions/models.ErrorResponse'
             - properties:
                 errors:
                   $ref: '#/definitions/models.ErrorValidateResponse'
@@ -1936,7 +1955,7 @@ paths:
             while create account
           schema:
             allOf:
-            - $ref: '#/definitions/models.ErrorValidationResponse'
+            - $ref: '#/definitions/models.ErrorResponse'
             - properties:
                 errors:
                   $ref: '#/definitions/models.ErrorValidateResponse'
@@ -2021,7 +2040,7 @@ paths:
             while create account
           schema:
             allOf:
-            - $ref: '#/definitions/models.ErrorValidationResponse'
+            - $ref: '#/definitions/models.ErrorResponse'
             - properties:
                 errors:
                   $ref: '#/definitions/models.ErrorValidateResponse'
@@ -2063,7 +2082,7 @@ paths:
             while create account
           schema:
             allOf:
-            - $ref: '#/definitions/models.ErrorValidationResponse'
+            - $ref: '#/definitions/models.ErrorResponse'
             - properties:
                 errors:
                   $ref: '#/definitions/models.ErrorValidateResponse'
@@ -2106,7 +2125,7 @@ paths:
             while create account
           schema:
             allOf:
-            - $ref: '#/definitions/models.ErrorValidationResponse'
+            - $ref: '#/definitions/models.ErrorResponse'
             - properties:
                 errors:
                   $ref: '#/definitions/models.ErrorValidateResponse'
@@ -2158,7 +2177,7 @@ paths:
             while create account
           schema:
             allOf:
-            - $ref: '#/definitions/models.ErrorValidationResponse'
+            - $ref: '#/definitions/models.ErrorResponse'
             - properties:
                 errors:
                   $ref: '#/definitions/models.ErrorValidateResponse'
@@ -2203,7 +2222,7 @@ paths:
             while create account
           schema:
             allOf:
-            - $ref: '#/definitions/models.ErrorValidationResponse'
+            - $ref: '#/definitions/models.ErrorResponse'
             - properties:
                 errors:
                   $ref: '#/definitions/models.ErrorValidateResponse'
@@ -2251,7 +2270,7 @@ paths:
             while create account
           schema:
             allOf:
-            - $ref: '#/definitions/models.ErrorValidationResponse'
+            - $ref: '#/definitions/models.ErrorResponse'
             - properties:
                 errors:
                   $ref: '#/definitions/models.ErrorValidateResponse'
@@ -2300,7 +2319,7 @@ paths:
             while create account
           schema:
             allOf:
-            - $ref: '#/definitions/models.ErrorValidationResponse'
+            - $ref: '#/definitions/models.ErrorResponse'
             - properties:
                 errors:
                   $ref: '#/definitions/models.ErrorValidateResponse'
@@ -2347,7 +2366,7 @@ paths:
             while create account
           schema:
             allOf:
-            - $ref: '#/definitions/models.ErrorValidationResponse'
+            - $ref: '#/definitions/models.ErrorResponse'
             - properties:
                 errors:
                   $ref: '#/definitions/models.ErrorValidateResponse'
@@ -2399,7 +2418,7 @@ paths:
             while create account
           schema:
             allOf:
-            - $ref: '#/definitions/models.ErrorValidationResponse'
+            - $ref: '#/definitions/models.ErrorResponse'
             - properties:
                 errors:
                   $ref: '#/definitions/models.ErrorValidateResponse'
@@ -2443,7 +2462,7 @@ paths:
             while create account
           schema:
             allOf:
-            - $ref: '#/definitions/models.ErrorValidationResponse'
+            - $ref: '#/definitions/models.ErrorResponse'
             - properties:
                 errors:
                   $ref: '#/definitions/models.ErrorValidateResponse'
@@ -2486,7 +2505,7 @@ paths:
             while create account
           schema:
             allOf:
-            - $ref: '#/definitions/models.ErrorValidationResponse'
+            - $ref: '#/definitions/models.ErrorResponse'
             - properties:
                 errors:
                   $ref: '#/definitions/models.ErrorValidateResponse'
@@ -2533,7 +2552,7 @@ paths:
             while create account
           schema:
             allOf:
-            - $ref: '#/definitions/models.ErrorValidationResponse'
+            - $ref: '#/definitions/models.ErrorResponse'
             - properties:
                 errors:
                   $ref: '#/definitions/models.ErrorValidateResponse'
@@ -2576,7 +2595,7 @@ paths:
             while create account
           schema:
             allOf:
-            - $ref: '#/definitions/models.ErrorValidationResponse'
+            - $ref: '#/definitions/models.ErrorResponse'
             - properties:
                 errors:
                   $ref: '#/definitions/models.ErrorValidateResponse'
@@ -2617,7 +2636,7 @@ paths:
             while create account
           schema:
             allOf:
-            - $ref: '#/definitions/models.ErrorValidationResponse'
+            - $ref: '#/definitions/models.ErrorResponse'
             - properties:
                 errors:
                   $ref: '#/definitions/models.ErrorValidateResponse'
@@ -2665,7 +2684,7 @@ paths:
             while create account
           schema:
             allOf:
-            - $ref: '#/definitions/models.ErrorValidationResponse'
+            - $ref: '#/definitions/models.ErrorResponse'
             - properties:
                 errors:
                   $ref: '#/definitions/models.ErrorValidateResponse'
@@ -2708,7 +2727,7 @@ paths:
             while create account
           schema:
             allOf:
-            - $ref: '#/definitions/models.ErrorValidationResponse'
+            - $ref: '#/definitions/models.ErrorResponse'
             - properties:
                 errors:
                   $ref: '#/definitions/models.ErrorValidateResponse'
@@ -2751,7 +2770,7 @@ paths:
             while create account
           schema:
             allOf:
-            - $ref: '#/definitions/models.ErrorValidationResponse'
+            - $ref: '#/definitions/models.ErrorResponse'
             - properties:
                 errors:
                   $ref: '#/definitions/models.ErrorValidateResponse'
@@ -2799,7 +2818,7 @@ paths:
             while create account
           schema:
             allOf:
-            - $ref: '#/definitions/models.ErrorValidationResponse'
+            - $ref: '#/definitions/models.ErrorResponse'
             - properties:
                 errors:
                   $ref: '#/definitions/models.ErrorValidateResponse'
@@ -2840,7 +2859,7 @@ paths:
             while create account
           schema:
             allOf:
-            - $ref: '#/definitions/models.ErrorValidationResponse'
+            - $ref: '#/definitions/models.ErrorResponse'
             - properties:
                 errors:
                   $ref: '#/definitions/models.ErrorValidateResponse'
@@ -2886,7 +2905,7 @@ paths:
             while create account
           schema:
             allOf:
-            - $ref: '#/definitions/models.ErrorValidationResponse'
+            - $ref: '#/definitions/models.ErrorResponse'
             - properties:
                 errors:
                   $ref: '#/definitions/models.ErrorValidateResponse'
@@ -2933,7 +2952,7 @@ paths:
             while create account
           schema:
             allOf:
-            - $ref: '#/definitions/models.ErrorValidationResponse'
+            - $ref: '#/definitions/models.ErrorResponse'
             - properties:
                 errors:
                   $ref: '#/definitions/models.ErrorValidateResponse'
@@ -2974,7 +2993,7 @@ paths:
             while create account
           schema:
             allOf:
-            - $ref: '#/definitions/models.ErrorValidationResponse'
+            - $ref: '#/definitions/models.ErrorResponse'
             - properties:
                 errors:
                   $ref: '#/definitions/models.ErrorValidateResponse'
@@ -3023,7 +3042,7 @@ paths:
             while create account
           schema:
             allOf:
-            - $ref: '#/definitions/models.ErrorValidationResponse'
+            - $ref: '#/definitions/models.ErrorResponse'
             - properties:
                 errors:
                   $ref: '#/definitions/models.ErrorValidateResponse'
@@ -3056,7 +3075,7 @@ paths:
             while create account
           schema:
             allOf:
-            - $ref: '#/definitions/models.ErrorValidationResponse'
+            - $ref: '#/definitions/models.ErrorResponse'
             - properties:
                 errors:
                   $ref: '#/definitions/models.ErrorValidateResponse'
@@ -3099,7 +3118,7 @@ paths:
             while create account
           schema:
             allOf:
-            - $ref: '#/definitions/models.ErrorValidationResponse'
+            - $ref: '#/definitions/models.ErrorResponse'
             - properties:
                 errors:
                   $ref: '#/definitions/models.ErrorValidateResponse'
@@ -3140,7 +3159,7 @@ paths:
             while create account
           schema:
             allOf:
-            - $ref: '#/definitions/models.ErrorValidationResponse'
+            - $ref: '#/definitions/models.ErrorResponse'
             - properties:
                 errors:
                   $ref: '#/definitions/models.ErrorValidateResponse'
@@ -3182,7 +3201,7 @@ paths:
             while create account
           schema:
             allOf:
-            - $ref: '#/definitions/models.ErrorValidationResponse'
+            - $ref: '#/definitions/models.ErrorResponse'
             - properties:
                 errors:
                   $ref: '#/definitions/models.ErrorValidateResponse'

@@ -32,6 +32,7 @@ type UserRepository interface {
 	GetCommunityIdByParams(ctx context.Context, param models.GetCommunityIdsByParameter) (output []models.GetCommunityIdsByParamsDBOutput, err error)
 	CountUserByUserTypeCategory(ctx context.Context, userTypeCategory []string) (count int64, err error)
 	Delete(ctx context.Context, communityId string) (err error)
+	GetRBAC(ctx context.Context, communityId string) (output *models.GetRBACByCommunityIdDBOutput, err error)
 }
 
 type userRepository struct {
@@ -347,4 +348,17 @@ func (ur *userRepository) Delete(ctx context.Context, communityId string) (err e
 	}()
 
 	return ur.db.Where("community_id = ?", communityId).Delete(&models.User{}).Error
+}
+
+func (ur *userRepository) GetRBAC(ctx context.Context, communityId string) (output *models.GetRBACByCommunityIdDBOutput, err error) {
+	defer func() {
+		LogRepository(ctx, err)
+	}()
+
+	err = ur.db.Raw(queryGetRBACByCommunityId, communityId).Scan(&output).Error
+	if err != nil {
+		return nil, err
+	}
+
+	return output, nil
 }

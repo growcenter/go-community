@@ -55,3 +55,26 @@ type CursorInfo struct {
 	Limit          int         `json:"limit"`
 	Parameter      interface{} `json:"parameters,omitempty"`
 }
+
+type (
+	ErrorResponse struct {
+		Code     int         `json:"code"`
+		Status   string      `json:"status"`
+		Message  string      `json:"message"`
+		Errors   interface{} `json:"errors,omitempty"`
+		Metadata Metadata    `json:"metadata"`
+	}
+	Response struct {
+		Code       int         `json:"code"`
+		Status     string      `json:"status"`
+		Message    string      `json:"message"`
+		Data       interface{} `json:"data,omitempty"`
+		Pagination *CursorInfo `json:"pagination,omitempty"`
+		Errors     interface{} `json:"errors,omitempty"`
+		Metadata   Metadata    `json:"metadata"`
+	}
+	Metadata struct {
+		RequestId string `json:"requestId"`
+		Timestamp string `json:"timestamp"`
+	}
+)

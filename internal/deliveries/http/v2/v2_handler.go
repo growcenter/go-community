@@ -11,13 +11,14 @@ import (
 
 func NewV2Handler(g *echo.Group, u *usecases.Usecases, c *config.Configuration, a *authorization.Auth) {
 	v2 := g.Group("/v2")
-	v2.Use(middleware.InternalMiddleware(c))
+	v2.Use(middleware.GeneralMiddleware(c, u))
 
 	// Initialize handlers
 	NewEventHandler(v2, u, c, a)
 	NewUserHandler(v2, u, c)
-	NewTokenHandler(v2, a, c)
-	NewRoleHandler(v2, u)
+	NewTokenHandler(v2, a, c, u)
+	NewRoleHandler(v2, u, c)
 	NewConfigHandler(v2, c)
 	NewCoolHandler(v2, u)
+	NewFlagHandler(v2, u, *c)
 }

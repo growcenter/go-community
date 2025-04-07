@@ -22,7 +22,7 @@ func NewEventCommunityRequestHandler(api *echo.Group, u *usecases.Usecases, c *c
 
 	// Define event community request routes
 	endpoint := api.Group("/community-request")
-	endpoint.Use(middleware.UserMiddleware(c))
+	endpoint.Use(middleware.UserMiddleware(c, u, nil))
 	endpoint.POST("", handler.CreateRequest)
 	endpoint.GET("/:id", handler.GetRequestByID)
 	endpoint.GET("/account/:account_number", handler.GetRequestsByAccountNumber)

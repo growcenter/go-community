@@ -443,7 +443,7 @@ func (uu *userUsecase) Login(ctx context.Context, request *models.LoginUserReque
 
 	userRoles := common.CombineMapStrings(rolesInUserType, user.Roles)
 	user.Roles = userRoles
-	tokens, err = uu.a.GenerateTokens(user.CommunityID, user.UserTypes, userRoles, "active")
+	tokens, err = uu.a.GenerateTokens(user.CommunityID, user.UserTypes, userRoles)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -722,7 +722,7 @@ func (uu *userUsecase) UpdateProfile(ctx context.Context, parameter models.Updat
 		return nil, models.ErrorEmailPhoneNumberEmpty
 	}
 
-	if parameter.CommunityId != value.CommunityId {
+	if parameter.CommunityId != value.Id {
 		return nil, models.ErrorDifferentCommunityId
 	}
 
@@ -937,7 +937,7 @@ func (uu *userUsecase) GetUserProfile(ctx context.Context, communityId string, v
 		LogService(ctx, err)
 	}()
 
-	if communityId != value.CommunityId {
+	if communityId != value.Id {
 		return nil, models.ErrorDifferentCommunityId
 	}
 
@@ -1361,4 +1361,25 @@ func (uu *userUsecase) Delete(ctx context.Context, parameter models.DeleteUserPa
 	}
 
 	return res, nil
+}
+
+func (uu *userUsecase) GetRBAC(ctx context.Context, communityId string) (user *models.GetRBACByCommunityIdDBOutput, err error) {
+	defer func() {
+		LogService(ctx, err)
+	}()
+
+	if communityId == "" {
+		return nil, models.ErrorIdentifierCommunityIdEmpty
+	}
+
+	user, err = uu.ur.GetRBAC(ctx, communityId)
+	if err != nil {
+		return nil, err
+	}
+
+	if user.CommunityId == "" {
+		return nil, models.ErrorDataNotFound
+	}
+
+	return user, nil
 }

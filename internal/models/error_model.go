@@ -3,7 +3,9 @@ package models
 import (
 	"database/sql"
 	"errors"
+	"fmt"
 	"net/http"
+	"strings"
 )
 
 var (
@@ -14,6 +16,7 @@ var (
 	ErrorAlreadyExist    = errors.New("the resource that a client tried to create already exists")
 	ErrorUnauthorized    = errors.New("request not authenticated due to missing, invalid, or expired token")
 	ErrorNoRows          = sql.ErrNoRows
+	ErrorCannotBeEmpty   = errors.New("fields cannot be empty")
 
 	// Specific for COOL Category
 	ErrorAgeRange = errors.New("ageStart should be less than ageEnd")
@@ -89,312 +92,313 @@ var (
 	ErrorCSVOrXLSX = errors.New("should be either csv or xlsx")
 )
 
-type (
-	ErrorResponse struct {
-		Code    int    `json:"code" example:"400"`
-		Status  string `json:"status" example:"INVALID_VALUES"`
-		Message string `json:"message" example:"value cannot be blabla"`
-	}
-	ErrorValidationResponse struct {
-		Code    int         `json:"code" example:"422"`
-		Message string      `json:"message" example:"Validation failed for one or more fields."`
-		Errors  interface{} `json:"errors"`
-	}
-)
-
-func ErrorMapping(err error) ErrorResponse {
+func ErrorMapping(err error) Response {
 	switch err {
 	case ErrorUserNotFound:
-		return ErrorResponse{
+		return Response{
 			Code:    http.StatusNotFound,
 			Status:  "DATA_NOT_FOUND",
 			Message: err.Error(),
 		}
 	case ErrorDataNotFound:
-		return ErrorResponse{
+		return Response{
 			Code:    http.StatusNotFound,
 			Status:  "DATA_NOT_FOUND",
 			Message: err.Error(),
 		}
 	case ErrorInvalidInput:
-		return ErrorResponse{
+		// Optional: clean message
+		parts := strings.SplitN(err.Error(), ": ", 2)
+		msg := "invalid request input"
+		if len(parts) == 2 {
+			msg = fmt.Sprintf("invalid request input on: %s", parts[1])
+		}
+
+		return Response{
 			Code:    http.StatusBadRequest,
 			Status:  "INVALID_INPUT",
-			Message: err.Error(),
+			Message: msg,
+		}
+	case ErrorCannotBeEmpty:
+		// Optional: clean message
+		parts := strings.SplitN(err.Error(), ": ", 2)
+		msg := "fields cannot be empty"
+		if len(parts) == 2 {
+			msg = fmt.Sprintf("%s cannot be empty", parts[1])
+		}
+
+		return Response{
+			Code:    http.StatusBadRequest,
+			Status:  "EMPTY_FIELD",
+			Message: msg,
 		}
 	case ErrorNoRows:
-		return ErrorResponse{
+		return Response{
 			Code:    http.StatusInternalServerError,
 			Status:  "DATABASE_ERROR",
 			Message: err.Error(),
 		}
 	case ErrorAlreadyExist:
-		return ErrorResponse{
+		return Response{
 			Code:    http.StatusConflict,
 			Status:  "ALREADY_EXISTS",
 			Message: err.Error(),
 		}
-	case ErrorInvalidInput:
-		return ErrorResponse{
-			Code:    http.StatusBadRequest,
-			Status:  "INVALID_ARGUMENT",
-			Message: err.Error(),
-		}
 	case ErrorEmailInput:
-		return ErrorResponse{
+		return Response{
 			Code:    http.StatusBadRequest,
 			Status:  "INVALID_ARGUMENT",
 			Message: err.Error(),
 		}
 	case ErrorAgeRange:
-		return ErrorResponse{
+		return Response{
 			Code:    http.StatusBadRequest,
 			Status:  "INVALID_ARGUMENT",
 			Message: err.Error(),
 		}
 	case ErrorFetchGoogle:
-		return ErrorResponse{
+		return Response{
 			Code:    http.StatusInternalServerError,
 			Status:  "INTERNAL_SERVER_ERROR",
 			Message: err.Error(),
 		}
 	case ErrorTokenSignature:
-		return ErrorResponse{
+		return Response{
 			Code:    http.StatusUnauthorized,
 			Status:  "INVALID_TOKEN_SIGNATURE",
 			Message: err.Error(),
 		}
 	case ErrorInvalidToken:
-		return ErrorResponse{
+		return Response{
 			Code:    http.StatusUnauthorized,
 			Status:  "INVALID_TOKEN",
 			Message: err.Error(),
 		}
 	case ErrorExpiredToken:
-		return ErrorResponse{
+		return Response{
 			Code:    http.StatusUnauthorized,
 			Status:  "EXPIRED_TOKEN",
 			Message: err.Error(),
 		}
 	case ErrorEmptyToken:
-		return ErrorResponse{
+		return Response{
 			Code:    http.StatusUnauthorized,
 			Status:  "MISSING_TOKEN",
 			Message: err.Error(),
 		}
 	case ErrorEmailPhoneNumberEmpty:
-		return ErrorResponse{
+		return Response{
 			Code:    http.StatusBadRequest,
 			Status:  "MISSING_FIELD",
 			Message: err.Error(),
 		}
 	case ErrorInvalidPassword:
-		return ErrorResponse{
+		return Response{
 			Code:    http.StatusUnauthorized,
 			Status:  "INVALID_CREDENTIALS",
 			Message: err.Error(),
 		}
 	case ErrorCannotRegisterYet:
-		return ErrorResponse{
+		return Response{
 			Code:    http.StatusForbidden,
 			Status:  "FORBIDDEN_REGISTRATION",
 			Message: err.Error(),
 		}
 	case ErrorRegistrationTimeDisabled:
-		return ErrorResponse{
+		return Response{
 			Code:    http.StatusForbidden,
 			Status:  "FORBIDDEN_REGISTRATION",
 			Message: err.Error(),
 		}
 	case ErrorInvalidAPIKey:
-		return ErrorResponse{
+		return Response{
 			Code:    http.StatusUnauthorized,
 			Status:  "INVALID_KEY",
 			Message: err.Error(),
 		}
 	case ErrorEmptyAPIKey:
-		return ErrorResponse{
+		return Response{
 			Code:    http.StatusUnauthorized,
 			Status:  "MISSING_KEY",
 			Message: err.Error(),
 		}
 	case ErrorEventNotValid:
-		return ErrorResponse{
+		return Response{
 			Code:    http.StatusBadRequest,
 			Status:  "INVALID_INPUT",
 			Message: err.Error(),
 		}
 	case ErrorExceedMaxSeating:
-		return ErrorResponse{
+		return Response{
 			Code:    http.StatusBadRequest,
 			Status:  "FORBIDDEN_REGISTRATION",
 			Message: err.Error(),
 		}
 	case ErrorRegisterQuotaNotAvailable:
-		return ErrorResponse{
+		return Response{
 			Code:    http.StatusForbidden,
 			Status:  "FORBIDDEN_REGISTRATION",
 			Message: err.Error(),
 		}
 	case ErrorRegistrationCodeInvalid:
-		return ErrorResponse{
+		return Response{
 			Code:    http.StatusForbidden,
 			Status:  "FORBIDDEN_REGISTRATION",
 			Message: err.Error(),
 		}
 	case ErrorRegistrationAlreadyCancel:
-		return ErrorResponse{
+		return Response{
 			Code:    http.StatusBadRequest,
 			Status:  "ALREADY_CHANGED",
 			Message: err.Error(),
 		}
 	case ErrorRegistrationAlreadyVerified:
-		return ErrorResponse{
+		return Response{
 			Code:    http.StatusBadRequest,
 			Status:  "ALREADY_CHANGED",
 			Message: err.Error(),
 		}
 	case ErrorForbiddenRole:
-		return ErrorResponse{
+		return Response{
 			Code:    http.StatusForbidden,
 			Status:  "FORBIDDEN_ROLE",
 			Message: err.Error(),
 		}
 	case ErrorRegistrationWrongTime:
-		return ErrorResponse{
+		return Response{
 			Code:    http.StatusBadRequest,
 			Status:  "INVALID_ARGUMENT",
 			Message: err.Error(),
 		}
 	case ErrorNoRegistrationNeeded:
-		return ErrorResponse{
+		return Response{
 			Code:    http.StatusForbidden,
 			Status:  "FORBIDDEN_REGISTRATION",
 			Message: err.Error(),
 		}
 	case ErrorLoggedOut:
-		return ErrorResponse{
+		return Response{
 			Code:    http.StatusUnauthorized,
 			Status:  "LOGGED_OUT",
 			Message: err.Error(),
 		}
 	case ErrorDidNotFillKKJNumber:
-		return ErrorResponse{
+		return Response{
 			Code:    http.StatusBadRequest,
 			Status:  "MISSING_FIELD",
 			Message: err.Error(),
 		}
 	case ErrorMismatchFields:
-		return ErrorResponse{
+		return Response{
 			Code:    http.StatusBadRequest,
 			Status:  "MISMATCH_FIELDS",
 			Message: err.Error(),
 		}
 	case ErrorStartDateLater:
-		return ErrorResponse{
+		return Response{
 			Code:    http.StatusBadRequest,
 			Status:  "INVALID_VALUES",
 			Message: err.Error(),
 		}
 	case ErrorMissingDepartmentCool:
-		return ErrorResponse{
+		return Response{
 			Code:    http.StatusBadRequest,
 			Status:  "MISSING_FIELDS",
 			Message: err.Error(),
 		}
 	case ErrorViolateAllowedForPrivate:
-		return ErrorResponse{
+		return Response{
 			Code:    http.StatusBadRequest,
 			Status:  "MISSING_FIELDS",
 			Message: err.Error(),
 		}
 	case ErrorMaxPerTrxIsZero:
-		return ErrorResponse{
+		return Response{
 			Code:    http.StatusBadRequest,
 			Status:  "INVALID_VALUES",
 			Message: err.Error(),
 		}
 	case ErrorAttendanceTypeWhenRequired:
-		return ErrorResponse{
+		return Response{
 			Code:    http.StatusBadRequest,
 			Status:  "MISSING_FIELDS",
 			Message: err.Error(),
 		}
 	case ErrorEventNotAvailable:
-		return ErrorResponse{
+		return Response{
 			Code:    http.StatusBadRequest,
 			Status:  "FORBIDDEN_REGISTRATION",
 			Message: err.Error(),
 		}
 	case ErrorEventCanOnlyRegisterOnce:
-		return ErrorResponse{
+		return Response{
 			Code:    http.StatusConflict,
 			Status:  "ALREADY_REGISTERED",
 			Message: err.Error(),
 		}
 	case ErrorAlreadyRegistered:
-		return ErrorResponse{
+		return Response{
 			Code:    http.StatusConflict,
 			Status:  "ALREADY_REGISTERED",
 			Message: err.Error(),
 		}
 	case ErrorCannotUsePersonalQR:
-		return ErrorResponse{
+		return Response{
 			Code:    http.StatusForbidden,
 			Status:  "FORBIDDEN_REGISTRATION",
 			Message: err.Error(),
 		}
 	case ErrorAlreadyVerified:
-		return ErrorResponse{
+		return Response{
 			Code:    http.StatusConflict,
 			Status:  "ALREADY_UPDATED",
 			Message: err.Error(),
 		}
 	case ErrorAlreadyCancelled:
-		return ErrorResponse{
+		return Response{
 			Code:    http.StatusConflict,
 			Status:  "ALREADY_UPDATED",
 			Message: err.Error(),
 		}
 	case ErrorForbiddenStatus:
-		return ErrorResponse{
+		return Response{
 			Code:    http.StatusBadRequest,
 			Status:  "FORBIDDEN_STATUS",
 			Message: err.Error(),
 		}
 	case ErrorReasonEmpty:
-		return ErrorResponse{
+		return Response{
 			Code:    http.StatusUnprocessableEntity,
 			Status:  "MISSING_FIELDS",
 			Message: err.Error(),
 		}
 	case ErrorDifferentCommunityId:
-		return ErrorResponse{
+		return Response{
 			Code:    http.StatusForbidden,
 			Status:  "FORBIDDEN_ACTION",
 			Message: err.Error(),
 		}
 	case ErrorConflictRelationDelete:
-		return ErrorResponse{
+		return Response{
 			Code:    http.StatusConflict,
 			Status:  "CONFLICT_USERS",
 			Message: err.Error(),
 		}
 	case ErrorLimitMustBeGreaterThanZero:
-		return ErrorResponse{
+		return Response{
 			Code:    http.StatusBadRequest,
 			Status:  "INVALID_VALUES",
 			Message: err.Error(),
 		}
 	case ErrorCSVOrXLSX:
-		return ErrorResponse{
+		return Response{
 			Code:    http.StatusUnprocessableEntity,
 			Status:  "INVALID_FORMAT",
 			Message: err.Error(),
 		}
 
 	default:
-		return ErrorResponse{
+		return Response{
 			Code:    http.StatusInternalServerError,
 			Status:  "INTERNAL_SERVER_ERROR",
 			Message: err.Error(),

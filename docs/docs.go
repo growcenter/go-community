@@ -70,7 +70,7 @@ const docTemplate = `{
                         "schema": {
                             "allOf": [
                                 {
-                                    "$ref": "#/definitions/models.ErrorValidationResponse"
+                                    "$ref": "#/definitions/models.ErrorResponse"
                                 },
                                 {
                                     "type": "object",
@@ -141,7 +141,7 @@ const docTemplate = `{
                         "schema": {
                             "allOf": [
                                 {
-                                    "$ref": "#/definitions/models.ErrorValidationResponse"
+                                    "$ref": "#/definitions/models.ErrorResponse"
                                 },
                                 {
                                     "type": "object",
@@ -271,7 +271,7 @@ const docTemplate = `{
                         "schema": {
                             "allOf": [
                                 {
-                                    "$ref": "#/definitions/models.ErrorValidationResponse"
+                                    "$ref": "#/definitions/models.ErrorResponse"
                                 },
                                 {
                                     "type": "object",
@@ -336,7 +336,7 @@ const docTemplate = `{
                         "schema": {
                             "allOf": [
                                 {
-                                    "$ref": "#/definitions/models.ErrorValidationResponse"
+                                    "$ref": "#/definitions/models.ErrorResponse"
                                 },
                                 {
                                     "type": "object",
@@ -412,7 +412,7 @@ const docTemplate = `{
                         "schema": {
                             "allOf": [
                                 {
-                                    "$ref": "#/definitions/models.ErrorValidationResponse"
+                                    "$ref": "#/definitions/models.ErrorResponse"
                                 },
                                 {
                                     "type": "object",
@@ -488,7 +488,7 @@ const docTemplate = `{
                         "schema": {
                             "allOf": [
                                 {
-                                    "$ref": "#/definitions/models.ErrorValidationResponse"
+                                    "$ref": "#/definitions/models.ErrorResponse"
                                 },
                                 {
                                     "type": "object",
@@ -568,7 +568,7 @@ const docTemplate = `{
                         "schema": {
                             "allOf": [
                                 {
-                                    "$ref": "#/definitions/models.ErrorValidationResponse"
+                                    "$ref": "#/definitions/models.ErrorResponse"
                                 },
                                 {
                                     "type": "object",
@@ -640,7 +640,7 @@ const docTemplate = `{
                         "schema": {
                             "allOf": [
                                 {
-                                    "$ref": "#/definitions/models.ErrorValidationResponse"
+                                    "$ref": "#/definitions/models.ErrorResponse"
                                 },
                                 {
                                     "type": "object",
@@ -726,7 +726,7 @@ const docTemplate = `{
                         "schema": {
                             "allOf": [
                                 {
-                                    "$ref": "#/definitions/models.ErrorValidationResponse"
+                                    "$ref": "#/definitions/models.ErrorResponse"
                                 },
                                 {
                                     "type": "object",
@@ -808,7 +808,7 @@ const docTemplate = `{
                         "schema": {
                             "allOf": [
                                 {
-                                    "$ref": "#/definitions/models.ErrorValidationResponse"
+                                    "$ref": "#/definitions/models.ErrorResponse"
                                 },
                                 {
                                     "type": "object",
@@ -878,7 +878,7 @@ const docTemplate = `{
                         "schema": {
                             "allOf": [
                                 {
-                                    "$ref": "#/definitions/models.ErrorValidationResponse"
+                                    "$ref": "#/definitions/models.ErrorResponse"
                                 },
                                 {
                                     "type": "object",
@@ -964,7 +964,7 @@ const docTemplate = `{
                         "schema": {
                             "allOf": [
                                 {
-                                    "$ref": "#/definitions/models.ErrorValidationResponse"
+                                    "$ref": "#/definitions/models.ErrorResponse"
                                 },
                                 {
                                     "type": "object",
@@ -1027,7 +1027,7 @@ const docTemplate = `{
                         "schema": {
                             "allOf": [
                                 {
-                                    "$ref": "#/definitions/models.ErrorValidationResponse"
+                                    "$ref": "#/definitions/models.ErrorResponse"
                                 },
                                 {
                                     "type": "object",
@@ -1099,7 +1099,7 @@ const docTemplate = `{
                         "schema": {
                             "allOf": [
                                 {
-                                    "$ref": "#/definitions/models.ErrorValidationResponse"
+                                    "$ref": "#/definitions/models.ErrorResponse"
                                 },
                                 {
                                     "type": "object",
@@ -1170,7 +1170,7 @@ const docTemplate = `{
                         "schema": {
                             "allOf": [
                                 {
-                                    "$ref": "#/definitions/models.ErrorValidationResponse"
+                                    "$ref": "#/definitions/models.ErrorResponse"
                                 },
                                 {
                                     "type": "object",
@@ -1233,7 +1233,7 @@ const docTemplate = `{
                         "schema": {
                             "allOf": [
                                 {
-                                    "$ref": "#/definitions/models.ErrorValidationResponse"
+                                    "$ref": "#/definitions/models.ErrorResponse"
                                 },
                                 {
                                     "type": "object",
@@ -1311,7 +1311,7 @@ const docTemplate = `{
                         "schema": {
                             "allOf": [
                                 {
-                                    "$ref": "#/definitions/models.ErrorValidationResponse"
+                                    "$ref": "#/definitions/models.ErrorResponse"
                                 },
                                 {
                                     "type": "object",
@@ -1387,7 +1387,7 @@ const docTemplate = `{
                         "schema": {
                             "allOf": [
                                 {
-                                    "$ref": "#/definitions/models.ErrorValidationResponse"
+                                    "$ref": "#/definitions/models.ErrorResponse"
                                 },
                                 {
                                     "type": "object",
@@ -1450,7 +1450,7 @@ const docTemplate = `{
                         "schema": {
                             "allOf": [
                                 {
-                                    "$ref": "#/definitions/models.ErrorValidationResponse"
+                                    "$ref": "#/definitions/models.ErrorResponse"
                                 },
                                 {
                                     "type": "object",
@@ -1513,7 +1513,7 @@ const docTemplate = `{
                         "schema": {
                             "allOf": [
                                 {
-                                    "$ref": "#/definitions/models.ErrorValidationResponse"
+                                    "$ref": "#/definitions/models.ErrorResponse"
                                 },
                                 {
                                     "type": "object",
@@ -1593,7 +1593,7 @@ const docTemplate = `{
                         "schema": {
                             "allOf": [
                                 {
-                                    "$ref": "#/definitions/models.ErrorValidationResponse"
+                                    "$ref": "#/definitions/models.ErrorResponse"
                                 },
                                 {
                                     "type": "object",
@@ -1646,7 +1646,7 @@ const docTemplate = `{
                         "schema": {
                             "allOf": [
                                 {
-                                    "$ref": "#/definitions/models.ErrorValidationResponse"
+                                    "$ref": "#/definitions/models.ErrorResponse"
                                 },
                                 {
                                     "type": "object",
@@ -1717,7 +1717,7 @@ const docTemplate = `{
                         "schema": {
                             "allOf": [
                                 {
-                                    "$ref": "#/definitions/models.ErrorValidationResponse"
+                                    "$ref": "#/definitions/models.ErrorResponse"
                                 },
                                 {
                                     "type": "object",
@@ -1780,7 +1780,7 @@ const docTemplate = `{
                         "schema": {
                             "allOf": [
                                 {
-                                    "$ref": "#/definitions/models.ErrorValidationResponse"
+                                    "$ref": "#/definitions/models.ErrorResponse"
                                 },
                                 {
                                     "type": "object",
@@ -1845,7 +1845,7 @@ const docTemplate = `{
                         "schema": {
                             "allOf": [
                                 {
-                                    "$ref": "#/definitions/models.ErrorValidationResponse"
+                                    "$ref": "#/definitions/models.ErrorResponse"
                                 },
                                 {
                                     "type": "object",
@@ -1923,7 +1923,7 @@ const docTemplate = `{
                         "schema": {
                             "allOf": [
                                 {
-                                    "$ref": "#/definitions/models.ErrorValidationResponse"
+                                    "$ref": "#/definitions/models.ErrorResponse"
                                 },
                                 {
                                     "type": "object",
@@ -1986,7 +1986,7 @@ const docTemplate = `{
                         "schema": {
                             "allOf": [
                                 {
-                                    "$ref": "#/definitions/models.ErrorValidationResponse"
+                                    "$ref": "#/definitions/models.ErrorResponse"
                                 },
                                 {
                                     "type": "object",
@@ -2056,7 +2056,7 @@ const docTemplate = `{
                         "schema": {
                             "allOf": [
                                 {
-                                    "$ref": "#/definitions/models.ErrorValidationResponse"
+                                    "$ref": "#/definitions/models.ErrorResponse"
                                 },
                                 {
                                     "type": "object",
@@ -2128,7 +2128,7 @@ const docTemplate = `{
                         "schema": {
                             "allOf": [
                                 {
-                                    "$ref": "#/definitions/models.ErrorValidationResponse"
+                                    "$ref": "#/definitions/models.ErrorResponse"
                                 },
                                 {
                                     "type": "object",
@@ -2468,6 +2468,8 @@ const docTemplate = `{
         "models.CreateInstanceExistingEventRequest": {
             "type": "object",
             "required": [
+                "allowVerifyAt",
+                "disallowVerifyAt",
                 "eventCode",
                 "instanceEndAt",
                 "instanceStartAt",
@@ -2478,6 +2480,9 @@ const docTemplate = `{
                 "title"
             ],
             "properties": {
+                "allowVerifyAt": {
+                    "type": "string"
+                },
                 "checkType": {
                     "type": "string",
                     "enum": [
@@ -2488,6 +2493,9 @@ const docTemplate = `{
                     ]
                 },
                 "description": {
+                    "type": "string"
+                },
+                "disallowVerifyAt": {
                     "type": "string"
                 },
                 "eventCode": {
@@ -2548,6 +2556,8 @@ const docTemplate = `{
         "models.CreateInstanceRequest": {
             "type": "object",
             "required": [
+                "allowVerifyAt",
+                "disallowVerifyAt",
                 "instanceEndAt",
                 "instanceStartAt",
                 "locationName",
@@ -2557,6 +2567,9 @@ const docTemplate = `{
                 "title"
             ],
             "properties": {
+                "allowVerifyAt": {
+                    "type": "string"
+                },
                 "checkType": {
                     "type": "string",
                     "enum": [
@@ -2567,6 +2580,9 @@ const docTemplate = `{
                     ]
                 },
                 "description": {
+                    "type": "string"
+                },
+                "disallowVerifyAt": {
                     "type": "string"
                 },
                 "instanceEndAt": {
@@ -2621,10 +2637,16 @@ const docTemplate = `{
         "models.CreateInstanceResponse": {
             "type": "object",
             "properties": {
+                "allowVerifyAt": {
+                    "type": "string"
+                },
                 "checkType": {
                     "type": "string"
                 },
                 "description": {
+                    "type": "string"
+                },
+                "disallowVerifyAt": {
                     "type": "string"
                 },
                 "eventCode": {
@@ -3149,16 +3171,17 @@ const docTemplate = `{
             "type": "object",
             "properties": {
                 "code": {
-                    "type": "integer",
-                    "example": 400
+                    "type": "integer"
                 },
+                "errors": {},
                 "message": {
-                    "type": "string",
-                    "example": "value cannot be blabla"
+                    "type": "string"
+                },
+                "metadata": {
+                    "$ref": "#/definitions/models.Metadata"
                 },
                 "status": {
-                    "type": "string",
-                    "example": "INVALID_VALUES"
+                    "type": "string"
                 }
             }
         },
@@ -3176,20 +3199,6 @@ const docTemplate = `{
                 "message": {
                     "type": "string",
                     "example": "field is missing"
-                }
-            }
-        },
-        "models.ErrorValidationResponse": {
-            "type": "object",
-            "properties": {
-                "code": {
-                    "type": "integer",
-                    "example": 422
-                },
-                "errors": {},
-                "message": {
-                    "type": "string",
-                    "example": "Validation failed for one or more fields."
                 }
             }
         },
@@ -3665,6 +3674,10 @@ const docTemplate = `{
                     "type": "string",
                     "example": "PIOT 6 Lt. 6"
                 },
+                "allowVerifyAt": {
+                    "type": "string",
+                    "example": ""
+                },
                 "availabilityStatus": {
                     "type": "string",
                     "example": "available"
@@ -3683,6 +3696,10 @@ const docTemplate = `{
                 "description": {
                     "type": "string",
                     "example": "Homebase"
+                },
+                "disallowVerifyAt": {
+                    "type": "string",
+                    "example": ""
                 },
                 "instanceEndAt": {
                     "type": "string",
@@ -4086,6 +4103,17 @@ const docTemplate = `{
                     "items": {
                         "type": "string"
                     }
+                }
+            }
+        },
+        "models.Metadata": {
+            "type": "object",
+            "properties": {
+                "requestId": {
+                    "type": "string"
+                },
+                "timestamp": {
+                    "type": "string"
                 }
             }
         },

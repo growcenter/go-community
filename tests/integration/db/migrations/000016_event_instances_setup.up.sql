@@ -10,6 +10,8 @@ CREATE TABLE "event_instances" (
     "instance_end_at" TIMESTAMPTZ,
     "register_start_at" TIMESTAMPTZ,
     "register_end_at" TIMESTAMPTZ,
+    "allow_verify_at" TIMESTAMPTZ,
+    "disallow_verify_at" TIMESTAMPTZ,
     "location_type" varchar(6) not null,
     "location_name" varchar(255) NOT NULL,
     "max_per_transaction" INT NOT NULL,
