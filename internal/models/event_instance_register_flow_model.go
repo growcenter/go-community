@@ -31,21 +31,30 @@ var (
 )
 
 func GetRegisterFlowsFromStringArray(input []string) []string {
-	var registerFlows []string
+	//var registerFlows []string
+	//re := regexp.MustCompile(`(?i)(event-qr|personal-qr|both-qr|none)$`)
+	//
+	//// Loop through each string in the input slice
+	//for _, element := range input {
+	//	// Use regex to extract the last meaningful part (e.g., event-qr, personal-qr, etc.)
+	//	matches := re.FindStringSubmatch(element)
+	//
+	//	// If there is a match, append it to the result slice
+	//	if len(matches) > 0 {
+	//		registerFlows = append(registerFlows, strings.ToLower(matches[0])) // Normalize to lowercase
+	//	}
+	//}
 
-	// Loop through each string in the input slice
-	for _, element := range input {
-		// Use regex to extract the last meaningful part (e.g., event-qr, personal-qr, etc.)
-		re := regexp.MustCompile(`(?i)(event-qr|personal-qr|both-qr|none)$`)
-		matches := re.FindStringSubmatch(element)
-
-		// If there is a match, append it to the result slice
-		if len(matches) > 0 {
-			registerFlows = append(registerFlows, strings.ToLower(matches[0])) // Normalize to lowercase
+	var result []string
+	for _, item := range input {
+		trimmed := strings.Trim(item, "()")  // remove parentheses
+		parts := strings.Split(trimmed, ",") // split by comma
+		if len(parts) == 3 {
+			result = append(result, parts[2]) // get the 3rd part (both-qr)
 		}
 	}
 
-	return registerFlows
+	return result
 }
 
 func CountTotalRegisterFlows(input []string) int {

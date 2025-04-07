@@ -529,6 +529,8 @@ func DefineAvailabilityStatus(event interface{}) (string, error) {
 	case GetAllEventsDBOutput:
 		totalRemainingSeats = e.TotalRemainingSeats
 		totalSeats = e.InstanceTotalSeats
+		instanceRegisterFlows = GetRegisterFlowsFromStringArray(e.InstancesData)
+		countInstanceRegisterFlows = CountTotalRegisterFlows(instanceRegisterFlows)
 		//eventAllowedFor = e.EventAllowedFor
 		eventRegisterStartAt = e.EventRegisterStartAt
 		eventRegisterEndAt = e.EventRegisterEndAt
