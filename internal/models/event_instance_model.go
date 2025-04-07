@@ -17,6 +17,8 @@ type EventInstance struct {
 	InstanceEndAt     time.Time
 	RegisterStartAt   time.Time
 	RegisterEndAt     time.Time
+	AllowVerifyAt     time.Time
+	DisallowVerifyAt  time.Time
 	LocationType      string
 	LocationName      string
 	MaxPerTransaction int
@@ -44,6 +46,8 @@ func (ir *CreateInstanceResponse) ToResponse() *CreateInstanceResponse {
 		InstanceEndAt:     ir.InstanceEndAt,
 		RegisterStartAt:   ir.RegisterStartAt,
 		RegisterEndAt:     ir.RegisterEndAt,
+		AllowVerifyAt:     ir.AllowVerifyAt,
+		DisallowVerifyAt:  ir.DisallowVerifyAt,
 		LocationType:      ir.LocationType,
 		LocationName:      ir.LocationName,
 		MaxPerTransaction: ir.MaxPerTransaction,
@@ -64,6 +68,8 @@ type (
 		InstanceEndAt     string `json:"instanceEndAt" validate:"required"`
 		RegisterStartAt   string `json:"registerStartAt" validate:"required"`
 		RegisterEndAt     string `json:"registerEndAt" validate:"required"`
+		AllowVerifyAt     string `json:"allowVerifyAt" validate:"required"`
+		DisallowVerifyAt  string `json:"disallowVerifyAt" validate:"required"`
 		LocationType      string `json:"locationType" validate:"required,oneof=online onsite hybrid"`
 		LocationName      string `json:"locationName" validate:"required"`
 		MaxPerTransaction int    `json:"maxPerTransaction"`
@@ -83,6 +89,8 @@ type (
 		InstanceEndAt     time.Time `json:"instanceEndAt"`
 		RegisterStartAt   time.Time `json:"registerStartAt"`
 		RegisterEndAt     time.Time `json:"registerEndAt"`
+		AllowVerifyAt     time.Time `json:"allowVerifyAt"`
+		DisallowVerifyAt  time.Time `json:"disallowVerifyAt"`
 		LocationType      string    `json:"locationType"`
 		LocationName      string    `json:"locationName"`
 		MaxPerTransaction int       `json:"maxPerTransaction,omitempty"`
@@ -104,6 +112,8 @@ type GetInstanceByCodeDBOutput struct {
 	InstanceEndAt             time.Time `json:"instance_end_at"`
 	InstanceRegisterStartAt   time.Time `json:"instance_register_start_at"`
 	InstanceRegisterEndAt     time.Time `json:"instance_register_end_at"`
+	InstanceAllowVerifyAt     time.Time `json:"instance_allow_verify_at"`
+	InstanceDisallowVerifyAt  time.Time `json:"instance_disallow_verify_at"`
 	InstanceLocationType      string    `json:"instance_location"`
 	InstanceLocationName      string    `json:"instance_location_name"`
 	InstanceMaxPerTransaction int       `json:"instance_max_register"`
@@ -119,12 +129,14 @@ type GetInstanceByCodeDBOutput struct {
 }
 
 type GetSeatsAndNamesByInstanceCodeDBOutput struct {
-	TotalSeats          int    `json:"total_seats"`
-	BookedSeats         int    `json:"booked_seats"`
-	ScannedSeats        int    `json:"scanned_seats"`
-	EventInstanceTitle  string `json:"event_instance_title"`
-	EventTitle          string `json:"event_title"`
-	TotalRemainingSeats int    `json:"total_remaining_seats"`
+	TotalSeats               int       `json:"total_seats"`
+	BookedSeats              int       `json:"booked_seats"`
+	ScannedSeats             int       `json:"scanned_seats"`
+	EventInstanceTitle       string    `json:"event_instance_title"`
+	EventTitle               string    `json:"event_title"`
+	TotalRemainingSeats      int       `json:"total_remaining_seats"`
+	InstanceAllowVerifyAt    time.Time `json:"instance_allow_verify_at"`
+	InstanceDisallowVerifyAt time.Time `json:"instance_disallow_verify_at"`
 }
 
 type (
@@ -136,6 +148,8 @@ type (
 		InstanceEndAt     string `json:"instanceEndAt" validate:"required"`
 		RegisterStartAt   string `json:"registerStartAt" validate:"required"`
 		RegisterEndAt     string `json:"registerEndAt" validate:"required"`
+		AllowVerifyAt     string `json:"allowVerifyAt" validate:"required"`
+		DisallowVerifyAt  string `json:"disallowVerifyAt" validate:"required"`
 		LocationType      string `json:"locationType" validate:"required,oneof=online onsite hybrid"`
 		LocationName      string `json:"locationName" validate:"required"`
 		MaxPerTransaction int    `json:"maxPerTransaction"`

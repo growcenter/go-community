@@ -2457,6 +2457,8 @@
         "models.CreateInstanceExistingEventRequest": {
             "type": "object",
             "required": [
+                "allowVerifyAt",
+                "disallowVerifyAt",
                 "eventCode",
                 "instanceEndAt",
                 "instanceStartAt",
@@ -2467,6 +2469,9 @@
                 "title"
             ],
             "properties": {
+                "allowVerifyAt": {
+                    "type": "string"
+                },
                 "checkType": {
                     "type": "string",
                     "enum": [
@@ -2477,6 +2482,9 @@
                     ]
                 },
                 "description": {
+                    "type": "string"
+                },
+                "disallowVerifyAt": {
                     "type": "string"
                 },
                 "eventCode": {
@@ -2537,6 +2545,8 @@
         "models.CreateInstanceRequest": {
             "type": "object",
             "required": [
+                "allowVerifyAt",
+                "disallowVerifyAt",
                 "instanceEndAt",
                 "instanceStartAt",
                 "locationName",
@@ -2546,6 +2556,9 @@
                 "title"
             ],
             "properties": {
+                "allowVerifyAt": {
+                    "type": "string"
+                },
                 "checkType": {
                     "type": "string",
                     "enum": [
@@ -2556,6 +2569,9 @@
                     ]
                 },
                 "description": {
+                    "type": "string"
+                },
+                "disallowVerifyAt": {
                     "type": "string"
                 },
                 "instanceEndAt": {
@@ -2610,10 +2626,16 @@
         "models.CreateInstanceResponse": {
             "type": "object",
             "properties": {
+                "allowVerifyAt": {
+                    "type": "string"
+                },
                 "checkType": {
                     "type": "string"
                 },
                 "description": {
+                    "type": "string"
+                },
+                "disallowVerifyAt": {
                     "type": "string"
                 },
                 "eventCode": {
@@ -3641,6 +3663,10 @@
                     "type": "string",
                     "example": "PIOT 6 Lt. 6"
                 },
+                "allowVerifyAt": {
+                    "type": "string",
+                    "example": ""
+                },
                 "availabilityStatus": {
                     "type": "string",
                     "example": "available"
@@ -3659,6 +3685,10 @@
                 "description": {
                     "type": "string",
                     "example": "Homebase"
+                },
+                "disallowVerifyAt": {
+                    "type": "string",
+                    "example": ""
                 },
                 "instanceEndAt": {
                     "type": "string",

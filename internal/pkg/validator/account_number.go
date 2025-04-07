@@ -1,6 +1,11 @@
 package validator
 
-import "go-community/internal/pkg/generator"
+import (
+	"errors"
+	"github.com/google/uuid"
+	"go-community/internal/pkg/generator"
+	"strings"
+)
 
 // Function to validate an account number with Luhn checksum
 func LuhnAccountNumber(accountNumber string) bool {
@@ -13,4 +18,19 @@ func LuhnAccountNumber(accountNumber string) bool {
 
 	calculatedChecksum := generator.CalculateLuhnChecksum(baseAccountNumber)
 	return checksum == calculatedChecksum
+}
+
+func AccountNumberType(accountNumber string) (string, error) {
+	input := strings.TrimSpace(accountNumber)
+
+	_, err := uuid.Parse(input)
+	if err == nil {
+		return "guest", nil
+	}
+
+	if LuhnAccountNumber(input) {
+		return "communityId", nil
+	}
+
+	return "", errors.New("invalid account number")
 }

@@ -149,11 +149,14 @@ func (eu *eventUsecase) Create(ctx context.Context, request models.CreateEventRe
 		instanceEnd, _ := time.Parse(time.RFC3339, instanceRequest.InstanceEndAt)
 		instanceRegisterStart, _ := time.Parse(time.RFC3339, instanceRequest.RegisterStartAt)
 		instanceRegisterEnd, _ := time.Parse(time.RFC3339, instanceRequest.RegisterEndAt)
+		instanceAllowVerifyAt, _ := time.Parse(time.RFC3339, instanceRequest.AllowVerifyAt)
+		instanceDisallowVerifyAt, _ := time.Parse(time.RFC3339, instanceRequest.DisallowVerifyAt)
+
 		numberForCode := int(countInstance) + i
 		code := fmt.Sprintf("instance-%s-%d-%d", eventCode, numberForCode, timeNowNano.UnixNano())
 		instanceCode := fmt.Sprintf("%s-%s", eventCode, generator.GenerateHashCode(code, 7))
 
-		if instanceStart.After(instanceEnd) || instanceRegisterStart.After(instanceRegisterEnd) {
+		if instanceStart.After(instanceEnd) || instanceRegisterStart.After(instanceRegisterEnd) || instanceAllowVerifyAt.After(instanceDisallowVerifyAt) {
 			return nil, models.ErrorStartDateLater
 		}
 
@@ -186,6 +189,8 @@ func (eu *eventUsecase) Create(ctx context.Context, request models.CreateEventRe
 			InstanceEndAt:     instanceEnd,
 			RegisterStartAt:   instanceRegisterStart,
 			RegisterEndAt:     instanceRegisterEnd,
+			AllowVerifyAt:     instanceAllowVerifyAt,
+			DisallowVerifyAt:  instanceDisallowVerifyAt,
 			LocationType:      instanceRequest.LocationType,
 			LocationName:      instanceRequest.LocationName,
 			MaxPerTransaction: instanceRequest.MaxPerTransaction,
@@ -220,6 +225,8 @@ func (eu *eventUsecase) Create(ctx context.Context, request models.CreateEventRe
 			InstanceEndAt:     p.InstanceEndAt,
 			RegisterStartAt:   p.RegisterStartAt,
 			RegisterEndAt:     p.RegisterEndAt,
+			AllowVerifyAt:     p.AllowVerifyAt,
+			DisallowVerifyAt:  p.DisallowVerifyAt,
 			LocationType:      p.LocationType,
 			LocationName:      p.LocationName,
 			MaxPerTransaction: p.MaxPerTransaction,
@@ -423,6 +430,8 @@ func (eu *eventUsecase) GetByCode(ctx context.Context, code string, roles []stri
 				InstanceEndAt:       p.InstanceEndAt,
 				RegisterStartAt:     p.InstanceRegisterStartAt,
 				RegisterEndAt:       p.InstanceRegisterEndAt,
+				AllowVerifyAt:       p.InstanceAllowVerifyAt,
+				DisallowVerifyAt:    p.InstanceDisallowVerifyAt,
 				LocationType:        p.InstanceLocationType,
 				LocationName:        p.InstanceLocationName,
 				MaxPerTransaction:   p.InstanceMaxPerTransaction,
@@ -475,6 +484,8 @@ func (eu *eventUsecase) GetByCode(ctx context.Context, code string, roles []stri
 			InstanceEndAt:       p.InstanceEndAt,
 			RegisterStartAt:     p.InstanceRegisterStartAt,
 			RegisterEndAt:       p.InstanceRegisterEndAt,
+			AllowVerifyAt:       p.InstanceAllowVerifyAt,
+			DisallowVerifyAt:    p.InstanceDisallowVerifyAt,
 			LocationType:        p.InstanceLocationType,
 			LocationName:        p.InstanceLocationName,
 			MaxPerTransaction:   p.InstanceMaxPerTransaction,

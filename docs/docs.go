@@ -2468,6 +2468,8 @@ const docTemplate = `{
         "models.CreateInstanceExistingEventRequest": {
             "type": "object",
             "required": [
+                "allowVerifyAt",
+                "disallowVerifyAt",
                 "eventCode",
                 "instanceEndAt",
                 "instanceStartAt",
@@ -2478,6 +2480,9 @@ const docTemplate = `{
                 "title"
             ],
             "properties": {
+                "allowVerifyAt": {
+                    "type": "string"
+                },
                 "checkType": {
                     "type": "string",
                     "enum": [
@@ -2488,6 +2493,9 @@ const docTemplate = `{
                     ]
                 },
                 "description": {
+                    "type": "string"
+                },
+                "disallowVerifyAt": {
                     "type": "string"
                 },
                 "eventCode": {
@@ -2548,6 +2556,8 @@ const docTemplate = `{
         "models.CreateInstanceRequest": {
             "type": "object",
             "required": [
+                "allowVerifyAt",
+                "disallowVerifyAt",
                 "instanceEndAt",
                 "instanceStartAt",
                 "locationName",
@@ -2557,6 +2567,9 @@ const docTemplate = `{
                 "title"
             ],
             "properties": {
+                "allowVerifyAt": {
+                    "type": "string"
+                },
                 "checkType": {
                     "type": "string",
                     "enum": [
@@ -2567,6 +2580,9 @@ const docTemplate = `{
                     ]
                 },
                 "description": {
+                    "type": "string"
+                },
+                "disallowVerifyAt": {
                     "type": "string"
                 },
                 "instanceEndAt": {
@@ -2621,10 +2637,16 @@ const docTemplate = `{
         "models.CreateInstanceResponse": {
             "type": "object",
             "properties": {
+                "allowVerifyAt": {
+                    "type": "string"
+                },
                 "checkType": {
                     "type": "string"
                 },
                 "description": {
+                    "type": "string"
+                },
+                "disallowVerifyAt": {
                     "type": "string"
                 },
                 "eventCode": {
@@ -3652,6 +3674,10 @@ const docTemplate = `{
                     "type": "string",
                     "example": "PIOT 6 Lt. 6"
                 },
+                "allowVerifyAt": {
+                    "type": "string",
+                    "example": ""
+                },
                 "availabilityStatus": {
                     "type": "string",
                     "example": "available"
@@ -3670,6 +3696,10 @@ const docTemplate = `{
                 "description": {
                     "type": "string",
                     "example": "Homebase"
+                },
+                "disallowVerifyAt": {
+                    "type": "string",
+                    "example": ""
                 },
                 "instanceEndAt": {
                     "type": "string",

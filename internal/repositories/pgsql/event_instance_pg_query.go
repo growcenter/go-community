@@ -2,6 +2,7 @@ package pgsql
 
 var (
 	queryCountEventInstanceByCode = `SELECT COUNT(*) FROM event_instances WHERE event_code = ?`
+	queryCheckEventInstanceByCode = "SELECT EXISTS (SELECT 1 FROM event_instances WHERE code = ?)"
 
 	queryGetSessionsByEventCode = `
 		SELECT 
@@ -12,6 +13,8 @@ var (
 			ei.instance_end_at, 
 			ei.register_start_at AS instance_register_start_at, 
 			ei.register_end_at AS instance_register_end_at, 
+			ei.allow_verify_at AS instance_allow_verify_at,
+			ei.disallow_verify_at AS instance_disallow_verify_at,
 			ei.location_type AS instance_location, 
 			ei.location_name AS instance_location_name, 
 			ei.max_per_transaction AS instance_max_per_transaction, 
@@ -34,7 +37,7 @@ var (
 			ei.status = ? AND 
 			ei.deleted_at IS NULL 
 		GROUP BY 
-			ei.code, ei.title, ei.description, ei.instance_start_at, ei.instance_end_at, ei.register_start_at, ei.register_end_at, ei.location_type, ei.location_name, ei.max_per_transaction, ei.is_one_per_account, ei.is_one_per_ticket, ei.register_flow, ei.check_type, ei.total_seats, ei.booked_seats, ei.scanned_seats, ei.status, e.allowed_for
+			ei.code, ei.title, ei.description, ei.instance_start_at, ei.instance_end_at, ei.register_start_at, ei.register_end_at, ei.location_type, ei.location_name, ei.max_per_transaction, ei.is_one_per_account, ei.is_one_per_ticket, ei.register_flow, ei.check_type, ei.total_seats, ei.booked_seats, ei.scanned_seats, ei.status, e.allowed_for, ei.allow_verify_at, ei.disallow_verify_at
 `
 
 	queryGetSessionByCode = `
@@ -46,7 +49,9 @@ var (
 			ei.instance_start_at, 
 			ei.instance_end_at, 
 			ei.register_start_at AS instance_register_start_at, 
-			ei.register_end_at AS instance_register_end_at, 
+			ei.register_end_at AS instance_register_end_at,
+			ei.allow_verify_at AS instance_allow_verify_at,
+			ei.disallow_verify_at AS instance_disallow_verify_at,
 			ei.location_type AS instance_location, 
 			ei.location_name AS instance_location_name, 
 			ei.max_per_transaction AS instance_max_per_transaction, 
@@ -69,18 +74,20 @@ var (
 			ei.status = ? AND 
 			ei.deleted_at IS NULL 
 		GROUP BY 
-			ei.code, ei.event_code, ei.title, ei.description, ei.instance_start_at, ei.instance_end_at, ei.register_start_at, ei.register_end_at, ei.location_type, ei.location_name, ei.max_per_transaction, ei.is_one_per_account, ei.is_one_per_ticket, ei.register_flow, ei.check_type, ei.total_seats, ei.booked_seats, ei.scanned_seats, ei.status
+			ei.code, ei.event_code, ei.title, ei.description, ei.instance_start_at, ei.instance_end_at, ei.register_start_at, ei.register_end_at, ei.location_type, ei.location_name, ei.max_per_transaction, ei.is_one_per_account, ei.is_one_per_ticket, ei.register_flow, ei.check_type, ei.total_seats, ei.booked_seats, ei.scanned_seats, ei.status, ei.allow_verify_at, ei.disallow_verify_at
 `
 	queryGetSeatsByInstanceCode = `SELECT ei.total_seats as total_seats,
 		   ei.booked_seats as booked_seats,
 		   ei.scanned_seats as scanned_seats,
 		   ei.title as event_instance_title,
 		   e.title as event_title,
+		   ei.allow_verify_at AS instance_allow_verify_at,
+		   ei.disallow_verify_at AS instance_disallow_verify_at,
 		   coalesce(sum(ei.total_seats - ei.booked_seats), 0) as total_remaining_seats
 	from event_instances ei
 		left join events e on ei.event_code = e.code
 	where ei.code = ?
-	group by ei.total_seats, ei.booked_seats, ei.scanned_seats, ei.title, e.title`
+	group by ei.total_seats, ei.booked_seats, ei.scanned_seats, ei.title, e.title, ei.allow_verify_at, ei.disallow_verify_at`
 
 	queryGetInstanceSummary = `SELECT 
 			ei.code AS instance_code, 

@@ -3,7 +3,9 @@ package models
 import (
 	"database/sql"
 	"errors"
+	"fmt"
 	"net/http"
+	"strings"
 )
 
 var (
@@ -14,6 +16,7 @@ var (
 	ErrorAlreadyExist    = errors.New("the resource that a client tried to create already exists")
 	ErrorUnauthorized    = errors.New("request not authenticated due to missing, invalid, or expired token")
 	ErrorNoRows          = sql.ErrNoRows
+	ErrorCannotBeEmpty   = errors.New("fields cannot be empty")
 
 	// Specific for COOL Category
 	ErrorAgeRange = errors.New("ageStart should be less than ageEnd")
@@ -104,10 +107,30 @@ func ErrorMapping(err error) Response {
 			Message: err.Error(),
 		}
 	case ErrorInvalidInput:
+		// Optional: clean message
+		parts := strings.SplitN(err.Error(), ": ", 2)
+		msg := "invalid request input"
+		if len(parts) == 2 {
+			msg = fmt.Sprintf("invalid request input on: %s", parts[1])
+		}
+
 		return Response{
 			Code:    http.StatusBadRequest,
 			Status:  "INVALID_INPUT",
-			Message: err.Error(),
+			Message: msg,
+		}
+	case ErrorCannotBeEmpty:
+		// Optional: clean message
+		parts := strings.SplitN(err.Error(), ": ", 2)
+		msg := "fields cannot be empty"
+		if len(parts) == 2 {
+			msg = fmt.Sprintf("%s cannot be empty", parts[1])
+		}
+
+		return Response{
+			Code:    http.StatusBadRequest,
+			Status:  "EMPTY_FIELD",
+			Message: msg,
 		}
 	case ErrorNoRows:
 		return Response{
@@ -119,12 +142,6 @@ func ErrorMapping(err error) Response {
 		return Response{
 			Code:    http.StatusConflict,
 			Status:  "ALREADY_EXISTS",
-			Message: err.Error(),
-		}
-	case ErrorInvalidInput:
-		return Response{
-			Code:    http.StatusBadRequest,
-			Status:  "INVALID_ARGUMENT",
 			Message: err.Error(),
 		}
 	case ErrorEmailInput:

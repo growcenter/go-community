@@ -235,6 +235,8 @@ type (
 		InstanceEndAt             time.Time `json:"instance_end_at"`
 		InstanceRegisterStartAt   time.Time `json:"instance_register_start_at"`
 		InstanceRegisterEndAt     time.Time `json:"instance_register_end_at"`
+		InstanceAllowVerifyAt     time.Time `json:"instance_allow_verify_at"`
+		InstanceDisallowVerifyAt  time.Time `json:"instance_disallow_verify_at"`
 		InstanceLocationType      string    `json:"instance_location"`
 		InstanceLocationName      string    `json:"instance_location_name"`
 		InstanceMaxPerTransaction int       `json:"instance_max_register"`
@@ -284,6 +286,8 @@ type (
 		InstanceEndAt       time.Time `json:"instanceEndAt" example:""`
 		RegisterStartAt     time.Time `json:"registerStartAt" example:""`
 		RegisterEndAt       time.Time `json:"registerEndAt" example:""`
+		AllowVerifyAt       time.Time `json:"allowVerifyAt" example:""`
+		DisallowVerifyAt    time.Time `json:"disallowVerifyAt" example:""`
 		LocationType        string    `json:"locationType" example:"offline"`
 		LocationName        string    `json:"LocationName" example:"PIOT 6 Lt. 6"`
 		MaxPerTransaction   int       `json:"maxPerTransaction,omitempty"`
