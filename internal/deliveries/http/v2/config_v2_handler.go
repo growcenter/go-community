@@ -23,9 +23,7 @@ func NewConfigHandler(api *echo.Group, c *config.Configuration, u *usecases.Usec
 
 	campusEndpoint := api.Group("/campuses")
 	campusEndpoint.GET("", handler.GetCampuses)
-
-	locationEndpoint := api.Group("/locations")
-	locationEndpoint.GET("/:campusCode", handler.GetLocationsByCampusCode)
+	campusEndpoint.GET("/:campusCode/locations", handler.GetLocationsByCampusCode)
 }
 
 // GetDepartments godoc
