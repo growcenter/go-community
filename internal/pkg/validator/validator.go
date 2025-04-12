@@ -26,6 +26,7 @@ func init() {
 	registerCommunityId()
 	registerEmailOrPhoneField()
 	registerNameIdentifierCommunityIdFields()
+	registerPhoneStandardize()
 }
 
 func Validate(request interface{}) error {
@@ -209,6 +210,24 @@ func registerNameIdentifierCommunityIdFields() {
 
 		// If neither is filled, it's invalid
 		if (name == "" && identifier == "" && communityId == "") || (name != "" && identifier == "" && communityId == "") || (name == "" && identifier != "" && communityId == "") {
+			return false
+		}
+
+		return true
+	})
+}
+
+func registerPhoneStandardize() {
+	valid.RegisterValidation("phoneFormat0862", func(fl v10.FieldLevel) bool {
+		input := fl.Field().Interface()
+
+		inputString := input.(string)
+		if inputString == "" {
+			return true
+		}
+
+		_, err := PhoneNumber("", inputString)
+		if err != nil {
 			return false
 		}
 

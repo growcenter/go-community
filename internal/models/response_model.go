@@ -57,6 +57,11 @@ type CursorInfo struct {
 }
 
 type (
+	PaginationOutput struct {
+		Prev  string
+		Next  string
+		Total int
+	}
 	ErrorResponse struct {
 		Code     int         `json:"code"`
 		Status   string      `json:"status"`

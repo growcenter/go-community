@@ -28,6 +28,8 @@ type Usecases struct {
 	EventRegistrationRecord eventRegistrationRecordUsecase
 	EventInstance           eventInstanceUsecase
 	FeatureFlag             featureFlagUsecase
+	Config                  configDBUsecase
+	CoolNewJoiner           coolNewJoinerUsecase
 }
 
 func New(d Dependencies) *Usecases {
@@ -44,5 +46,7 @@ func New(d Dependencies) *Usecases {
 		EventRegistrationRecord: *NewEventRegistrationRecordUsecase(*d.Repository, *d.Config),
 		EventInstance:           *NewEventInstanceUsecase(*d.Config, *d.Authorization, *d.Repository),
 		FeatureFlag:             *NewFeatureFlagUsecase(*d.Repository),
+		Config:                  *NewConfigDBUsecase(*d.Repository, *d.Config),
+		CoolNewJoiner:           *NewCoolNewJoinerUsecase(*d.Repository, d.Config, configDBUsecase{r: *d.Repository}),
 	}
 }
