@@ -221,6 +221,7 @@ func (cnju *coolNewJoinerUsecase) UpdateStatus(ctx context.Context, request *mod
 	}
 
 	if err := cnju.r.CoolNewJoiner.Update(ctx, &models.CoolNewJoiner{
+		ID:                  newJoiner.ID,
 		Name:                newJoiner.Name,
 		MaritalStatus:       newJoiner.MaritalStatus,
 		Gender:              newJoiner.Gender,

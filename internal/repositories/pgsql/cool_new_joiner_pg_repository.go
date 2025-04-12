@@ -123,9 +123,5 @@ func (cnjr *coolNewJoinerRepository) Update(ctx context.Context, question *model
 		LogRepository(ctx, err)
 	}()
 
-	if err := cnjr.db.Model(&models.CoolNewJoiner{}).Where("id = ?", question.ID).Updates(question).Error; err != nil {
-		return fmt.Errorf("failed to update cool new joiner: %w", err)
-	}
-
-	return nil
+	return cnjr.db.Model(&models.CoolNewJoiner{}).Where("id = ?", question.ID).Updates(question).Error
 }
