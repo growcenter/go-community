@@ -8,6 +8,7 @@ import (
 	"golang.org/x/text/language"
 	"reflect"
 	"strings"
+	"unicode"
 )
 
 func CapitalizeFirstWord(str string) string {
@@ -145,4 +146,13 @@ func GetUniqueFieldValuesFromModel(data interface{}, fieldName string) ([]string
 func IsValidUUID(input string) bool {
 	_, err := uuid.Parse(input)
 	return err == nil
+}
+
+func ContainsAlphabet(s string) bool {
+	for _, r := range s {
+		if unicode.IsLetter(r) {
+			return true
+		}
+	}
+	return false
 }

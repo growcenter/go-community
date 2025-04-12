@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"go-community/internal/common"
 	"go-community/internal/config"
+	"go-community/internal/constants"
 	"go-community/internal/models"
 	"go-community/internal/pkg/authorization"
 	"go-community/internal/pkg/generator"
@@ -107,7 +108,7 @@ func (eiu *eventInstanceUsecase) Create(ctx context.Context, request models.Crea
 		RegisterFlow:      request.RegisterFlow,
 		CheckType:         request.CheckType,
 		TotalSeats:        request.TotalSeats,
-		Status:            models.MapStatus[models.STATUS_ACTIVE],
+		Status:            constants.MapStatus[constants.STATUS_ACTIVE],
 	}
 
 	if err := eiu.r.EventInstance.Create(ctx, &instance); err != nil {
@@ -145,7 +146,7 @@ func (eiu *eventInstanceUsecase) Create(ctx context.Context, request models.Crea
 		RegisterFlow:      request.RegisterFlow,
 		CheckType:         request.CheckType,
 		TotalSeats:        request.TotalSeats,
-		Status:            models.MapStatus[models.STATUS_ACTIVE],
+		Status:            constants.MapStatus[constants.STATUS_ACTIVE],
 	}
 
 	return &res, nil

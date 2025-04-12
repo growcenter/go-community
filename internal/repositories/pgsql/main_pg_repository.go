@@ -14,6 +14,7 @@ type PostgreRepositories struct {
 	EventCommunityRequest EventCommunityRequestRepository
 
 	FeatureFlag FeatureFlagRepository
+	Config      ConfigRepository
 
 	Role                    RoleRepository
 	UserType                UserTypeRepository
@@ -21,6 +22,7 @@ type PostgreRepositories struct {
 	EventInstance           EventInstanceRepository
 	EventRegistrationRecord EventRegistrationRecordRepository
 	EventQuestion           EventQuestionRepository
+	CoolNewJoiner           CoolNewJoinerRepository
 }
 
 func New(db *gorm.DB) *PostgreRepositories {
@@ -41,5 +43,7 @@ func New(db *gorm.DB) *PostgreRepositories {
 		EventRegistrationRecord: NewEventRegistrationRecordRepository(db, NewTransactionRepository(db)),
 		EventQuestion:           NewEventQuestionRepository(db),
 		FeatureFlag:             NewFeatureFlagRepository(db),
+		CoolNewJoiner:           NewCoolNewJoinerRepository(db),
+		Config:                  NewConfigRepository(db),
 	}
 }

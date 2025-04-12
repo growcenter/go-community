@@ -18,7 +18,7 @@ func NewV2Handler(g *echo.Group, u *usecases.Usecases, c *config.Configuration, 
 	NewUserHandler(v2, u, c)
 	NewTokenHandler(v2, a, c, u)
 	NewRoleHandler(v2, u, c)
-	NewConfigHandler(v2, c)
-	NewCoolHandler(v2, u)
+	NewConfigHandler(v2, c, u)
+	NewCoolHandler(v2, u, c)
 	NewFlagHandler(v2, u, *c)
 }

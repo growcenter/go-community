@@ -202,7 +202,7 @@ func GeneralMiddleware(config *config.Configuration, usecase *usecases.Usecases)
 					return response.Error(ctx, err)
 				}
 
-				if config.Auth.ClientId[string(decoded)] == false {
+				if config.Auth.ClientId[common.StringTrimSpaceAndLower(string(decoded))] == false {
 					return response.Error(ctx, models.ErrorInvalidToken)
 				}
 			}

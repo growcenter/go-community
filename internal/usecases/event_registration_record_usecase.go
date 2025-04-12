@@ -10,6 +10,7 @@ import (
 	"github.com/xuri/excelize/v2"
 	"go-community/internal/common"
 	"go-community/internal/config"
+	"go-community/internal/constants"
 	"go-community/internal/models"
 	"go-community/internal/repositories/pgsql"
 	"strconv"
@@ -237,7 +238,7 @@ func (erru *eventRegistrationRecordUsecase) validateCreate(ctx context.Context, 
 
 	registerAt, _ := common.ParseStringToDatetime(time.RFC3339, request.RegisterAt, common.GetLocation())
 	switch {
-	case event.EventCode == "" || event.EventStatus != models.MapStatus[models.STATUS_ACTIVE]:
+	case event.EventCode == "" || event.EventStatus != constants.MapStatus[constants.STATUS_ACTIVE]:
 		return models.ErrorDataNotFound
 	case request.EventCode != event.EventCode:
 		return models.ErrorEventNotValid
@@ -279,7 +280,7 @@ func (erru *eventRegistrationRecordUsecase) validateCreate(ctx context.Context, 
 		//	return models.ErrorCannotRegisterYet
 	}
 
-	instance, err := erru.r.EventInstance.GetOneByCode(ctx, request.InstanceCode, models.MapStatus[models.STATUS_ACTIVE])
+	instance, err := erru.r.EventInstance.GetOneByCode(ctx, request.InstanceCode, constants.MapStatus[constants.STATUS_ACTIVE])
 	if err != nil {
 		return err
 	}
@@ -290,7 +291,7 @@ func (erru *eventRegistrationRecordUsecase) validateCreate(ctx context.Context, 
 	}
 
 	switch {
-	case instance.InstanceCode == "" || instance.InstanceStatus != models.MapStatus[models.STATUS_ACTIVE]:
+	case instance.InstanceCode == "" || instance.InstanceStatus != constants.MapStatus[constants.STATUS_ACTIVE]:
 		return models.ErrorDataNotFound
 	case instance.InstanceEventCode != request.EventCode || instance.InstanceEventCode != event.EventCode:
 		return models.ErrorEventNotValid

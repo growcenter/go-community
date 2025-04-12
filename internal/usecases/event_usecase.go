@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"go-community/internal/common"
 	"go-community/internal/config"
+	"go-community/internal/constants"
 	"go-community/internal/models"
 	"go-community/internal/pkg/authorization"
 	"go-community/internal/pkg/generator"
@@ -131,7 +132,7 @@ func (eu *eventUsecase) Create(ctx context.Context, request models.CreateEventRe
 		EventEndAt:         eventEnd,
 		LocationType:       request.LocationType,
 		LocationName:       request.LocationName,
-		Status:             models.MapStatus[models.STATUS_ACTIVE],
+		Status:             constants.MapStatus[constants.STATUS_ACTIVE],
 	}
 
 	instances := make([]models.EventInstance, 0)
@@ -199,7 +200,7 @@ func (eu *eventUsecase) Create(ctx context.Context, request models.CreateEventRe
 			RegisterFlow:      instanceRequest.RegisterFlow,
 			CheckType:         instanceRequest.CheckType,
 			TotalSeats:        instanceRequest.TotalSeats,
-			Status:            models.MapStatus[models.STATUS_ACTIVE],
+			Status:            constants.MapStatus[constants.STATUS_ACTIVE],
 		}
 
 		instances = append(instances, instance)
@@ -279,7 +280,7 @@ func (eu *eventUsecase) GetAll(ctx context.Context, roles []string, userTypes []
 		return userType.Category == "internal" || userType.Category == "cool"
 	})
 
-	events, err := eu.r.Event.GetAllByRolesAndUserTypes(ctx, roles, userTypes, isNotGeneral, models.MapStatus[models.STATUS_ACTIVE])
+	events, err := eu.r.Event.GetAllByRolesAndUserTypes(ctx, roles, userTypes, isNotGeneral, constants.MapStatus[constants.STATUS_ACTIVE])
 	if err != nil {
 		return nil, err
 	}
@@ -399,7 +400,7 @@ func (eu *eventUsecase) GetByCode(ctx context.Context, code string, roles []stri
 		}
 	}
 
-	instances, err := eu.r.EventInstance.GetManyByEventCode(ctx, event.EventCode, models.MapStatus[models.STATUS_ACTIVE])
+	instances, err := eu.r.EventInstance.GetManyByEventCode(ctx, event.EventCode, constants.MapStatus[constants.STATUS_ACTIVE])
 	if err != nil {
 		return nil, nil, err
 	}

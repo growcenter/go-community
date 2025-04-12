@@ -5,22 +5,27 @@ import (
 	"go-community/internal/config"
 	"go-community/internal/deliveries/http/common/response"
 	"go-community/internal/models"
+	"go-community/internal/usecases"
 	"net/http"
 	"strings"
 )
 
 type ConfigHandler struct {
-	conf *config.Configuration
+	conf    *config.Configuration
+	usecase *usecases.Usecases
 }
 
-func NewConfigHandler(api *echo.Group, c *config.Configuration) {
-	handler := &ConfigHandler{conf: c}
+func NewConfigHandler(api *echo.Group, c *config.Configuration, u *usecases.Usecases) {
+	handler := &ConfigHandler{conf: c, usecase: u}
 
 	departmentEndpoint := api.Group("/departments")
 	departmentEndpoint.GET("", handler.GetDepartments)
 
 	campusEndpoint := api.Group("/campuses")
 	campusEndpoint.GET("", handler.GetCampuses)
+
+	locationEndpoint := api.Group("/locations")
+	locationEndpoint.GET("/:campusCode", handler.GetLocationsByCampusCode)
 }
 
 // GetDepartments godoc
@@ -73,4 +78,13 @@ func (ch *ConfigHandler) GetCampuses(ctx echo.Context) error {
 	}
 
 	return response.SuccessList(ctx, http.StatusOK, len(campuses), campuses)
+}
+
+func (ch *ConfigHandler) GetLocationsByCampusCode(ctx echo.Context) error {
+	locations, err := ch.usecase.Config.GetLocationsByCampusCode(ctx.Request().Context(), ctx.Param("campusCode"))
+	if err != nil {
+		return response.Error(ctx, err)
+	}
+
+	return response.SuccessV2(ctx, http.StatusOK, "", locations)
 }

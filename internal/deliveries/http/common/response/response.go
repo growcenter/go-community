@@ -105,7 +105,7 @@ func SuccessDownload(ctx echo.Context, code int, contentType string, fileName st
 	return ctx.Blob(http.StatusOK, contentType, data)
 }
 
-func SuccessV2(ctx echo.Context, code int, data interface{}) error {
+func SuccessV2(ctx echo.Context, code int, message string, data interface{}) error {
 	requestID, _ := ctx.Get("X-Request-Id").(string)
 	if requestID == "" {
 		requestID = uuid.New().String()
@@ -116,11 +116,43 @@ func SuccessV2(ctx echo.Context, code int, data interface{}) error {
 		timestamp = common.Now().Format(time.RFC3339)
 	}
 
+	if message == "" {
+		message = "Request has been successfully processed."
+	}
+
 	return ctx.JSON(http.StatusOK, models.Response{
 		Code:    code,
-		Status:  "RESPONSE_SUCCESS",
-		Message: "Response has been successfully processed.",
+		Status:  "OK",
+		Message: message,
 		Data:    data,
+		Metadata: models.Metadata{
+			RequestId: requestID,
+			Timestamp: timestamp,
+		},
+	})
+}
+
+func SuccessPaginationV2(ctx echo.Context, code int, message string, cursorInfo models.CursorInfo, data interface{}) error {
+	requestID, _ := ctx.Get("X-Request-Id").(string)
+	if requestID == "" {
+		requestID = uuid.New().String()
+	}
+
+	timestamp, _ := ctx.Get("X-Timestamp").(string)
+	if timestamp == "" {
+		timestamp = common.Now().Format(time.RFC3339)
+	}
+
+	if message == "" {
+		message = "Request has been successfully processed."
+	}
+
+	return ctx.JSON(http.StatusOK, models.Response{
+		Code:       code,
+		Status:     "OK",
+		Message:    message,
+		Data:       data,
+		Pagination: &cursorInfo,
 		Metadata: models.Metadata{
 			RequestId: requestID,
 			Timestamp: timestamp,
