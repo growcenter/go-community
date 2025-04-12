@@ -1,8 +1,6 @@
 module go-community
 
-go 1.23.0
-
-toolchain go1.23.4
+go 1.22.0
 
 require (
 	github.com/golang-jwt/jwt v3.2.2+incompatible
