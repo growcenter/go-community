@@ -1,7 +1,7 @@
 ############################
 # STEP 1 build executable binary
 ############################
-FROM golang:1.22.0-alpine AS build
+FROM golang:1.23.0-alpine AS build
 
 WORKDIR /go/src/app
 
