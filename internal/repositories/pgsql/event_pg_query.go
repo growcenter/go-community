@@ -71,7 +71,9 @@ var (
 	  AND e.status = ?
 	  AND e.event_start_at >= DATE_TRUNC('year', CURRENT_DATE) AND e.event_start_at < DATE_TRUNC('year', CURRENT_DATE) + INTERVAL '1 year'
 	GROUP BY
-		e.code, e.title, e.topics, e.location_type, e.allowed_for, e.allowed_roles, e.allowed_users, e.allowed_campuses, e.is_recurring, e.recurrence, e.event_start_at, e.event_end_at, e.register_start_at, e.register_end_at, e.status, e.image_links;
+		e.code, e.title, e.topics, e.location_type, e.allowed_for, e.allowed_roles, e.allowed_users, e.allowed_campuses, e.is_recurring, e.recurrence, e.event_start_at, e.event_end_at, e.register_start_at, e.register_end_at, e.status, e.image_links
+	ORDER BY
+	    e.event_start_at DESC;
 `
 
 	queryGetAllEventsByRolesAndStatusAndRangeEventTime = `
@@ -112,7 +114,9 @@ var (
 	  AND e.status = ?
 	  AND (CURRENT_DATE < e.event_start_at OR CURRENT_DATE > e.event_end_at)
 	GROUP BY
-		e.code, e.title, e.topics, e.location_type, e.allowed_for, e.allowed_roles, e.allowed_users, e.allowed_campuses, e.is_recurring, e.recurrence, e.event_start_at, e.event_end_at, e.register_start_at, e.register_end_at, e.status, e.image_links;
+		e.code, e.title, e.topics, e.location_type, e.allowed_for, e.allowed_roles, e.allowed_users, e.allowed_campuses, e.is_recurring, e.recurrence, e.event_start_at, e.event_end_at, e.register_start_at, e.register_end_at, e.status, e.image_links
+	ORDER BY
+	    e.event_start_at DESC;
 `
 
 	queryGetEventInstancesByEventCode = `
