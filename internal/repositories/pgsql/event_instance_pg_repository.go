@@ -2,6 +2,7 @@ package pgsql
 
 import (
 	"context"
+	"github.com/lib/pq"
 	"go-community/internal/models"
 
 	"gorm.io/gorm"
@@ -21,6 +22,7 @@ type EventInstanceRepository interface {
 	UpdateSeatsByCode(ctx context.Context, code string, event *models.GetSeatsAndNamesByInstanceCodeDBOutput) (err error)
 	GetSummary(ctx context.Context, eventCode string) (output []models.GetInstanceSummaryDBOutput, err error)
 	CheckByCode(ctx context.Context, code string) (dataExist bool, err error)
+	CheckMultiple(ctx context.Context, codes []string) (count int64, err error)
 }
 
 type eventInstanceRepository struct {
@@ -177,4 +179,17 @@ func (eir *eventInstanceRepository) CheckByCode(ctx context.Context, code string
 	}
 
 	return dataExist, nil
+}
+
+func (eir *eventInstanceRepository) CheckMultiple(ctx context.Context, codes []string) (count int64, err error) {
+	defer func() {
+		LogRepository(ctx, err)
+	}()
+
+	err = eir.db.Raw(queryMultipleCheckEventInstance, pq.Array(codes)).Scan(&count).Error
+	if err != nil {
+		return 0, err
+	}
+
+	return count, nil
 }

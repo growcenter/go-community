@@ -13,7 +13,7 @@ var TYPE_EVENT_QUESTION = "eventQuestion"
 type EventQuestion struct {
 	ID                    uuid.UUID              `json:"id"`
 	EventCode             string                 `json:"event_code"`
-	InstanceCode          *string                `json:"instance_code"` // Optional - if null, it's a general event question
+	InstanceCode          []string               `json:"instance_code"` // Optional - if null, it's a general event question
 	Question              string                 `json:"question"`
 	Description           string                 `json:"description"`
 	Type                  constants.QuestionType `json:"type"`
@@ -37,7 +37,7 @@ type QuestionRules struct {
 type (
 	CreateQuestionRequest struct {
 		EventCode    string                        `json:"eventCode" validate:"required" example:"event_code_123"`
-		InstanceCode *string                       `json:"instanceCode" validate:"omitempty" example:"instance_code_123"` // Optional - if null, it's a general event question
+		InstanceCode []string                      `json:"instanceCode" validate:"omitempty" example:"instance_code_123"` // Optional - if null, it's a general event question
 		Questions    []CreateQuestionDetailRequest `json:"questions" validate:"required,dive"`
 	}
 	CreateQuestionDetailRequest struct {
@@ -51,12 +51,13 @@ type (
 		IsVisibleToRegistrant bool                   `json:"isVisibleToRegistrant" validate:"omitempty" example:"true"`
 		Rules                 *QuestionRules         `json:"rules,omitempty"`
 		Status                string                 `json:"status" validate:"required,oneof=active inactive" example:"active"`
+		InstanceCode          []string               `json:"instanceCode" validate:"omitempty" example:"instance_code_123"` // Optional - if null, it's a general event question
 	}
 	CreateQuestionResponse struct {
 		Type                  string                 `json:"type" example:"question"`
 		ID                    uuid.UUID              `json:"id" example:"question_id_123"`
 		EventCode             string                 `json:"eventCode" example:"event_code_123"`
-		InstanceCode          *string                `json:"instanceCode" example:"instance_code_123"` // Optional - if null, it's a general event question
+		InstanceCode          []string               `json:"instanceCodes" example:"instance_code_123"` // Optional - if null, it's a general event question
 		Question              string                 `json:"question" example:"What is your favorite color?"`
 		Description           string                 `json:"description" example:"Please select your favorite color from the options below."`
 		QuestionType          constants.QuestionType `json:"questionType" example:"single_choice"`
