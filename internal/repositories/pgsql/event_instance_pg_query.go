@@ -1,8 +1,9 @@
 package pgsql
 
 var (
-	queryCountEventInstanceByCode = `SELECT COUNT(*) FROM event_instances WHERE event_code = ?`
-	queryCheckEventInstanceByCode = "SELECT EXISTS (SELECT 1 FROM event_instances WHERE code = ?)"
+	queryCountEventInstanceByCode   = `SELECT COUNT(*) FROM event_instances WHERE event_code = ?`
+	queryCheckEventInstanceByCode   = "SELECT EXISTS (SELECT 1 FROM event_instances WHERE code = ?)"
+	queryMultipleCheckEventInstance = "SELECT COUNT(*) FROM event_instances WHERE code = ANY(?)"
 
 	queryGetSessionsByEventCode = `
 		SELECT 

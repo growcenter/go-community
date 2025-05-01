@@ -37,17 +37,19 @@ func (equ *eventQuestionUsecase) Create(ctx context.Context, request models.Crea
 		return nil, models.ErrorDataNotFound
 	}
 
-	if *request.InstanceCode != "" {
-		if request.EventCode != (*request.InstanceCode)[:7] {
-			return nil, models.ErrorMismatchFields
+	if request.InstanceCode != nil {
+		for _, instanceCode := range request.InstanceCode {
+			if request.EventCode != (instanceCode)[:7] {
+				return nil, models.ErrorMismatchFields
+			}
 		}
 
-		existInstance, err := equ.r.EventInstance.CheckByCode(ctx, common.StringTrimSpaceAndLower(*request.InstanceCode))
+		existInstance, err := equ.r.EventInstance.CheckMultiple(ctx, request.InstanceCode)
 		if err != nil {
 			return nil, err
 		}
 
-		if !existInstance {
+		if int(existInstance) != len(request.InstanceCode) {
 			return nil, models.ErrorDataNotFound
 		}
 	}
