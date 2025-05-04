@@ -81,5 +81,6 @@ type (
 	Metadata struct {
 		RequestId string `json:"requestId"`
 		Timestamp string `json:"timestamp"`
+		TotalRows int    `json:"totalRows,omitempty"`
 	}
 )

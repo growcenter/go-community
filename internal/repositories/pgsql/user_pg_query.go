@@ -29,6 +29,8 @@ var (
 	queryGetUserNameByIdentifier = `SELECT name, community_id
 	FROM users WHERE email = ? OR phone_number = ? LIMIT 1`
 
+	queryGetManyNameByCommunityId = "SELECT	 community_id, name FROM users WHERE community_id = ANY(?)"
+
 	queryGetRBACByCommunityId = `SELECT community_id, roles, user_types
 	FROM users WHERE community_id = ? LIMIT 1`
 
@@ -127,6 +129,12 @@ var (
 	  AND u.status = 'active'
 	  AND u.deleted_at IS NULL
 	  AND ut.deleted_at IS NULL;`
+
+	queryGetUserNamesByCommunityIds = `
+		SELECT name, community_id
+		FROM users
+		WHERE community_id = ANY(?)
+	`
 )
 
 func ConditionExistOrNot(email string, phoneNumber string) (condition string, args []interface{}) {

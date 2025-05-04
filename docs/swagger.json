@@ -4103,6 +4103,9 @@
                 },
                 "timestamp": {
                     "type": "string"
+                },
+                "totalRows": {
+                    "type": "integer"
                 }
             }
         },

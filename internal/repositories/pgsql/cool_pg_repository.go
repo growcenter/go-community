@@ -8,8 +8,10 @@ import (
 
 type CoolRepository interface {
 	CheckById(ctx context.Context, id int) (dataExist bool, err error)
-	GetById(ctx context.Context, id int) (cool models.Cool, err error)
+	GetOneById(ctx context.Context, id int) (cool models.Cool, err error)
 	GetNameById(ctx context.Context, id int) (cool models.Cool, err error)
+	Create(ctx context.Context, cool *models.Cool) (err error)
+	GetAllOptions(ctx context.Context) (cool []models.GetAllCoolOptionsDBOutput, err error)
 }
 
 type coolRepository struct {
@@ -34,7 +36,7 @@ func (clr *coolRepository) CheckById(ctx context.Context, id int) (dataExist boo
 	return dataExist, nil
 }
 
-func (clr *coolRepository) GetById(ctx context.Context, id int) (cool models.Cool, err error) {
+func (clr *coolRepository) GetOneById(ctx context.Context, id int) (cool models.Cool, err error) {
 	defer func() {
 		LogRepository(ctx, err)
 	}()
@@ -52,6 +54,25 @@ func (clr *coolRepository) GetNameById(ctx context.Context, id int) (cool models
 
 	var cl models.Cool
 	err = clr.db.Raw(queryGetNameById, id).Scan(&cl).Error
+
+	return cl, err
+}
+
+func (clr *coolRepository) Create(ctx context.Context, cool *models.Cool) (err error) {
+	defer func() {
+		LogRepository(ctx, err)
+	}()
+
+	return clr.db.Create(&cool).Error
+}
+
+func (clr *coolRepository) GetAllOptions(ctx context.Context) (cool []models.GetAllCoolOptionsDBOutput, err error) {
+	defer func() {
+		LogRepository(ctx, err)
+	}()
+
+	var cl []models.GetAllCoolOptionsDBOutput
+	err = clr.db.Raw(queryGetCoolsOptions).Scan(&cl).Error
 
 	return cl, err
 }

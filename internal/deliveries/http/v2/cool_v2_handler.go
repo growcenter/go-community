@@ -31,11 +31,14 @@ func NewCoolHandler(api *echo.Group, u *usecases.Usecases, c *config.Configurati
 	endpointAuth := endpoint.Group("")
 	endpointAuth.Use(middleware.UserMiddleware(c, u, nil))
 	endpointAuth.POST("/join", handler.CreateNewJoiner)
+	endpoint.GET("", handler.GetAll)
+	endpoint.GET("/me", handler.GetCoolPersonal)
 
 	endpointInternalAuth := api.Group("/internal/cools")
 	endpointInternalAuth.Use(middleware.UserMiddleware(c, u, []string{"event-internal-view", "event-internal-edit"}))
 	endpointInternalAuth.GET("/join", handler.GetAllNewJoiner)
 	endpointInternalAuth.PATCH("/join/:idNewJoiner/:status", handler.UpdateNewJoiner)
+	endpointInternalAuth.POST("", handler.CreateCool)
 }
 
 func (clh *CoolHandler) CreateCategory(ctx echo.Context) error {
@@ -127,6 +130,42 @@ func (clh *CoolHandler) UpdateNewJoiner(ctx echo.Context) error {
 	}
 
 	cool, err := clh.usecase.CoolNewJoiner.UpdateStatus(ctx.Request().Context(), &request)
+	if err != nil {
+		return response.Error(ctx, err)
+	}
+
+	return response.SuccessV2(ctx, http.StatusOK, "", cool)
+}
+
+func (clh *CoolHandler) CreateCool(ctx echo.Context) error {
+	var request models.CreateCoolRequest
+	if err := ctx.Bind(&request); err != nil {
+		return response.Error(ctx, models.ErrorInvalidInput)
+	}
+
+	if err := validator.Validate(request); err != nil {
+		return response.ErrorValidation(ctx, err)
+	}
+
+	new, err := clh.usecase.Cool.Create(ctx.Request().Context(), request)
+	if err != nil {
+		return response.Error(ctx, err)
+	}
+
+	return response.SuccessV2(ctx, http.StatusCreated, "", new.ToResponse())
+}
+
+func (clh *CoolHandler) GetAll(ctx echo.Context) error {
+	data, err := clh.usecase.Cool.GetAll(ctx.Request().Context())
+	if err != nil {
+		return response.Error(ctx, err)
+	}
+
+	return response.SuccessListV2(ctx, http.StatusOK, "", data)
+}
+
+func (clh *CoolHandler) GetCoolPersonal(ctx echo.Context) error {
+	cool, err := clh.usecase.Cool.GetByCommunityId(ctx.Request().Context(), ctx.Get("id").(string))
 	if err != nil {
 		return response.Error(ctx, err)
 	}

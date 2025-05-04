@@ -132,6 +132,47 @@ func SuccessV2(ctx echo.Context, code int, message string, data interface{}) err
 	})
 }
 
+func SuccessListV2(ctx echo.Context, code int, message string, data interface{}) error {
+	requestID, _ := ctx.Get("X-Request-Id").(string)
+	if requestID == "" {
+		requestID = uuid.New().String()
+	}
+
+	timestamp, _ := ctx.Get("X-Timestamp").(string)
+	if timestamp == "" {
+		timestamp = common.Now().Format(time.RFC3339)
+	}
+
+	if message == "" {
+		message = "Request has been successfully processed."
+	}
+
+	length, err := common.LengthOf(data)
+	if err != nil {
+		return ctx.JSON(http.StatusInternalServerError, models.Response{
+			Code:    http.StatusInternalServerError,
+			Status:  "ERROR",
+			Message: "Failed to get length of data.",
+			Metadata: models.Metadata{
+				RequestId: requestID,
+				Timestamp: timestamp,
+			},
+		})
+	}
+
+	return ctx.JSON(http.StatusOK, models.Response{
+		Code:    code,
+		Status:  "OK",
+		Message: message,
+		Data:    data,
+		Metadata: models.Metadata{
+			RequestId: requestID,
+			Timestamp: timestamp,
+			TotalRows: length,
+		},
+	})
+}
+
 func SuccessPaginationV2(ctx echo.Context, code int, message string, cursorInfo models.CursorInfo, data interface{}) error {
 	requestID, _ := ctx.Get("X-Request-Id").(string)
 	if requestID == "" {

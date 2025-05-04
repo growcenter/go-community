@@ -27,12 +27,15 @@ type UserRepository interface {
 	GetAllWithCursor(ctx context.Context, param models.GetAllUserCursorParam) (output []models.GetAllUserDBOutput, prev string, next string, total int, err error)
 	BulkUpdateRolesByCommunityIds(ctx context.Context, communityIds []string, roles []string) (err error)
 	BulkUpdateUserTypesByCommunityIds(ctx context.Context, communityIds []string, userTypes []string) (err error)
+	UpdateCoolTeamsByCommunityId(ctx context.Context, communityId string, coolId int, userTypes []string) (err error)
 	CheckMultiple(ctx context.Context, communityIds []string) (count int64, err error)
 	GetDetailByCommunityId(ctx context.Context, communityId string) (output []models.GetUserProfileDBOutput, err error)
 	GetCommunityIdByParams(ctx context.Context, param models.GetCommunityIdsByParameter) (output []models.GetCommunityIdsByParamsDBOutput, err error)
 	CountUserByUserTypeCategory(ctx context.Context, userTypeCategory []string) (count int64, err error)
 	Delete(ctx context.Context, communityId string) (err error)
 	GetRBAC(ctx context.Context, communityId string) (output *models.GetRBACByCommunityIdDBOutput, err error)
+	GetUserNamesByMultipleCommunityId(ctx context.Context, communityIds []string) (output []models.GetNameOnUserDBOutput, err error)
+	GetManyNamesByCommunityId(ctx context.Context, communityIds []string) (output []models.GetNameOnUserDBOutput, err error)
 }
 
 type userRepository struct {
@@ -285,6 +288,18 @@ func (ur *userRepository) BulkUpdateUserTypesByCommunityIds(ctx context.Context,
 	return ur.db.Model(user).Where("community_id IN ?", communityIds).Update("user_types", pq.Array(userTypes)).Error
 }
 
+func (ur *userRepository) UpdateCoolTeamsByCommunityId(ctx context.Context, communityId string, coolId int, userTypes []string) (err error) {
+	defer func() {
+		LogRepository(ctx, err)
+	}()
+
+	user := models.User{}
+	return ur.db.Model(user).Where("community_id = ?", communityId).Updates(map[string]interface{}{
+		"user_types": pq.Array(userTypes),
+		"cool_id":    coolId,
+	}).Error
+}
+
 func (ur *userRepository) CheckMultiple(ctx context.Context, communityIds []string) (count int64, err error) {
 	defer func() {
 		LogRepository(ctx, err)
@@ -361,4 +376,31 @@ func (ur *userRepository) GetRBAC(ctx context.Context, communityId string) (outp
 	}
 
 	return output, nil
+}
+
+func (ur *userRepository) GetUserNamesByMultipleCommunityId(ctx context.Context, communityIds []string) (output []models.GetNameOnUserDBOutput, err error) {
+	defer func() {
+		LogRepository(ctx, err)
+	}()
+
+	err = ur.db.Raw(queryGetUserNamesByCommunityIds, communityIds).Scan(&output).Error
+	if err != nil {
+		return nil, err
+	}
+
+	return output, nil
+}
+
+func (ur *userRepository) GetManyNamesByCommunityId(ctx context.Context, communityIds []string) (output []models.GetNameOnUserDBOutput, err error) {
+	defer func() {
+		LogRepository(ctx, err)
+	}()
+
+	var users []models.GetNameOnUserDBOutput
+	err = ur.db.Raw(queryGetManyNameByCommunityId, pq.Array(communityIds)).Scan(&users).Error
+	if err != nil {
+		return nil, err
+	}
+
+	return users, nil
 }
