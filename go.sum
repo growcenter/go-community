@@ -28,6 +28,8 @@ github.com/go-playground/universal-translator v0.18.1 h1:Bcnm0ZwsGyWbCzImXv+pAJn
 github.com/go-playground/universal-translator v0.18.1/go.mod h1:xekY+UJKNuX9WP91TpwSH2VMlDf28Uj24BCp08ZFTUY=
 github.com/go-playground/validator/v10 v10.20.0 h1:K9ISHbSaI0lyB2eWMPJo+kOS/FBExVwjEviJTixqxL8=
 github.com/go-playground/validator/v10 v10.20.0/go.mod h1:dbuPbCMFw/DrkbEynArYaCwl3amGuJotoKCe95atGMM=
+github.com/gofrs/uuid/v5 v5.2.0 h1:qw1GMx6/y8vhVsx626ImfKMuS5CvJmhIKKtuyvfajMM=
+github.com/gofrs/uuid/v5 v5.2.0/go.mod h1:CDOjlDMVAtN56jqyRUZh58JT31Tiw7/oQyEXZV+9bD8=
 github.com/golang-jwt/jwt v3.2.2+incompatible h1:IfV12K8xAKAnZqdXVzCZ+TOjboZ2keLg81eXfW3O+oY=
 github.com/golang-jwt/jwt v3.2.2+incompatible/go.mod h1:8pz2t5EyA70fFQQSrl6XZXzqecmYZeUEB8OUGHkxJ+I=
 github.com/golang-jwt/jwt/v5 v5.2.1 h1:OuVbFODueb089Lh128TAcimifWaLhJwVflnrgM17wHk=
@@ -137,6 +139,8 @@ github.com/xuri/excelize/v2 v2.9.0 h1:1tgOaEq92IOEumR1/JfYS/eR0KHOCsRv/rYXXh6YJQ
 github.com/xuri/excelize/v2 v2.9.0/go.mod h1:uqey4QBZ9gdMeWApPLdhm9x+9o2lq4iVmjiLfBS5hdE=
 github.com/xuri/nfp v0.0.0-20240318013403-ab9948c2c4a7 h1:hPVCafDV85blFTabnqKgNhDCkJX25eik94Si9cTER4A=
 github.com/xuri/nfp v0.0.0-20240318013403-ab9948c2c4a7/go.mod h1:WwHg+CVyzlv/TX9xqBFXEZAuxOPxn2k1GNHwG41IIUQ=
+go.jetify.com/typeid v1.3.0 h1:fuWV7oxO4mSsgpxwhaVpFXgt0IfjogR29p+XAjDCVKY=
+go.jetify.com/typeid v1.3.0/go.mod h1:CtVGyt2+TSp4Rq5+ARLvGsJqdNypKBAC6INQ9TLPlmk=
 go.uber.org/goleak v1.3.0 h1:2K3zAYmnTNqV73imy9J1T3WC+gmCePx2hEGkimedGto=
 go.uber.org/goleak v1.3.0/go.mod h1:CoHD4mav9JJNrW/WLlf7HGZPjdw8EucARQHekz1X6bE=
 go.uber.org/multierr v1.10.0 h1:S0h4aNzvfcFsC3dRF1jLoaov7oRaKqRGC/pUEJ2yvPQ=

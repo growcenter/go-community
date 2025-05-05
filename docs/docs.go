@@ -4114,6 +4114,9 @@ const docTemplate = `{
                 },
                 "timestamp": {
                     "type": "string"
+                },
+                "totalRows": {
+                    "type": "integer"
                 }
             }
         },

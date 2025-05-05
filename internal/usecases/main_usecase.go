@@ -29,6 +29,7 @@ type Usecases struct {
 	EventInstance           eventInstanceUsecase
 	FeatureFlag             featureFlagUsecase
 	Config                  configDBUsecase
+	Cool                    coolUsecase
 	CoolNewJoiner           coolNewJoinerUsecase
 }
 
@@ -47,6 +48,7 @@ func New(d Dependencies) *Usecases {
 		EventInstance:           *NewEventInstanceUsecase(*d.Config, *d.Authorization, *d.Repository),
 		FeatureFlag:             *NewFeatureFlagUsecase(*d.Repository),
 		Config:                  *NewConfigDBUsecase(*d.Repository, *d.Config),
+		Cool:                    *NewCoolUsecase(*d.Repository, *d.Config, &featureFlagUsecase{r: *d.Repository}),
 		CoolNewJoiner:           *NewCoolNewJoinerUsecase(*d.Repository, d.Config, configDBUsecase{r: *d.Repository}),
 	}
 }
