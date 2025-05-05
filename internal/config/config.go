@@ -40,7 +40,6 @@ type (
 		Name     string `mapstructure:"name"`
 		Port     int    `mapstructure:"port"`
 		SSLMode  string `mapstructure:"ssl_mode"`
-		Schema   string `mapstructure:"schema"`
 	}
 	Google struct {
 		ClientID     string `mapstructure:"client_id"`
