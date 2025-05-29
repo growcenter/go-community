@@ -15,7 +15,7 @@ CREATE TABLE "users" (
     "address" text,
     "campus_code" VARCHAR(3) NOT NULL,
     "cool_category_code" VARCHAR(3),
-    "cool_id" INT,
+    "cool_code" varchar(30),
     "department" VARCHAR(50),
     "date_of_birth" TIMESTAMP,
     "place_of_birth" VARCHAR(100),

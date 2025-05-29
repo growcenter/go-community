@@ -2,6 +2,7 @@ package validator
 
 import (
 	"errors"
+	"go-community/internal/common"
 	"go-community/internal/models"
 	"reflect"
 	"regexp"
@@ -27,6 +28,8 @@ func init() {
 	registerEmailOrPhoneField()
 	registerNameIdentifierCommunityIdFields()
 	registerPhoneStandardize()
+	registerhhmmField()
+	registeryyyymmddNoExceedTodayFormat()
 }
 
 func Validate(request interface{}) error {
@@ -232,5 +235,34 @@ func registerPhoneStandardize() {
 		}
 
 		return true
+	})
+}
+
+func registerhhmmField() {
+	valid.RegisterValidation("hhmmFormat", func(fl v10.FieldLevel) bool {
+		// The "15:04" layout is the reference time format for "HH:MM".
+		// time.Parse requires the input string to exactly match the layout.
+		// If parsing is successful and the formatted output matches the input,
+		// it confirms the input was in the correct "HH:MM" format.
+		t, err := time.Parse("15:04", fl.Field().String())
+		if err != nil {
+			return false // Parsing failed, not in HH:MM format
+		}
+
+		// Check if formatting the parsed time back to "15:04" matches the original input.
+		// This handles cases like "25:00" which time.Parse might partially parse but isn't valid HH:MM.
+		return t.Format("15:04") == fl.Field().String()
+	})
+}
+
+func registeryyyymmddNoExceedTodayFormat() {
+	valid.RegisterValidation("yyyymmddNoExceedToday", func(fl v10.FieldLevel) bool {
+		date := fl.Field().String()
+		layout := "2006-01-02" // This layout corresponds to yyyy-mm-dd
+		parsedDate, err := time.Parse(layout, date)
+		if err != nil {
+			return false
+		}
+		return parsedDate.Before(common.Now())
 	})
 }

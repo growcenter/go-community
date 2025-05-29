@@ -1,7 +1,6 @@
 package v2
 
 import (
-	"github.com/labstack/echo/v4"
 	"go-community/internal/config"
 	"go-community/internal/deliveries/http/common/response"
 	"go-community/internal/deliveries/http/middleware"
@@ -12,6 +11,8 @@ import (
 	"net/http"
 	"strings"
 	"time"
+
+	"github.com/labstack/echo/v4"
 )
 
 type UserHandler struct {
@@ -148,7 +149,7 @@ func (uh *UserHandler) Login(ctx echo.Context) error {
 		SameSite: http.SameSiteStrictMode, // Prevent CSRF
 	})
 
-	res := models.LoginUserResponse{Type: models.TYPE_USER, CommunityId: user.CommunityID, Name: user.Name, PhoneNumber: user.PhoneNumber, Email: user.Email, CampusCode: user.CampusCode, PlaceOfBirth: user.PlaceOfBirth, DateOfBirth: user.DateOfBirth, Address: user.Address, Gender: user.Gender, DepartmentCode: user.Department, CoolID: user.CoolID, KKJNumber: user.KKJNumber, JemaatId: user.JemaatID, IsKOM100: user.IsKom100, IsBaptized: user.IsBaptized, MaritalStatus: user.MaritalStatus, Status: user.Status, Token: tokens.ToGenerateTokens(), UserTypes: user.UserTypes, Roles: user.Roles}
+	res := models.LoginUserResponse{Type: models.TYPE_USER, CommunityId: user.CommunityID, Name: user.Name, PhoneNumber: user.PhoneNumber, Email: user.Email, CampusCode: user.CampusCode, PlaceOfBirth: user.PlaceOfBirth, DateOfBirth: user.DateOfBirth, Address: user.Address, Gender: user.Gender, DepartmentCode: user.Department, CoolID: user.CoolID, CoolCode: user.CoolCode, KKJNumber: user.KKJNumber, JemaatId: user.JemaatID, IsKOM100: user.IsKom100, IsBaptized: user.IsBaptized, MaritalStatus: user.MaritalStatus, Status: user.Status, Token: tokens.ToGenerateTokens(), UserTypes: user.UserTypes, Roles: user.Roles}
 	return response.Success(ctx, http.StatusCreated, res.ToLogin())
 }
 
@@ -518,7 +519,7 @@ func (uh *UserHandler) GetCommunityIdsByParams(ctx echo.Context) error {
 }
 
 // UpdateUser godoc
-// @Summary Update User Profile
+// @Summary Update User Profile Internally
 // @Description Update user through their own profile
 // @Tags users-internal
 // @Accept json

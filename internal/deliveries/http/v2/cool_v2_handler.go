@@ -31,8 +31,9 @@ func NewCoolHandler(api *echo.Group, u *usecases.Usecases, c *config.Configurati
 	endpointAuth := endpoint.Group("")
 	endpointAuth.Use(middleware.UserMiddleware(c, u, nil))
 	endpointAuth.POST("/join", handler.CreateNewJoiner)
+	endpointAuth.GET("/me", handler.GetCoolPersonal)
 	endpoint.GET("", handler.GetAll)
-	endpoint.GET("/me", handler.GetCoolPersonal)
+	endpointAuth.GET("/:code/members", handler.GetCoolMemberByCode)
 
 	endpointInternalAuth := api.Group("/internal/cools")
 	endpointInternalAuth.Use(middleware.UserMiddleware(c, u, []string{"event-internal-view", "event-internal-edit"}))
@@ -171,4 +172,21 @@ func (clh *CoolHandler) GetCoolPersonal(ctx echo.Context) error {
 	}
 
 	return response.SuccessV2(ctx, http.StatusOK, "", cool)
+}
+
+func (clh *CoolHandler) GetCoolMemberByCode(ctx echo.Context) error {
+	parameter := models.GetCoolMemberByCoolCodeParameter{
+		Code: ctx.Param("code"),
+	}
+
+	if err := validator.Validate(parameter); err != nil {
+		return response.ErrorValidation(ctx, err)
+	}
+
+	cools, err := clh.usecase.Cool.GetMemberById(ctx.Request().Context(), parameter.Code)
+	if err != nil {
+		return response.Error(ctx, err)
+	}
+
+	return response.SuccessListV2(ctx, http.StatusOK, "", cools)
 }

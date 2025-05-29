@@ -31,7 +31,7 @@ var (
 
 	queryGetManyNameByCommunityId = "SELECT	 community_id, name FROM users WHERE community_id = ANY(?)"
 
-	queryGetRBACByCommunityId = `SELECT community_id, roles, user_types
+	queryGetRBACByCommunityId = `SELECT community_id, roles, user_types, cool_code
 	FROM users WHERE community_id = ? LIMIT 1`
 
 	queryGetUserNameByCommunityId = `SELECT name, community_id
@@ -54,7 +54,7 @@ var (
 		u.gender AS gender,
 		u.address AS address,
 		u.campus_code AS campus_code,
-		u.cool_id AS cool_id,
+		u.cool_code AS cool_code,
 		c.name AS cool_name,
 		u.department AS department,
 		u.date_of_birth AS date_of_birth,
@@ -70,7 +70,7 @@ var (
 	FROM
 		users u
 	LEFT JOIN
-		cools c ON u.cool_id = c.id
+		cools c ON u.cool_code = c.code
 	WHERE
 		1=1`
 
@@ -89,7 +89,7 @@ var (
 					u.gender as gender,
 					coalesce(u.address, '') as address,
 					u.campus_code as campus_code,
-					coalesce(u.cool_id, 0) as cool_id,
+					coalesce(u.cool_code, '') as cool_code,
 					coalesce(c.name, '') as cool_name,
 					u.department as department,
 					u.date_of_birth as date_of_birth,
@@ -111,9 +111,9 @@ var (
 			from users u
 				left join user_relations ur on ur.community_id = u.community_id
 				left join users ru on ru.community_id = ur.related_community_id
-				left join cools c on c.id = u.cool_id
+				left join cools c on c.code = u.cool_code
 			WHERE u.community_id = ?
-			group by u.community_id, u.name, u.phone_number, u.email, u.roles, u.status, u.gender, coalesce(u.address, ''), u.campus_code, u.cool_id, c.name, u.department, u.date_of_birth, coalesce(u.place_of_birth, ''), u.marital_status, u.date_of_marriage, coalesce(u.employment_status, ''), coalesce(u.education_level, ''), coalesce(u.kkj_number, ''), coalesce(u.jemaat_id, ''), u.is_baptized, u.is_kom100, u.created_at, u.updated_at, u.user_types, ru.community_id, ru.name, ur.relationship_type
+			group by u.community_id, u.name, u.phone_number, u.email, u.roles, u.status, u.gender, coalesce(u.address, ''), u.campus_code, u.cool_code, c.name, u.department, u.date_of_birth, coalesce(u.place_of_birth, ''), u.marital_status, u.date_of_marriage, coalesce(u.employment_status, ''), coalesce(u.education_level, ''), coalesce(u.kkj_number, ''), coalesce(u.jemaat_id, ''), u.is_baptized, u.is_kom100, u.created_at, u.updated_at, u.user_types, ru.community_id, ru.name, ur.relationship_type
 	`
 
 	queryGetCommunityIdByName = `SELECT name, community_id
@@ -198,7 +198,7 @@ func BuildCountGetAllUser(param models.GetAllUserCursorParam) (string, []interfa
 		args = append(args, param.CampusCode)
 	}
 	if param.CoolId != 0 {
-		queryBuilder.WriteString(" AND u.cool_id = ?")
+		queryBuilder.WriteString(" AND u.cool_code = ?")
 		args = append(args, param.CoolId)
 	}
 
@@ -241,7 +241,7 @@ func BuildQueryGetAllUser(param models.GetAllUserCursorParam) (string, []interfa
 		args = append(args, param.CampusCode)
 	}
 	if param.CoolId != 0 {
-		queryBuilder.WriteString(" AND u.cool_id = ?")
+		queryBuilder.WriteString(" AND u.cool_code = ?")
 		args = append(args, param.CoolId)
 	}
 

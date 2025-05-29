@@ -31,6 +31,8 @@ type Usecases struct {
 	Config                  configDBUsecase
 	Cool                    coolUsecase
 	CoolNewJoiner           coolNewJoinerUsecase
+	CoolMeeting             coolMeetingUsecase
+	CoolAttendance          coolAttendanceUsecase
 }
 
 func New(d Dependencies) *Usecases {
@@ -50,5 +52,7 @@ func New(d Dependencies) *Usecases {
 		Config:                  *NewConfigDBUsecase(*d.Repository, *d.Config),
 		Cool:                    *NewCoolUsecase(*d.Repository, *d.Config, &featureFlagUsecase{r: *d.Repository}),
 		CoolNewJoiner:           *NewCoolNewJoinerUsecase(*d.Repository, d.Config, configDBUsecase{r: *d.Repository}),
+		CoolMeeting:             *NewCoolMeetingUsecase(*d.Repository, *d.Config, &coolAttendanceUsecase{r: *d.Repository}),
+		CoolAttendance:          *NewCoolAttendanceUsecase(*d.Repository),
 	}
 }

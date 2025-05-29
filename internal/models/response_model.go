@@ -70,9 +70,9 @@ type (
 		Metadata Metadata    `json:"metadata"`
 	}
 	Response struct {
-		Code       int         `json:"code"`
-		Status     string      `json:"status"`
-		Message    string      `json:"message"`
+		Code       int         `json:"code" example:"200"`
+		Status     string      `json:"status" example:"OK"`
+		Message    string      `json:"message" example:"Request has been successfully processed."`
 		Data       interface{} `json:"data,omitempty"`
 		Pagination *CursorInfo `json:"pagination,omitempty"`
 		Errors     interface{} `json:"errors,omitempty"`

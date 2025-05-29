@@ -352,6 +352,86 @@ const docTemplate = `{
                 }
             }
         },
+        "/v2/cools/meetings": {
+            "post": {
+                "description": "Create Cool Meetings",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "cools-meetings"
+                ],
+                "summary": "Create Meeting",
+                "parameters": [
+                    {
+                        "description": "Create Meeting Request JSON",
+                        "name": "user",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/models.CreateMeetingRequest"
+                        }
+                    },
+                    {
+                        "type": "string",
+                        "description": "mandatory header to access endpoint",
+                        "name": "X-API-Key",
+                        "in": "header",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Response indicates that the request succeeded and the resources has been fetched and transmitted in the message body",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/models.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/models.CreateMeetingResponse"
+                                        },
+                                        "metadata": {
+                                            "$ref": "#/definitions/models.Metadata"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/models.ErrorResponse"
+                        }
+                    },
+                    "422": {
+                        "description": "Validation error. This can happen if there is an error validation while create account",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/models.ErrorResponse"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "errors": {
+                                            "$ref": "#/definitions/models.ErrorValidateResponse"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                }
+            }
+        },
         "/v2/events": {
             "get": {
                 "security": [
@@ -1055,7 +1135,7 @@ const docTemplate = `{
                 "tags": [
                     "users-internal"
                 ],
-                "summary": "Update User Profile",
+                "summary": "Update User Profile Internally",
                 "parameters": [
                     {
                         "type": "string",
@@ -2178,6 +2258,26 @@ const docTemplate = `{
                 }
             }
         },
+        "models.CreateAttendanceRequest": {
+            "type": "object",
+            "properties": {
+                "meetingId": {
+                    "type": "string"
+                },
+                "members": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/models.CreateMemberAttendanceRequest"
+                    }
+                },
+                "newJoiners": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/models.CreateNewJoinerAttendanceRequest"
+                    }
+                }
+            }
+        },
         "models.CreateEventRegistrationRecordRequest": {
             "type": "object",
             "required": [
@@ -2700,6 +2800,149 @@ const docTemplate = `{
                 }
             }
         },
+        "models.CreateMeetingRequest": {
+            "type": "object",
+            "required": [
+                "coolCode",
+                "meetingDate",
+                "meetingEndAt",
+                "meetingStartAt"
+            ],
+            "properties": {
+                "attendance": {
+                    "$ref": "#/definitions/models.CreateAttendanceRequest"
+                },
+                "coolCode": {
+                    "type": "string"
+                },
+                "description": {
+                    "type": "string"
+                },
+                "markAttendanceNow": {
+                    "type": "boolean"
+                },
+                "meetingDate": {
+                    "type": "string"
+                },
+                "meetingEndAt": {
+                    "type": "string"
+                },
+                "meetingStartAt": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
+                }
+            }
+        },
+        "models.CreateMeetingResponse": {
+            "type": "object",
+            "properties": {
+                "attendanceId": {
+                    "type": "string"
+                },
+                "coolCode": {
+                    "type": "string"
+                },
+                "description": {
+                    "type": "string"
+                },
+                "meetingDate": {
+                    "type": "string"
+                },
+                "meetingEndAt": {
+                    "type": "string"
+                },
+                "meetingStartAt": {
+                    "type": "string"
+                },
+                "members": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/models.CreateMemberAttendanceResponse"
+                    }
+                },
+                "name": {
+                    "type": "string"
+                },
+                "newJoiners": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/models.CreateNewJoinerAttendanceResponse"
+                    }
+                },
+                "type": {
+                    "type": "string"
+                }
+            }
+        },
+        "models.CreateMemberAttendanceRequest": {
+            "type": "object",
+            "required": [
+                "communityId"
+            ],
+            "properties": {
+                "communityId": {
+                    "type": "string"
+                },
+                "isPresent": {
+                    "type": "boolean"
+                },
+                "remarks": {
+                    "type": "string"
+                }
+            }
+        },
+        "models.CreateMemberAttendanceResponse": {
+            "type": "object",
+            "properties": {
+                "attendanceId": {
+                    "type": "string"
+                },
+                "communityId": {
+                    "type": "string"
+                },
+                "isPresent": {
+                    "description": "Name         string ` + "`" + `json:\"name\"` + "`" + `",
+                    "type": "boolean"
+                },
+                "remarks": {
+                    "type": "string"
+                },
+                "type": {
+                    "type": "string"
+                }
+            }
+        },
+        "models.CreateNewJoinerAttendanceRequest": {
+            "type": "object",
+            "required": [
+                "name",
+                "phoneNumber"
+            ],
+            "properties": {
+                "name": {
+                    "type": "string"
+                },
+                "phoneNumber": {
+                    "type": "string"
+                }
+            }
+        },
+        "models.CreateNewJoinerAttendanceResponse": {
+            "type": "object",
+            "properties": {
+                "name": {
+                    "type": "string"
+                },
+                "phoneNumber": {
+                    "type": "string"
+                },
+                "type": {
+                    "type": "string"
+                }
+            }
+        },
         "models.CreateOtherEventRegistrationRecordRequest": {
             "type": "object",
             "required": [
@@ -2762,6 +3005,9 @@ const docTemplate = `{
                     "maxLength": 3,
                     "minLength": 3,
                     "example": "001"
+                },
+                "coolCode": {
+                    "type": "string"
                 },
                 "coolId": {
                     "type": "integer",
@@ -2845,6 +3091,9 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "communityId": {
+                    "type": "string"
+                },
+                "coolCode": {
                     "type": "string"
                 },
                 "coolId": {
@@ -2948,6 +3197,7 @@ const docTemplate = `{
         "models.CreateVolunteerRequest": {
             "type": "object",
             "required": [
+                "coolCode",
                 "coolId",
                 "dateOfBirth",
                 "department_code",
@@ -2967,6 +3217,9 @@ const docTemplate = `{
                     "maxLength": 3,
                     "minLength": 3,
                     "example": "001"
+                },
+                "coolCode": {
+                    "type": "string"
                 },
                 "coolId": {
                     "type": "integer",
@@ -3050,6 +3303,9 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "communityId": {
+                    "type": "string"
+                },
+                "coolCode": {
                     "type": "string"
                 },
                 "coolId": {
@@ -3349,6 +3605,9 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "communityId": {
+                    "type": "string"
+                },
+                "coolCode": {
                     "type": "string"
                 },
                 "coolId": {
@@ -3766,6 +4025,9 @@ const docTemplate = `{
                 "communityId": {
                     "type": "string"
                 },
+                "coolCode": {
+                    "type": "string"
+                },
                 "coolId": {
                     "type": "integer",
                     "example": 1
@@ -3865,6 +4127,9 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "communityId": {
+                    "type": "string"
+                },
+                "coolCode": {
                     "type": "string"
                 },
                 "coolId": {
@@ -4039,6 +4304,10 @@ const docTemplate = `{
                 "communityId": {
                     "type": "string"
                 },
+                "coolCode": {
+                    "type": "string",
+                    "example": "C014KG56DC0EX5V37QMMXTAE5F9"
+                },
                 "coolId": {
                     "type": "integer",
                     "example": 1
@@ -4152,6 +4421,31 @@ const docTemplate = `{
                 }
             }
         },
+        "models.Response": {
+            "type": "object",
+            "properties": {
+                "code": {
+                    "type": "integer",
+                    "example": 200
+                },
+                "data": {},
+                "errors": {},
+                "message": {
+                    "type": "string",
+                    "example": "Request has been successfully processed."
+                },
+                "metadata": {
+                    "$ref": "#/definitions/models.Metadata"
+                },
+                "pagination": {
+                    "$ref": "#/definitions/models.CursorInfo"
+                },
+                "status": {
+                    "type": "string",
+                    "example": "OK"
+                }
+            }
+        },
         "models.RoleResponse": {
             "type": "object",
             "properties": {
@@ -4201,6 +4495,9 @@ const docTemplate = `{
                     "maxLength": 3,
                     "minLength": 3,
                     "example": "001"
+                },
+                "coolCode": {
+                    "type": "string"
                 },
                 "coolId": {
                     "type": "integer"
@@ -4560,6 +4857,10 @@ const docTemplate = `{
                     "minLength": 3,
                     "example": "001"
                 },
+                "coolCode": {
+                    "description": "TODO: change to coolId in the future, and change the coolCode to coolInf",
+                    "type": "string"
+                },
                 "coolId": {
                     "type": "integer"
                 },
@@ -4665,6 +4966,10 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "communityId": {
+                    "type": "string"
+                },
+                "coolCode": {
+                    "description": "TODO: change to coolId in the future, and change the coolCode to coolInf",
                     "type": "string"
                 },
                 "coolId": {

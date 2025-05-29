@@ -21,6 +21,19 @@ definitions:
       user:
         type: boolean
     type: object
+  models.CreateAttendanceRequest:
+    properties:
+      meetingId:
+        type: string
+      members:
+        items:
+          $ref: '#/definitions/models.CreateMemberAttendanceRequest'
+        type: array
+      newJoiners:
+        items:
+          $ref: '#/definitions/models.CreateNewJoinerAttendanceRequest'
+        type: array
+    type: object
   models.CreateEventRegistrationRecordRequest:
     properties:
       communityId:
@@ -391,6 +404,101 @@ definitions:
       type:
         type: string
     type: object
+  models.CreateMeetingRequest:
+    properties:
+      attendance:
+        $ref: '#/definitions/models.CreateAttendanceRequest'
+      coolCode:
+        type: string
+      description:
+        type: string
+      markAttendanceNow:
+        type: boolean
+      meetingDate:
+        type: string
+      meetingEndAt:
+        type: string
+      meetingStartAt:
+        type: string
+      name:
+        type: string
+    required:
+    - coolCode
+    - meetingDate
+    - meetingEndAt
+    - meetingStartAt
+    type: object
+  models.CreateMeetingResponse:
+    properties:
+      attendanceId:
+        type: string
+      coolCode:
+        type: string
+      description:
+        type: string
+      meetingDate:
+        type: string
+      meetingEndAt:
+        type: string
+      meetingStartAt:
+        type: string
+      members:
+        items:
+          $ref: '#/definitions/models.CreateMemberAttendanceResponse'
+        type: array
+      name:
+        type: string
+      newJoiners:
+        items:
+          $ref: '#/definitions/models.CreateNewJoinerAttendanceResponse'
+        type: array
+      type:
+        type: string
+    type: object
+  models.CreateMemberAttendanceRequest:
+    properties:
+      communityId:
+        type: string
+      isPresent:
+        type: boolean
+      remarks:
+        type: string
+    required:
+    - communityId
+    type: object
+  models.CreateMemberAttendanceResponse:
+    properties:
+      attendanceId:
+        type: string
+      communityId:
+        type: string
+      isPresent:
+        description: Name         string `json:"name"`
+        type: boolean
+      remarks:
+        type: string
+      type:
+        type: string
+    type: object
+  models.CreateNewJoinerAttendanceRequest:
+    properties:
+      name:
+        type: string
+      phoneNumber:
+        type: string
+    required:
+    - name
+    - phoneNumber
+    type: object
+  models.CreateNewJoinerAttendanceResponse:
+    properties:
+      name:
+        type: string
+      phoneNumber:
+        type: string
+      type:
+        type: string
+    type: object
   models.CreateOtherEventRegistrationRecordRequest:
     properties:
       name:
@@ -428,6 +536,8 @@ definitions:
         example: "001"
         maxLength: 3
         minLength: 3
+        type: string
+      coolCode:
         type: string
       coolId:
         example: 1
@@ -494,6 +604,8 @@ definitions:
       campusCode:
         type: string
       communityId:
+        type: string
+      coolCode:
         type: string
       coolId:
         example: 1
@@ -573,6 +685,8 @@ definitions:
         maxLength: 3
         minLength: 3
         type: string
+      coolCode:
+        type: string
       coolId:
         example: 1
         type: integer
@@ -625,6 +739,7 @@ definitions:
           type: string
         type: array
     required:
+    - coolCode
     - coolId
     - dateOfBirth
     - department_code
@@ -642,6 +757,8 @@ definitions:
       campusCode:
         type: string
       communityId:
+        type: string
+      coolCode:
         type: string
       coolId:
         example: 1
@@ -847,6 +964,8 @@ definitions:
       campusName:
         type: string
       communityId:
+        type: string
+      coolCode:
         type: string
       coolId:
         type: integer
@@ -1142,6 +1261,8 @@ definitions:
         type: string
       communityId:
         type: string
+      coolCode:
+        type: string
       coolId:
         example: 1
         type: integer
@@ -1209,6 +1330,8 @@ definitions:
       campusName:
         type: string
       communityId:
+        type: string
+      coolCode:
         type: string
       coolId:
         type: integer
@@ -1325,6 +1448,9 @@ definitions:
         type: string
       communityId:
         type: string
+      coolCode:
+        example: C014KG56DC0EX5V37QMMXTAE5F9
+        type: string
       coolId:
         example: 1
         type: integer
@@ -1403,6 +1529,24 @@ definitions:
     - communityId
     - type
     type: object
+  models.Response:
+    properties:
+      code:
+        example: 200
+        type: integer
+      data: {}
+      errors: {}
+      message:
+        example: Request has been successfully processed.
+        type: string
+      metadata:
+        $ref: '#/definitions/models.Metadata'
+      pagination:
+        $ref: '#/definitions/models.CursorInfo'
+      status:
+        example: OK
+        type: string
+    type: object
   models.RoleResponse:
     properties:
       description:
@@ -1433,6 +1577,8 @@ definitions:
         example: "001"
         maxLength: 3
         minLength: 3
+        type: string
+      coolCode:
         type: string
       coolId:
         type: integer
@@ -1679,6 +1825,10 @@ definitions:
         maxLength: 3
         minLength: 3
         type: string
+      coolCode:
+        description: 'TODO: change to coolId in the future, and change the coolCode
+          to coolInf'
+        type: string
       coolId:
         type: integer
       dateOfBirth:
@@ -1759,6 +1909,10 @@ definitions:
       campusCode:
         type: string
       communityId:
+        type: string
+      coolCode:
+        description: 'TODO: change to coolId in the future, and change the coolCode
+          to coolInf'
         type: string
       coolId:
         type: integer
@@ -2092,6 +2246,55 @@ paths:
       summary: Update User Role or User Type
       tags:
       - users
+  /v2/cools/meetings:
+    post:
+      consumes:
+      - application/json
+      description: Create Cool Meetings
+      parameters:
+      - description: Create Meeting Request JSON
+        in: body
+        name: user
+        required: true
+        schema:
+          $ref: '#/definitions/models.CreateMeetingRequest'
+      - description: mandatory header to access endpoint
+        in: header
+        name: X-API-Key
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Response indicates that the request succeeded and the resources
+            has been fetched and transmitted in the message body
+          schema:
+            allOf:
+            - $ref: '#/definitions/models.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/models.CreateMeetingResponse'
+                metadata:
+                  $ref: '#/definitions/models.Metadata'
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+        "422":
+          description: Validation error. This can happen if there is an error validation
+            while create account
+          schema:
+            allOf:
+            - $ref: '#/definitions/models.ErrorResponse'
+            - properties:
+                errors:
+                  $ref: '#/definitions/models.ErrorValidateResponse'
+              type: object
+      summary: Create Meeting
+      tags:
+      - cools-meetings
   /v2/events:
     get:
       consumes:
@@ -2559,7 +2762,7 @@ paths:
                 errors:
                   $ref: '#/definitions/models.ErrorValidateResponse'
               type: object
-      summary: Update User Profile
+      summary: Update User Profile Internally
       tags:
       - users-internal
   /v2/roles:

@@ -12,6 +12,10 @@ run: generate-docs run_api
 run_api: tidy
 	export ENV="DEV" && go run ./cmd/api/main.go
 
+run_local:
+	swag init -g cmd/api/main.go
+	export ENV="DEV" && go run ./cmd/api/main.go | jq -C -R '. as $$line | try (fromjson) catch $$line'
+
 tidy:
 	go mod tidy
 	go mod download

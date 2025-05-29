@@ -3,9 +3,10 @@ package pgsql
 import (
 	"context"
 	"fmt"
-	"github.com/lib/pq"
 	"go-community/internal/models"
 	"go-community/internal/pkg/cursor"
+
+	"github.com/lib/pq"
 	"gorm.io/gorm"
 )
 
@@ -27,7 +28,7 @@ type UserRepository interface {
 	GetAllWithCursor(ctx context.Context, param models.GetAllUserCursorParam) (output []models.GetAllUserDBOutput, prev string, next string, total int, err error)
 	BulkUpdateRolesByCommunityIds(ctx context.Context, communityIds []string, roles []string) (err error)
 	BulkUpdateUserTypesByCommunityIds(ctx context.Context, communityIds []string, userTypes []string) (err error)
-	UpdateCoolTeamsByCommunityId(ctx context.Context, communityId string, coolId int, userTypes []string) (err error)
+	UpdateCoolTeamsByCommunityId(ctx context.Context, communityId string, coolCode string, userTypes []string) (err error)
 	CheckMultiple(ctx context.Context, communityIds []string) (count int64, err error)
 	GetDetailByCommunityId(ctx context.Context, communityId string) (output []models.GetUserProfileDBOutput, err error)
 	GetCommunityIdByParams(ctx context.Context, param models.GetCommunityIdsByParameter) (output []models.GetCommunityIdsByParamsDBOutput, err error)
@@ -288,15 +289,15 @@ func (ur *userRepository) BulkUpdateUserTypesByCommunityIds(ctx context.Context,
 	return ur.db.Model(user).Where("community_id IN ?", communityIds).Update("user_types", pq.Array(userTypes)).Error
 }
 
-func (ur *userRepository) UpdateCoolTeamsByCommunityId(ctx context.Context, communityId string, coolId int, userTypes []string) (err error) {
+func (ur *userRepository) UpdateCoolTeamsByCommunityId(ctx context.Context, communityId string, coolCode string, userTypes []string) (err error) {
 	defer func() {
 		LogRepository(ctx, err)
 	}()
 
-	user := models.User{}
+	user := &models.User{}
 	return ur.db.Model(user).Where("community_id = ?", communityId).Updates(map[string]interface{}{
 		"user_types": pq.Array(userTypes),
-		"cool_id":    coolId,
+		"cool_code":  coolCode,
 	}).Error
 }
 
@@ -383,7 +384,7 @@ func (ur *userRepository) GetUserNamesByMultipleCommunityId(ctx context.Context,
 		LogRepository(ctx, err)
 	}()
 
-	err = ur.db.Raw(queryGetUserNamesByCommunityIds, communityIds).Scan(&output).Error
+	err = ur.db.Raw(queryGetUserNamesByCommunityIds, pq.Array(communityIds)).Scan(&output).Error
 	if err != nil {
 		return nil, err
 	}

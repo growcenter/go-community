@@ -2,18 +2,23 @@ package usecases
 
 import (
 	"context"
+	"encoding/json"
 	"go-community/internal/common"
 	"go-community/internal/config"
 	"go-community/internal/constants"
 	"go-community/internal/models"
+	"go-community/internal/pkg/generator"
 	"go-community/internal/repositories/pgsql"
 	"strings"
+
+	"gorm.io/gorm"
 )
 
 type CoolUsecase interface {
 	Create(ctx context.Context, request models.CreateCoolRequest) (response *models.CreateCoolResponse, err error)
 	GetAll(ctx context.Context) (response []models.GetAllCoolOptionsResponse, err error)
 	GetByCommunityId(ctx context.Context, communityId string) (response *models.GetCoolDetailResponse, err error)
+	GetMemberById(ctx context.Context, id int) (response *models.GetCoolMemberByIdResponse, err error)
 }
 
 type coolUsecase struct {
@@ -35,7 +40,7 @@ func (clu *coolUsecase) Create(ctx context.Context, request models.CreateCoolReq
 		LogService(ctx, err)
 	}()
 
-	campusName, campusExist := clu.cfg.Campus[strings.ToLower(request.CampusCode)]
+	campusName, campusExist := clu.cfg.Campus[common.StringTrimSpaceAndLower(request.CampusCode)]
 	if !campusExist {
 		return nil, models.ErrorDataNotFound
 	}
@@ -75,17 +80,18 @@ func (clu *coolUsecase) Create(ctx context.Context, request models.CreateCoolReq
 	}
 
 	cool := models.Cool{
+		Code:                    generator.TypeId("c"), // C stands for COOL
 		Name:                    strings.TrimSpace(request.Name),
-		Description:             *request.Description,
-		CampusCode:              request.CampusCode,
+		Description:             &request.Description,
+		CampusCode:              common.StringTrimSpaceAndUpper(request.CampusCode),
 		FacilitatorCommunityIds: request.FacilitatorCommunityIds,
 		LeaderCommunityIds:      request.LeaderCommunityIds,
 		CoreCommunityIds:        request.CoreCommunityIds,
 		Category:                *category,
-		Gender:                  *request.Gender,
-		Recurrence:              *request.Recurrence,
+		Gender:                  &request.Gender,
+		Recurrence:              &request.Recurrence,
 		LocationType:            request.LocationType,
-		LocationName:            *request.LocationName,
+		LocationName:            &request.LocationName,
 		Status:                  constants.MapStatus[constants.STATUS_ACTIVE],
 	}
 
@@ -93,7 +99,24 @@ func (clu *coolUsecase) Create(ctx context.Context, request models.CreateCoolReq
 		return nil, err
 	}
 
-	// TODO: need to add case for facilitator to be set into cool of facilitators
+	for _, facilitatorCommunityId := range request.FacilitatorCommunityIds {
+		// Get User Type here
+		userRbacs, err := clu.r.User.GetRBAC(ctx, facilitatorCommunityId)
+		if err != nil {
+			return nil, err
+		}
+
+		existingUserTypes := []string(userRbacs.UserTypes) // convert pq.StringArray to []string
+		if common.CheckOneDataInList([]string{constants.USER_TYPE_COOL_FACILITATOR}, existingUserTypes) && userRbacs.CoolCode == clu.cfg.Cool.FacilitatorCode {
+			continue
+		}
+
+		userTypes := common.CombineMapStrings(existingUserTypes, []string{constants.USER_TYPE_COOL_FACILITATOR})
+		if err := clu.r.User.UpdateCoolTeamsByCommunityId(ctx, facilitatorCommunityId, clu.cfg.Cool.FacilitatorCode, userTypes); err != nil {
+			return nil, err
+		}
+	}
+
 	for _, leaderCommunityId := range request.LeaderCommunityIds {
 		// Get User Type here
 		userRbacs, err := clu.r.User.GetRBAC(ctx, leaderCommunityId)
@@ -102,9 +125,12 @@ func (clu *coolUsecase) Create(ctx context.Context, request models.CreateCoolReq
 		}
 
 		existingUserTypes := []string(userRbacs.UserTypes) // convert pq.StringArray to []string
-		userTypes := append(existingUserTypes, "cool-leader")
+		if common.CheckOneDataInList([]string{constants.USER_TYPE_COOL_LEADER}, existingUserTypes) && userRbacs.CoolCode == cool.Code {
+			continue
+		}
 
-		if err := clu.r.User.UpdateCoolTeamsByCommunityId(ctx, leaderCommunityId, cool.ID, userTypes); err != nil {
+		userTypes := common.CombineMapStrings(existingUserTypes, []string{constants.USER_TYPE_COOL_LEADER})
+		if err := clu.r.User.UpdateCoolTeamsByCommunityId(ctx, leaderCommunityId, cool.Code, userTypes); err != nil {
 			return nil, err
 		}
 	}
@@ -116,11 +142,14 @@ func (clu *coolUsecase) Create(ctx context.Context, request models.CreateCoolReq
 			return nil, err
 		}
 
-		existingUserTypes := []string(userRbacs.UserTypes)  // convert pq.StringArray to []string
-		userTypes := append(existingUserTypes, "cool-core") // add core team user type to the user
+		existingUserTypes := []string(userRbacs.UserTypes) // convert pq.StringArray to []string
+		if common.CheckOneDataInList([]string{constants.USER_TYPE_COOL_CORE}, existingUserTypes) && userRbacs.CoolCode == cool.Code {
+			continue
+		}
 
+		userTypes := common.CombineMapStrings(existingUserTypes, []string{constants.USER_TYPE_COOL_CORE}) // add core team user type to the user
 		// update user's user types and cool id here
-		if err := clu.r.User.UpdateCoolTeamsByCommunityId(ctx, coreCommunityId, cool.ID, userTypes); err != nil {
+		if err := clu.r.User.UpdateCoolTeamsByCommunityId(ctx, coreCommunityId, cool.Code, userTypes); err != nil {
 			return nil, err
 		}
 	}
@@ -169,18 +198,19 @@ func (clu *coolUsecase) Create(ctx context.Context, request models.CreateCoolReq
 
 	res := models.CreateCoolResponse{
 		Type:         models.TYPE_COOL,
-		Name:         strings.TrimSpace(request.Name),
-		Description:  *request.Description,
-		CampusCode:   request.CampusCode,
+		Code:         cool.Code,
+		Name:         cool.Name,
+		Description:  *cool.Description,
+		CampusCode:   cool.CampusCode,
 		CampusName:   campusName,
 		Facilitators: facRes,
 		Leaders:      leadRes,
 		CoreTeam:     coreRes,
-		Category:     request.Category,
-		Gender:       *request.Gender,
-		Recurrence:   *request.Recurrence,
-		LocationType: request.LocationType,
-		LocationName: *request.LocationName,
+		Category:     cool.Category,
+		Gender:       *cool.Gender,
+		Recurrence:   *cool.Recurrence,
+		LocationType: cool.LocationType,
+		LocationName: *cool.LocationName,
 		Status:       constants.MapStatus[constants.STATUS_ACTIVE],
 	}
 
@@ -224,7 +254,7 @@ func (clu *coolUsecase) GetAll(ctx context.Context) (response []models.GetAllCoo
 
 		list[i] = models.GetAllCoolOptionsResponse{
 			Type:       models.TYPE_COOL,
-			ID:         e.ID,
+			Code:       e.Code,
 			Name:       e.Name,
 			CampusCode: e.CampusCode,
 			CampusName: campusName,
@@ -241,22 +271,13 @@ func (clu *coolUsecase) GetByCommunityId(ctx context.Context, communityId string
 		LogService(ctx, err)
 	}()
 
-	user, err := clu.r.User.GetOneByCommunityId(ctx, communityId)
+	cool, err := clu.r.Cool.GetOneByCommunityId(ctx, communityId)
 	if err != nil {
+		if err == gorm.ErrRecordNotFound {
+			return nil, models.ErrorDataNotFound
+		}
+
 		return nil, err
-	}
-
-	if user.ID == 0 {
-		return nil, models.ErrorDataNotFound
-	}
-
-	cool, err := clu.r.Cool.GetOneById(ctx, user.CoolID)
-	if err != nil {
-		return nil, err
-	}
-
-	if cool.ID == 0 {
-		return nil, models.ErrorDataNotFound
 	}
 
 	var campusName string
@@ -312,18 +333,59 @@ func (clu *coolUsecase) GetByCommunityId(ctx context.Context, communityId string
 
 	return &models.GetCoolDetailResponse{
 		Type:         models.TYPE_COOL,
+		Code:         cool.Code,
 		Name:         cool.Name,
-		Description:  cool.Description,
+		Description:  *cool.Description,
 		CampusCode:   cool.CampusCode,
 		CampusName:   campusName,
 		Facilitators: facRes,
 		Leaders:      leadRes,
 		CoreTeam:     coreRes,
 		Category:     cool.Category,
-		Gender:       cool.Gender,
-		Recurrence:   cool.Recurrence,
+		Gender:       *cool.Gender,
+		Recurrence:   *cool.Recurrence,
 		LocationType: cool.LocationType,
-		LocationName: cool.LocationName,
+		LocationName: *cool.LocationName,
 		Status:       cool.Status,
 	}, nil
+}
+
+func (clu *coolUsecase) GetMemberById(ctx context.Context, code string) (response []models.GetCoolMemberByIdResponse, err error) {
+	defer func() {
+		LogService(ctx, err)
+	}()
+
+	existCool, err := clu.r.Cool.CheckByCode(ctx, code)
+	if err != nil {
+		return nil, err
+	}
+	if !existCool {
+		return nil, models.ErrorDataNotFound
+	}
+
+	members, err := clu.r.Cool.GetCoolMemberByCode(ctx, code)
+	if err != nil {
+		return nil, err
+	}
+
+	if len(members) == 0 {
+		return nil, models.ErrorDataNotFound
+	}
+	for _, member := range members {
+		var userTypeOutputs []models.UserTypeDBOutput
+		if err := json.Unmarshal(member.UserTypes, &userTypeOutputs); err != nil {
+			// Handle error
+			return nil, err
+		}
+
+		response = append(response, models.GetCoolMemberByIdResponse{
+			Type:        models.TYPE_USER,
+			CommunityId: member.CommunityID,
+			Name:        member.Name,
+			CoolCode:    member.CoolCode,
+			UserType:    userTypeOutputs,
+		})
+	}
+
+	return response, nil
 }
