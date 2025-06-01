@@ -18,7 +18,7 @@ type CoolUsecase interface {
 	Create(ctx context.Context, request models.CreateCoolRequest) (response *models.CreateCoolResponse, err error)
 	GetAll(ctx context.Context) (response []models.GetAllCoolOptionsResponse, err error)
 	GetByCommunityId(ctx context.Context, communityId string) (response *models.GetCoolDetailResponse, err error)
-	GetMemberById(ctx context.Context, id int) (response *models.GetCoolMemberByIdResponse, err error)
+	GetMemberByCode(ctx context.Context, param models.GetCoolMemberByCoolCodeParameter) (response []models.GroupedCoolMembers, err error)
 }
 
 type coolUsecase struct {
@@ -350,20 +350,90 @@ func (clu *coolUsecase) GetByCommunityId(ctx context.Context, communityId string
 	}, nil
 }
 
-func (clu *coolUsecase) GetMemberById(ctx context.Context, code string) (response []models.GetCoolMemberByIdResponse, err error) {
+// func (clu *coolUsecase) GetMemberById(ctx context.Context, code string) (response []models.GroupedCoolMembers, err error) {
+// 	defer func() {
+// 		LogService(ctx, err)
+// 	}()
+
+// 	existCool, err := clu.r.Cool.CheckByCode(ctx, code)
+// 	if err != nil {
+// 		return nil, err
+// 	}
+
+// 	if !existCool {
+// 		return nil, models.ErrorDataNotFound
+// 	}
+
+// 	members, err := clu.r.Cool.GetCoolMemberByCode(ctx, code)
+// 	if err != nil {
+// 		return nil, err
+// 	}
+
+// 	facilitators, err := clu.r.Cool.GetCoolFacilitatorByCode(ctx, code)
+// 	if err != nil {
+// 		return nil, err
+// 	}
+// 	if len(members) == 0 {
+// 		return nil, models.ErrorDataNotFound
+// 	}
+
+// 	var nonFacilitatorResponse []models.GetCoolMemberResponse
+// 	var facilitatorResponse []models.GetCoolMemberResponse
+// 	if facilitators != nil {
+// 		for _, facilitator := range facilitators {
+// 			var userTypeOutputs []models.UserTypeDBOutput
+// 			if err := json.Unmarshal(facilitator.UserTypes, &userTypeOutputs); err != nil {
+// 				// Handle error
+// 				return nil, err
+// 			}
+
+// 			facilitatorResponse = append(facilitatorResponse, models.GetCoolMemberResponse{
+// 				Type:        models.TYPE_USER,
+// 				CommunityId: facilitator.CommunityID,
+// 				Name:        facilitator.Name,
+// 				CoolCode:    facilitator.CoolCode,
+// 				UserType:    userTypeOutputs,
+// 			})
+// 		}
+// 	}
+
+// 	for _, member := range members {
+// 		var userTypeOutputs []models.UserTypeDBOutput
+// 		if err := json.Unmarshal(member.UserTypes, &userTypeOutputs); err != nil {
+// 			// Handle error
+// 			return nil, err
+// 		}
+
+// 		nonFacilitatorResponse = append(nonFacilitatorResponse, models.GetCoolMemberResponse{
+// 			Type:        models.TYPE_USER,
+// 			CommunityId: member.CommunityID,
+// 			Name:        member.Name,
+// 			CoolCode:    member.CoolCode,
+// 			UserType:    userTypeOutputs,
+// 		})
+// 	}
+
+// 	var allCoolMembers []models.GroupedCoolMembers
+// 	allCoolMembers = append(allCoolMembers, models.GroupMembersBySelectedTypes(facilitatorResponse, []string{constants.USER_TYPE_COOL_FACILITATOR})...)
+// 	allCoolMembers = append(allCoolMembers, models.GroupMembersBySelectedTypes(nonFacilitatorResponse, []string{constants.USER_TYPE_COOL_LEADER, constants.USER_TYPE_COOL_CORE})...)
+// 	return allCoolMembers, nil
+// }
+
+func (clu *coolUsecase) GetMemberByCode(ctx context.Context, param models.GetCoolMemberByCoolCodeParameter) (response []models.GroupedCoolMembers, err error) {
 	defer func() {
 		LogService(ctx, err)
 	}()
 
-	existCool, err := clu.r.Cool.CheckByCode(ctx, code)
+	existCool, err := clu.r.Cool.CheckByCode(ctx, param.Code)
 	if err != nil {
 		return nil, err
 	}
+
 	if !existCool {
 		return nil, models.ErrorDataNotFound
 	}
 
-	members, err := clu.r.Cool.GetCoolMemberByCode(ctx, code)
+	members, err := clu.r.Cool.GetAllMembersByCode(ctx, param.Code)
 	if err != nil {
 		return nil, err
 	}
@@ -371,14 +441,16 @@ func (clu *coolUsecase) GetMemberById(ctx context.Context, code string) (respons
 	if len(members) == 0 {
 		return nil, models.ErrorDataNotFound
 	}
+
+	var undividedRes []models.GetCoolMemberResponse
 	for _, member := range members {
-		var userTypeOutputs []models.UserTypeDBOutput
+		var userTypeOutputs []models.UserTypeSimplifyResponse
 		if err := json.Unmarshal(member.UserTypes, &userTypeOutputs); err != nil {
 			// Handle error
 			return nil, err
 		}
 
-		response = append(response, models.GetCoolMemberByIdResponse{
+		undividedRes = append(undividedRes, models.GetCoolMemberResponse{
 			Type:        models.TYPE_USER,
 			CommunityId: member.CommunityID,
 			Name:        member.Name,
@@ -386,6 +458,19 @@ func (clu *coolUsecase) GetMemberById(ctx context.Context, code string) (respons
 			UserType:    userTypeOutputs,
 		})
 	}
+
+	if len(param.Type) > 0 {
+		coolUserTypes, found := constants.CoolUserType.LookupValuesArray(param.Type)
+		if !found {
+			return nil, models.ErrorInvalidInput
+		}
+
+		response = append(response, models.GroupMembersBySelectedTypes(undividedRes, coolUserTypes)...)
+		return response, nil
+	}
+
+	allCoolTypes := constants.CoolUserType.GetAllKeys()
+	response = append(response, models.GroupMembersBySelectedTypes(undividedRes, allCoolTypes)...)
 
 	return response, nil
 }

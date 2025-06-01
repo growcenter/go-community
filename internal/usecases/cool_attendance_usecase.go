@@ -6,12 +6,15 @@ import (
 	"go-community/internal/models"
 	"go-community/internal/pkg/validator"
 	"go-community/internal/repositories/pgsql"
+	"time"
 
 	"github.com/google/uuid"
 )
 
 type CoolAttendanceUsecase interface {
 	Create(ctx context.Context, request models.CreateAttendanceRequest) (res *models.CreateAttendanceResponse, err error)
+	GetByMeetingId(ctx context.Context, meetingId uuid.UUID) (res *models.GetAllAttendanceByMeetingIdResponse, err error)
+	GetSummaryByCoolCode(ctx context.Context, request models.GetSummaryAttendanceByCoolCodeRequest) (response []models.GetSummaryAttendanceByCoolCodeResponse, err error)
 }
 
 type coolAttendanceUsecase struct {
@@ -38,7 +41,7 @@ func (cau *coolAttendanceUsecase) Create(ctx context.Context, request models.Cre
 		return nil, err
 	}
 
-	if &meeting.ID == nil {
+	if meeting.ID == uuid.Nil {
 		return nil, models.ErrorDataNotFound
 	}
 
@@ -142,4 +145,124 @@ func (cau *coolAttendanceUsecase) Create(ctx context.Context, request models.Cre
 		Members:       memberRes,
 		NewJoiners:    newJoinRes,
 	}, nil
+}
+
+func (cau *coolAttendanceUsecase) GetByMeetingId(ctx context.Context, meetingId uuid.UUID) (res *models.GetAllAttendanceByMeetingIdResponse, err error) {
+	defer func() {
+		LogService(ctx, err)
+	}()
+
+	meeting, err := cau.r.CoolMeeting.GetById(ctx, meetingId)
+	if err != nil {
+		return nil, err
+	}
+
+	if meeting.ID == uuid.Nil {
+		return nil, models.ErrorDataNotFound
+	}
+
+	attendances, err := cau.r.CoolAttendance.GetAttendancesByMeetingId(ctx, meetingId)
+	if err != nil {
+		return nil, err
+	}
+
+	members := make([]models.GetMemberAttendanceResponse, 0)
+	presentCount := 0
+	absentCount := 0
+	for _, attendance := range attendances {
+		members = append(members, models.GetMemberAttendanceResponse{
+			Type:         models.TYPE_COOL_MEMBER,
+			AttendanceId: attendance.AttendanceId.String(),
+			CommunityId:  attendance.CommunityId,
+			Name:         attendance.Name,
+			IsPresent:    attendance.IsPresent,
+			Remarks:      attendance.Remarks,
+		})
+
+		if attendance.IsPresent {
+			presentCount++
+		} else {
+			absentCount++
+		}
+	}
+
+	var newJoiners []models.CreateNewJoinerAttendanceResponse
+	for _, item := range meeting.NewJoiners {
+		var newJoiner models.CreateNewJoinerAttendanceResponse
+		if err := json.Unmarshal([]byte(item), &newJoiner); err != nil {
+			return nil, err
+		}
+
+		newJoiner.Type = models.TYPE_COOL_NEW_JOINER
+		newJoiners = append(newJoiners, newJoiner)
+	}
+
+	return &models.GetAllAttendanceByMeetingIdResponse{
+		Type:           models.TYPE_COOL_MEETING,
+		CoolMeetingId:  meeting.ID.String(),
+		Name:           meeting.Name,
+		CoolCode:       meeting.CoolCode,
+		Description:    *meeting.Description,
+		MeetingDate:    meeting.MeetingDate.Format("2006-01-02"),
+		MeetingStartAt: meeting.MeetingStartAt,
+		MeetingEndAt:   meeting.MeetingEndAt,
+		PresentCount:   presentCount,
+		AbsentCount:    absentCount,
+		Members:        members,
+		NewJoiners:     newJoiners,
+	}, nil
+}
+
+func (cau *coolAttendanceUsecase) GetSummaryByCoolCode(ctx context.Context, request models.GetSummaryAttendanceByCoolCodeRequest) (response []models.GetSummaryAttendanceByCoolCodeResponse, err error) {
+	defer func() {
+		LogService(ctx, err)
+	}()
+
+	existCool, err := cau.r.Cool.CheckByCode(ctx, request.CoolCode)
+	if err != nil {
+		return nil, err
+	}
+
+	if !existCool {
+		return nil, models.ErrorDataNotFound
+	}
+
+	switch {
+	case request.StartDate == "" && request.EndDate != "":
+		request.StartDate = time.Now().AddDate(0, -3, 0).Format("2006-01-02")
+	case request.StartDate != "" && request.EndDate == "":
+		request.EndDate = time.Now().Format("2006-01-02")
+	case request.StartDate == "" && request.EndDate == "":
+		request.StartDate = time.Now().AddDate(0, -3, 0).Format("2006-01-02")
+		request.EndDate = time.Now().Format("2006-01-02")
+	default:
+		// No need to self-assign StartDate since it's already set
+		// Default case can be empty since StartDate and EndDate are already set
+	}
+
+	meetings, err := cau.r.CoolAttendance.GetSummaryAttendanceByCoolCode(ctx, request)
+	if err != nil {
+		return nil, err
+	}
+
+	for _, meeting := range meetings {
+		var attendancePercentage float64
+		if meeting.TotalMeetingCount > 0 {
+			attendancePercentage = float64(meeting.PresentCount) / float64(meeting.TotalMeetingCount) * 100
+		} else {
+			attendancePercentage = 0.00
+		}
+
+		response = append(response, models.GetSummaryAttendanceByCoolCodeResponse{
+			Type:                 models.TYPE_USER,
+			Name:                 meeting.Name,
+			CommunityId:          meeting.CommunityId,
+			PresentCount:         meeting.PresentCount,
+			AbsentCount:          meeting.AbsentCount,
+			TotalMeetingCount:    meeting.TotalMeetingCount,
+			AttendancePercentage: attendancePercentage,
+		})
+	}
+
+	return response, nil
 }

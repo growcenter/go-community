@@ -20,6 +20,31 @@ func (d Dictionary) LookupValue(value string) (*string, bool) {
 	return nil, false
 }
 
+func (d Dictionary) LookupValuesArray(values []string) ([]string, bool) {
+	var keys []string
+	for _, value := range values {
+		for key, dictValues := range d {
+			for _, v := range dictValues {
+				if strings.EqualFold(v, common.StringTrimSpaceAndLower(value)) {
+					keys = append(keys, key)
+					break
+				}
+			}
+		}
+	}
+	return keys, len(keys) > 0
+}
+
+func (d Dictionary) GetAllKeys() []string {
+	// Extract keys
+	var keys []string
+	for key := range CoolUserType {
+		keys = append(keys, key)
+	}
+
+	return keys
+}
+
 // Define maritalStatus using the Dictionary type
 var MaritalStatus = Dictionary{
 	"DIVORCED": {"Divorced"},

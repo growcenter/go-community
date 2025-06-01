@@ -20,6 +20,59 @@ var (
 		u.cool_code = ?
 	;`
 
+	queryGetCoolFacilitatorByCode = `
+	SELECT
+		u.name AS name,
+		u.community_id AS community_id,
+		c.code AS cool_code,
+		(
+			SELECT json_agg(json_build_object('type', ut.type, 'name', ut.name))
+				FROM user_types ut
+				WHERE ut.type = ANY(u.user_types)
+			) AS user_types
+	FROM
+		users u
+	JOIN
+		cools c ON u.community_id = ANY(c.facilitator_community_ids)
+	WHERE
+		u.status = 'active' AND c.code = ?
+	ORDER BY
+		u.name;`
+
+	queryGetAllMembersByCoolCode = `
+	WITH members AS (
+			(SELECT 
+				u.community_id,
+				u.name,
+				u.cool_code,
+				(
+                SELECT json_agg(json_build_object('type', 'userType', 'userType', ut.type, 'name', ut.name))
+                    FROM user_types ut
+                    WHERE ut.type = ANY(u.user_types)
+                ) AS user_types,
+				true as is_facilitator
+			FROM
+                users u
+            JOIN
+                cools c ON u.community_id = ANY(c.facilitator_community_ids)
+			WHERE c.code = ? )
+			UNION ALL
+			(SELECT 
+				u.community_id,
+				u.name,
+				u.cool_code,
+				(
+                SELECT json_agg(json_build_object('type', 'userType', 'userType', ut.type, 'name', ut.name))
+                    FROM user_types ut
+                    WHERE ut.type = ANY(u.user_types)
+                ) AS user_types,
+				false as is_facilitator
+			FROM users u
+			WHERE u.cool_code = ?)
+		)
+		SELECT * FROM members;
+	`
+
 	queryGetCoolByCommunityId = `
 	SELECT 
 		c.id,

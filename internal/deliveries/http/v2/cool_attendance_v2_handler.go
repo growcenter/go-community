@@ -9,6 +9,7 @@ import (
 	"go-community/internal/usecases"
 	"net/http"
 
+	"github.com/google/uuid"
 	"github.com/labstack/echo/v4"
 )
 
@@ -25,7 +26,9 @@ func NewCoolAttendanceHandler(api *echo.Group, u *usecases.Usecases, c *config.C
 
 	endpointCoreAuth := endpoint.Group("")
 	endpointCoreAuth.Use(middleware.UserMiddleware(c, u, []string{"cool-attendance-create"}))
+	endpointCoreAuth.GET("/:coolCode/attendances", handler.GetSummaryByCoolCode)
 	endpointCoreAuth.POST("/meetings", handler.CreateMeeting)
+	endpointCoreAuth.GET("/meetings/:id/attendances", handler.GetMeetingAttendances)
 
 	endpointMemberAuth := endpoint.Group("")
 	endpointMemberAuth.Use(middleware.UserMiddleware(c, u, nil))
@@ -110,4 +113,48 @@ func (cah *CoolAttendanceHandler) GetMeetings(ctx echo.Context) error {
 	}
 
 	return response.SuccessListV2(ctx, http.StatusOK, "", meetings)
+}
+
+func (cah *CoolAttendanceHandler) GetMeetingAttendances(ctx echo.Context) error {
+	request := models.GetAllAttendanceByMeetingIdRequest{
+		MeetingId: uuid.MustParse(ctx.Param("id")),
+	}
+
+	if err := ctx.Bind(&request); err != nil {
+		return response.Error(ctx, err)
+	}
+
+	if err := validator.Validate(request); err != nil {
+		return response.ErrorValidation(ctx, err)
+	}
+
+	attendances, err := cah.usecase.CoolAttendance.GetByMeetingId(ctx.Request().Context(), request.MeetingId)
+	if err != nil {
+		return response.Error(ctx, err)
+	}
+
+	return response.SuccessV2(ctx, http.StatusOK, "", attendances)
+}
+
+func (cah *CoolAttendanceHandler) GetSummaryByCoolCode(ctx echo.Context) error {
+	request := models.GetSummaryAttendanceByCoolCodeRequest{
+		CoolCode:  ctx.Param("coolCode"),
+		StartDate: ctx.QueryParam("startDate"),
+		EndDate:   ctx.QueryParam("endDate"),
+	}
+
+	if err := ctx.Bind(&request); err != nil {
+		return response.Error(ctx, err)
+	}
+
+	if err := validator.Validate(request); err != nil {
+		return response.ErrorValidation(ctx, err)
+	}
+
+	summary, err := cah.usecase.CoolAttendance.GetSummaryByCoolCode(ctx.Request().Context(), request)
+	if err != nil {
+		return response.Error(ctx, err)
+	}
+
+	return response.SuccessListV2(ctx, http.StatusOK, "", summary)
 }

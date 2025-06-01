@@ -1,8 +1,9 @@
 package models
 
 import (
-	"github.com/lib/pq"
 	"time"
+
+	"github.com/lib/pq"
 )
 
 var TYPE_USER_TYPE = "userType"
@@ -51,4 +52,10 @@ type UserTypeSummaryResponse struct {
 	Type     string `json:"type" example:"userType"`
 	UserType string `json:"userType" example:"volunteer"`
 	Name     string `json:"name,omitempty" example:"Volunteer"`
+}
+
+type UserTypeSimplifyResponse struct {
+	Type     string `json:"type" example:"userType"`
+	UserType string `json:"userType" example:"volunteer"`
+	Name     string `json:"name" example:"Volunteer"`
 }

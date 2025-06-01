@@ -1,6 +1,8 @@
 package common
 
 import (
+	"errors"
+	"strconv"
 	"time"
 )
 
@@ -86,4 +88,29 @@ func GetTotalDiffDayBetweenTwoDate(dateFrom, dateTo time.Time) float64 {
 	diff := (t2.Sub(t1).Hours() / 24) / 1
 
 	return diff
+}
+
+// parseDuration parses strings like "3m", "90d", "1y"
+func ParseDuration(str string) (time.Duration, error) {
+	unit := str[len(str)-1]
+	numPart := str[:len(str)-1]
+
+	num, err := strconv.Atoi(numPart)
+	if err != nil {
+		return 0, err
+	}
+
+	switch unit {
+	case 'd':
+		return time.Duration(num) * 24 * time.Hour, nil
+	case 'm':
+		// months can't be directly converted to time.Duration,
+		// so return 0 and handle separately
+		return 0, nil
+	case 'y':
+		// same for years, return 0 and handle separately
+		return 0, nil
+	default:
+		return 0, errors.New("invalid duration unit, use d/m/y")
+	}
 }

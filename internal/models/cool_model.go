@@ -142,10 +142,11 @@ type GetCoolDetailResponse struct {
 
 type (
 	GetCoolMembersByIdDBOutput struct {
-		CommunityID string          `gorm:"column:community_id"`
-		Name        string          `gorm:"column:name"`
-		CoolCode    string          `gorm:"column:cool_code"`
-		UserTypes   json.RawMessage `gorm:"column:user_types"` // For the JSON data
+		CommunityID   string          `gorm:"column:community_id"`
+		Name          string          `gorm:"column:name"`
+		CoolCode      string          `gorm:"column:cool_code"`
+		UserTypes     json.RawMessage `gorm:"column:user_types"` // For the JSON data
+		IsFacilitator bool
 	}
 	// Optional: Define a UserType struct to unmarshal the JSON into
 	UserTypeDBOutput struct {
@@ -153,14 +154,62 @@ type (
 		Name string `json:"name"`
 	}
 	GetCoolMemberByCoolCodeParameter struct {
-		// Id   int    `json:"id" validate:"required,numeric"`
-		Code string `json:"code" validate:"required"`
+		Code string   `json:"code" validate:"required"`
+		Type []string `json:"type" validate:"omitempty,dive,oneof=facilitator leader core member"`
 	}
-	GetCoolMemberByIdResponse struct {
-		Type        string             `json:"type"`
-		CommunityId string             `json:"communityId"`
-		Name        string             `json:"name"`
-		CoolCode    string             `json:"coolCode"`
-		UserType    []UserTypeDBOutput `json:"userTypes"`
+	GetCoolMemberResponse struct {
+		Type        string                     `json:"type"`
+		CommunityId string                     `json:"communityId"`
+		Name        string                     `json:"name"`
+		CoolCode    string                     `json:"coolCode"`
+		UserType    []UserTypeSimplifyResponse `json:"-"`
+	}
+	GroupedCoolMembers struct {
+		Type     string                  `json:"type"`
+		UserType string                  `json:"userType"`
+		Members  []GetCoolMemberResponse `json:"members"`
 	}
 )
+
+// Group logic
+func GroupMembersBySelectedTypes(
+	members []GetCoolMemberResponse,
+	selectedTypes []string,
+) []GroupedCoolMembers {
+	groupMap := make(map[string][]GetCoolMemberResponse)
+	allowed := make(map[string]bool)
+
+	// Convert slice to map for fast lookup
+	for _, t := range selectedTypes {
+		allowed[t] = true
+	}
+
+	for _, member := range members {
+		simple := GetCoolMemberResponse{
+			Type:        member.Type,
+			CommunityId: member.CommunityId,
+			Name:        member.Name,
+			CoolCode:    member.CoolCode,
+			UserType:    member.UserType,
+		}
+
+		for _, userType := range member.UserType {
+			if allowed[userType.UserType] {
+				groupMap[userType.UserType] = append(groupMap[userType.UserType], simple)
+			}
+		}
+	}
+
+	var result []GroupedCoolMembers
+	for _, t := range selectedTypes {
+		if members, exists := groupMap[t]; exists {
+			result = append(result, GroupedCoolMembers{
+				Type:     TYPE_USER_TYPE,
+				UserType: t,
+				Members:  members,
+			})
+		}
+	}
+
+	return result
+}

@@ -6,11 +6,13 @@ import (
 	"go-community/internal/models"
 	"reflect"
 	"regexp"
+	"strconv"
 	"strings"
 	"time"
 
 	v10 "github.com/go-playground/validator/v10"
 	"github.com/hashicorp/go-multierror"
+	"go.jetify.com/typeid"
 )
 
 var valid = v10.New()
@@ -30,6 +32,8 @@ func init() {
 	registerPhoneStandardize()
 	registerhhmmField()
 	registeryyyymmddNoExceedTodayFormat()
+	registerTypeIdFormat()
+	registerDateRange()
 }
 
 func Validate(request interface{}) error {
@@ -264,5 +268,84 @@ func registeryyyymmddNoExceedTodayFormat() {
 			return false
 		}
 		return parsedDate.Before(common.Now())
+	})
+}
+
+func registerTypeIdFormat() {
+	valid.RegisterValidation("typeId", func(fl v10.FieldLevel) bool {
+		value := fl.Field().String()
+		_, err := typeid.FromString(value)
+		return err == nil
+	})
+}
+
+func registerDateRange() {
+	valid.RegisterValidation("daterange", func(fl v10.FieldLevel) bool {
+		// Expected format: "StartDateField|EndDateField|Duration"
+		parts := strings.Split(fl.Param(), "-")
+		if len(parts) != 3 {
+			return false
+		}
+
+		startFieldName := parts[0]
+		endFieldName := parts[1]
+		durationStr := parts[2]
+
+		structVal := fl.Parent()
+		if structVal.Kind() != reflect.Struct {
+			return false
+		}
+
+		startField := structVal.FieldByName(startFieldName)
+		endField := structVal.FieldByName(endFieldName)
+
+		if !startField.IsValid() || !endField.IsValid() {
+			return false
+		}
+
+		startDate, ok1 := startField.Interface().(time.Time)
+		endDate, ok2 := endField.Interface().(time.Time)
+
+		if !ok1 || !ok2 {
+			return false
+		}
+
+		now := time.Now()
+
+		// Handle months and years manually since time.Duration can't represent them
+		if strings.HasSuffix(durationStr, "m") {
+			monthsBack, err := strconv.Atoi(durationStr[:len(durationStr)-1])
+			if err != nil {
+				return false
+			}
+			threshold := now.AddDate(0, -monthsBack, 0)
+			if startDate.Before(threshold) || endDate.Before(threshold) {
+				return false
+			}
+			return true
+		} else if strings.HasSuffix(durationStr, "y") {
+			yearsBack, err := strconv.Atoi(durationStr[:len(durationStr)-1])
+			if err != nil {
+				return false
+			}
+			threshold := now.AddDate(-yearsBack, 0, 0)
+			if startDate.Before(threshold) || endDate.Before(threshold) {
+				return false
+			}
+			return true
+		} else if strings.HasSuffix(durationStr, "d") {
+			// days case
+			daysBack, err := strconv.Atoi(durationStr[:len(durationStr)-1])
+			if err != nil {
+				return false
+			}
+			threshold := now.AddDate(0, 0, -daysBack)
+			if startDate.Before(threshold) || endDate.Before(threshold) {
+				return false
+			}
+			return true
+		}
+
+		return false
 	})
 }

@@ -2,8 +2,10 @@ package models
 
 import (
 	"fmt"
-	"github.com/go-playground/validator/v10"
 	"strings"
+	"time"
+
+	"github.com/go-playground/validator/v10"
 )
 
 type (
@@ -52,6 +54,18 @@ func ErrorValidationMapping(validationError validator.FieldError) string {
 		return fmt.Sprintf("%s must be a valid email or phone number", validationError.Field())
 	case validationError.Tag() == "numeric":
 		return fmt.Sprintf("%s must be a valid number", validationError.Field())
+	case validationError.Tag() == "daterange":
+		return fmt.Sprintf("Your date range should be between %s and %s", time.Now().AddDate(0, -6, 0).Format("2006-01-02"), time.Now().Format("2006-01-02"))
+	case validationError.Tag() == "yyyymmddNoExceedToday":
+		return fmt.Sprintf("%s must be a valid date in YYYY-MM-DD format and not exceed today", validationError.Field())
+	case validationError.Tag() == "hhmmFormat":
+		return fmt.Sprintf("%s must be a valid time in HH:MM format", validationError.Field())
+	case validationError.Tag() == "phoneFormat0862":
+		return fmt.Sprintf("%s must be a valid phone number in format +628123456789 or 08123456789 or 628123456789", validationError.Field())
+	case validationError.Tag() == "nameIdentifierCommunityIdField":
+		return fmt.Sprintf("%s cannot be empty", validationError.Field())
+	case validationError.Tag() == "emailOrPhoneField":
+		return fmt.Sprintf("Email or Phone Number cannot be empty")
 	default:
 		return fmt.Sprintf("invalid input on field %s: %s", validationError.Field(), validationError.Tag())
 	}

@@ -66,3 +66,63 @@ type (
 		PhoneNumber string `json:"phoneNumber"`
 	}
 )
+
+type (
+	GetAllAttendanceByMeetingIdRequest struct {
+		MeetingId uuid.UUID `json:"meetingId" validate:"uuid"`
+	}
+	GetAllAttendanceByMeetingIdDBOutput struct {
+		Name          string    `json:"name"`
+		CommunityId   string    `json:"communityId"`
+		AttendanceId  uuid.UUID `json:"attendanceId"`
+		CoolMeetingId uuid.UUID `json:"coolMeetingId"`
+		IsPresent     bool      `json:"isPresent"`
+		Remarks       string    `json:"remarks"`
+	}
+	GetAllAttendanceByMeetingIdResponse struct {
+		Type           string                              `json:"type"`
+		CoolMeetingId  string                              `json:"coolMeetingId"`
+		Name           string                              `json:"name"`
+		CoolCode       string                              `json:"coolCode"`
+		Description    string                              `json:"description"`
+		MeetingDate    string                              `json:"meetingDate"`
+		MeetingStartAt string                              `json:"meetingStartAt"`
+		MeetingEndAt   string                              `json:"meetingEndAt"`
+		PresentCount   int                                 `json:"presentCount"`
+		AbsentCount    int                                 `json:"absentCount"`
+		Members        []GetMemberAttendanceResponse       `json:"members"`
+		NewJoiners     []CreateNewJoinerAttendanceResponse `json:"newJoiners"`
+	}
+	GetMemberAttendanceResponse struct {
+		Type         string `json:"type"`
+		AttendanceId string `json:"attendanceId"`
+		Name         string `json:"name"`
+		CommunityId  string `json:"communityId"`
+		IsPresent    bool   `json:"isPresent"`
+		Remarks      string `json:"remarks"`
+	}
+)
+
+type (
+	GetSummaryAttendanceByCoolCodeRequest struct {
+		CoolCode  string `json:"coolCode" validate:"required"`
+		StartDate string `json:"startDate" validate:"omitempty,yyymmddFormat"`
+		EndDate   string `json:"endDate" validate:"omitempty,yyymmddFormat,daterange=StartDate-EndDate-6m"`
+	}
+	GetSummaryAttendanceByCoolCodeDBOutput struct {
+		Name              string `json:"name"`
+		CommunityId       string `json:"communityId"`
+		PresentCount      int    `json:"presentCount"`
+		AbsentCount       int    `json:"absentCount"`
+		TotalMeetingCount int    `json:"totalMeetingCount"`
+	}
+	GetSummaryAttendanceByCoolCodeResponse struct {
+		Type                 string  `json:"type"`
+		Name                 string  `json:"name"`
+		CommunityId          string  `json:"communityId"`
+		PresentCount         int     `json:"presentCount"`
+		AbsentCount          int     `json:"absentCount"`
+		TotalMeetingCount    int     `json:"totalMeetingCount"`
+		AttendancePercentage float64 `json:"attendancePercentage"`
+	}
+)

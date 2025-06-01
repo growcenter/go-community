@@ -9,6 +9,7 @@ import (
 	"go-community/internal/usecases"
 	"net/http"
 	"strconv"
+	"strings"
 
 	"github.com/labstack/echo/v4"
 )
@@ -177,13 +178,18 @@ func (clh *CoolHandler) GetCoolPersonal(ctx echo.Context) error {
 func (clh *CoolHandler) GetCoolMemberByCode(ctx echo.Context) error {
 	parameter := models.GetCoolMemberByCoolCodeParameter{
 		Code: ctx.Param("code"),
+		Type: []string{},
+	}
+
+	if typeParam := ctx.QueryParam("type"); typeParam != "" {
+		parameter.Type = strings.Split(typeParam, ",")
 	}
 
 	if err := validator.Validate(parameter); err != nil {
 		return response.ErrorValidation(ctx, err)
 	}
 
-	cools, err := clh.usecase.Cool.GetMemberById(ctx.Request().Context(), parameter.Code)
+	cools, err := clh.usecase.Cool.GetMemberByCode(ctx.Request().Context(), parameter)
 	if err != nil {
 		return response.Error(ctx, err)
 	}
