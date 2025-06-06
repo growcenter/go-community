@@ -24,14 +24,12 @@ type CoolJoinerStatus int32
 const (
 	COOL_JOINER_STATUS_PENDING CoolJoinerStatus = iota
 	COOL_JOINER_STATUS_FOLLOWED
-	COOL_JOINER_STATUS_CANCELLED
 	COOL_JOINER_STATUS_COMPLETED
 )
 
 const (
 	CoolJoinerStatusPending   = "pending"
 	CoolJoinerStatusFollowed  = "followed"
-	CoolJoinerStatusCancelled = "cancelled"
 	CoolJoinerStatusCompleted = "completed"
 )
 
@@ -39,7 +37,6 @@ var (
 	MapCoolJoinerStatus = map[CoolJoinerStatus]string{
 		COOL_JOINER_STATUS_PENDING:   CoolJoinerStatusPending,
 		COOL_JOINER_STATUS_FOLLOWED:  CoolJoinerStatusFollowed,
-		COOL_JOINER_STATUS_CANCELLED: CoolJoinerStatusCancelled,
 		COOL_JOINER_STATUS_COMPLETED: CoolJoinerStatusCompleted,
 	}
 )
