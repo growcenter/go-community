@@ -109,11 +109,7 @@ type (
 		CampusCode          string `query:"campusCode" validate:"omitempty,min=3,max=3"`
 		MaritalStatus       string `query:"maritalStatus"`
 		CommunityOfInterest string `query:"communityOfInterest"`
-<<<<<<< HEAD
-		Status              string `query:"status" validate:"omitempty,oneof=pending followed completed"`
-=======
 		Status              string `query:"status" validate:"omitempty,oneof=pending followed completed cancelled" example:"active"`
->>>>>>> 0f69c107f7d511c983aa28534edd079466a0e0a7
 		Gender              string `query:"gender" validate:"omitempty,oneof=male female"`
 		Location            string `query:"location"`
 	}
