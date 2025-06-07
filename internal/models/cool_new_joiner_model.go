@@ -70,7 +70,7 @@ type (
 
 type (
 	UpdateCoolNewJoinerRequest struct {
-		Status    string `json:"status" validate:"required,oneof=pending followed completed" example:"active"`
+		Status    string `json:"status" validate:"required,oneof=pending followed completed cancelled" example:"active"`
 		Id        int    `json:"id" validate:"required,min=1" example:"1"`
 		UpdatedBy string `json:"updatedBy" validate:"required,min=1,max=255" example:"admin"`
 	}
@@ -109,7 +109,11 @@ type (
 		CampusCode          string `query:"campusCode" validate:"omitempty,min=3,max=3"`
 		MaritalStatus       string `query:"maritalStatus"`
 		CommunityOfInterest string `query:"communityOfInterest"`
+<<<<<<< HEAD
 		Status              string `query:"status" validate:"omitempty,oneof=pending followed completed"`
+=======
+		Status              string `query:"status" validate:"omitempty,oneof=pending followed completed cancelled" example:"active"`
+>>>>>>> 0f69c107f7d511c983aa28534edd079466a0e0a7
 		Gender              string `query:"gender" validate:"omitempty,oneof=male female"`
 		Location            string `query:"location"`
 	}
