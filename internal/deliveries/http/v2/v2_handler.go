@@ -1,6 +1,7 @@
 package v2
 
 import (
+	indonesiaAPI "go-community/internal/clients/indonesia-api"
 	"go-community/internal/config"
 	"go-community/internal/deliveries/http/middleware"
 	"go-community/internal/pkg/authorization"
@@ -18,7 +19,7 @@ func NewV2Handler(g *echo.Group, u *usecases.Usecases, c *config.Configuration, 
 	NewUserHandler(v2, u, c)
 	NewTokenHandler(v2, a, c, u)
 	NewRoleHandler(v2, u, c)
-	NewConfigHandler(v2, c, u)
+	NewConfigHandler(v2, c, u, indonesiaAPI.NewClient(*c))
 	NewCoolHandler(v2, u, c)
 	NewCoolAttendanceHandler(v2, u, c)
 	NewFlagHandler(v2, u, *c)

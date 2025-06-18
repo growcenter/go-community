@@ -26,7 +26,8 @@ type Cool struct {
 	Gender                  *string
 	Recurrence              *string
 	LocationType            string
-	LocationName            *string
+	LocationArea            string
+	LocationDistrict        string
 	Status                  string
 	CreatedAt               *time.Time
 	UpdatedAt               *time.Time
@@ -47,25 +48,36 @@ func (c *CreateCoolResponse) ToResponse() CreateCoolResponse {
 		Category:     c.Category,
 		Gender:       c.Gender,
 		Recurrence:   c.Recurrence,
-		LocationType: c.LocationType,
-		LocationName: c.LocationName,
+		Location:     c.Location,
 		Status:       c.Status,
 	}
 }
 
 type (
+	CoolLocationRequest struct {
+		Type     string `json:"type" validate:"required,oneof=offline onsite hybrid"`
+		Area     string `json:"area" validate:"required"`
+		District string `json:"district" validate:"required"`
+	}
+	CoolLocationResponse struct {
+		Type     string `json:"type"`
+		Area     string `json:"area"`
+		District string `json:"district"`
+	}
+)
+
+type (
 	CreateCoolRequest struct {
-		Name                    string   `json:"name" validate:"required,min=1,max=50,nospecial" example:"Professionals"`
-		Description             string   `json:"description"`
-		CampusCode              string   `json:"campusCode" validate:"required,min=3,max=3"`
-		FacilitatorCommunityIds []string `json:"facilitatorCommunityIds" validate:"required"`
-		LeaderCommunityIds      []string `json:"leaderCommunityIds" validate:"required"`
-		CoreCommunityIds        []string `json:"coreCommunityIds" validate:"omitempty"`
-		Category                string   `json:"category" validate:"required"`
-		Gender                  string   `json:"gender" validate:"omitempty,oneof=male female all"`
-		Recurrence              string   `json:"recurrence"`
-		LocationType            string   `json:"locationType" validate:"required,oneof=offline onsite hybrid"`
-		LocationName            string   `json:"locationName"`
+		Name                    string              `json:"name" validate:"required,min=1,max=50,nospecial" example:"Professionals"`
+		Description             string              `json:"description"`
+		CampusCode              string              `json:"campusCode" validate:"required,min=3,max=3"`
+		FacilitatorCommunityIds []string            `json:"facilitatorCommunityIds" validate:"required"`
+		LeaderCommunityIds      []string            `json:"leaderCommunityIds" validate:"required"`
+		CoreCommunityIds        []string            `json:"coreCommunityIds" validate:"omitempty"`
+		Category                string              `json:"category" validate:"required"`
+		Gender                  string              `json:"gender" validate:"omitempty,oneof=male female all"`
+		Recurrence              string              `json:"recurrence"`
+		Location                CoolLocationRequest `json:"location" validate:"required"`
 	}
 	CreateCoolResponse struct {
 		Type         string                      `json:"type"`
@@ -80,8 +92,7 @@ type (
 		Category     string                      `json:"category"`
 		Gender       string                      `json:"gender"`
 		Recurrence   string                      `json:"recurrence"`
-		LocationType string                      `json:"locationType"`
-		LocationName string                      `json:"locationName"`
+		Location     CoolLocationResponse        `json:"location"`
 		Status       string                      `json:"status"`
 	}
 	CoolLeaderAndCoreResponse struct {
@@ -135,8 +146,7 @@ type GetCoolDetailResponse struct {
 	Category     string                      `json:"category"`
 	Gender       string                      `json:"gender"`
 	Recurrence   string                      `json:"recurrence"`
-	LocationType string                      `json:"locationType"`
-	LocationName string                      `json:"locationName"`
+	Location     CoolLocationResponse        `json:"location"`
 	Status       string                      `json:"status"`
 }
 

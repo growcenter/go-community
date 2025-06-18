@@ -1,22 +1,25 @@
 package v2
 
 import (
-	"github.com/labstack/echo/v4"
+	indonesiaAPI "go-community/internal/clients/indonesia-api"
 	"go-community/internal/config"
 	"go-community/internal/deliveries/http/common/response"
 	"go-community/internal/models"
 	"go-community/internal/usecases"
 	"net/http"
 	"strings"
+
+	"github.com/labstack/echo/v4"
 )
 
 type ConfigHandler struct {
 	conf    *config.Configuration
 	usecase *usecases.Usecases
+	indoApi indonesiaAPI.Client
 }
 
-func NewConfigHandler(api *echo.Group, c *config.Configuration, u *usecases.Usecases) {
-	handler := &ConfigHandler{conf: c, usecase: u}
+func NewConfigHandler(api *echo.Group, c *config.Configuration, u *usecases.Usecases, indoApi indonesiaAPI.Client) {
+	handler := &ConfigHandler{conf: c, usecase: u, indoApi: indoApi}
 
 	departmentEndpoint := api.Group("/departments")
 	departmentEndpoint.GET("", handler.GetDepartments)
@@ -24,6 +27,10 @@ func NewConfigHandler(api *echo.Group, c *config.Configuration, u *usecases.Usec
 	campusEndpoint := api.Group("/campuses")
 	campusEndpoint.GET("", handler.GetCampuses)
 	campusEndpoint.GET("/:campusCode/locations", handler.GetLocationsByCampusCode)
+
+	locationEndpoint := api.Group("/locations")
+	locationEndpoint.GET("/:campusCode/cities", handler.GetCitiesByCampusCode)
+	locationEndpoint.GET("/:cityCode/districts", handler.GetDistrictsByCityCode)
 }
 
 // GetDepartments godoc
@@ -80,6 +87,24 @@ func (ch *ConfigHandler) GetCampuses(ctx echo.Context) error {
 
 func (ch *ConfigHandler) GetLocationsByCampusCode(ctx echo.Context) error {
 	locations, err := ch.usecase.Config.GetLocationsByCampusCode(ctx.Request().Context(), ctx.Param("campusCode"))
+	if err != nil {
+		return response.Error(ctx, err)
+	}
+
+	return response.SuccessV2(ctx, http.StatusOK, "", locations)
+}
+
+func (ch *ConfigHandler) GetCitiesByCampusCode(ctx echo.Context) error {
+	locations, err := ch.indoApi.GetCities(ctx.Param("campusCode"))
+	if err != nil {
+		return response.Error(ctx, err)
+	}
+
+	return response.SuccessV2(ctx, http.StatusOK, "", locations)
+}
+
+func (ch *ConfigHandler) GetDistrictsByCityCode(ctx echo.Context) error {
+	locations, err := ch.indoApi.GetDistricts(ctx.Param("cityCode"))
 	if err != nil {
 		return response.Error(ctx, err)
 	}

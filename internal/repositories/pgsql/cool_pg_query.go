@@ -87,7 +87,8 @@ var (
 		c.gender,
 		c.recurrence,
 		c.location_type,
-		c.location_name,
+		c.location_area,
+		c.location_district,
 		c.status
 	FROM 
 		cools c
@@ -98,4 +99,27 @@ var (
 		AND c.deleted_at IS NULL
 	LIMIT 1
 	;`
+
+	queryGetCoolsByFacilitatorCommunityId = `
+	SELECT
+		c.id,
+		c.code,
+		c.name,
+		c.description,
+		c.campus_code,
+		c.facilitator_community_ids,
+		c.leader_community_ids,
+		c.core_community_ids,
+		c.category,
+		c.gender,
+		c.recurrence,
+		c.location_type,
+		c.location_area,
+		c.location_district,
+		c.status
+	FROM
+		cools c
+	WHERE
+		c.facilitator_community_ids = ANY(?);
+	`
 )

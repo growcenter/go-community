@@ -2804,9 +2804,11 @@ const docTemplate = `{
             "type": "object",
             "required": [
                 "coolCode",
+                "locationType",
                 "meetingDate",
                 "meetingEndAt",
-                "meetingStartAt"
+                "meetingStartAt",
+                "topic"
             ],
             "properties": {
                 "attendance": {
@@ -2817,6 +2819,16 @@ const docTemplate = `{
                 },
                 "description": {
                     "type": "string"
+                },
+                "locationName": {
+                    "type": "string"
+                },
+                "locationType": {
+                    "type": "string",
+                    "enum": [
+                        "online",
+                        "offline"
+                    ]
                 },
                 "markAttendanceNow": {
                     "type": "boolean"
@@ -2832,6 +2844,9 @@ const docTemplate = `{
                 },
                 "name": {
                     "type": "string"
+                },
+                "topic": {
+                    "type": "string"
                 }
             }
         },
@@ -2845,6 +2860,12 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "description": {
+                    "type": "string"
+                },
+                "locationName": {
+                    "type": "string"
+                },
+                "locationType": {
                     "type": "string"
                 },
                 "meetingDate": {
@@ -2870,6 +2891,9 @@ const docTemplate = `{
                     "items": {
                         "$ref": "#/definitions/models.CreateNewJoinerAttendanceResponse"
                     }
+                },
+                "topic": {
+                    "type": "string"
                 },
                 "type": {
                     "type": "string"

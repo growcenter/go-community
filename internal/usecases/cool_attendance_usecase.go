@@ -14,7 +14,7 @@ import (
 type CoolAttendanceUsecase interface {
 	Create(ctx context.Context, request models.CreateAttendanceRequest) (res *models.CreateAttendanceResponse, err error)
 	GetByMeetingId(ctx context.Context, meetingId uuid.UUID) (res *models.GetAllAttendanceByMeetingIdResponse, err error)
-	GetSummaryByCoolCode(ctx context.Context, request models.GetSummaryAttendanceByCoolCodeRequest) (response []models.GetSummaryAttendanceByCoolCodeResponse, err error)
+	GetSummaryByCoolCode(ctx context.Context, request models.GetSummaryAttendanceByCoolCodeRequest) (response *models.GetSummaryAttendanceByCoolCodeResponse, err error)
 }
 
 type coolAttendanceUsecase struct {
@@ -152,6 +152,12 @@ func (cau *coolAttendanceUsecase) GetByMeetingId(ctx context.Context, meetingId 
 		LogService(ctx, err)
 	}()
 
+	var (
+		presentCount, absentCount            int
+		presentPercentage, absencePercentage float64
+		members                              []models.GetMemberAttendanceResponse
+	)
+
 	meeting, err := cau.r.CoolMeeting.GetById(ctx, meetingId)
 	if err != nil {
 		return nil, err
@@ -166,9 +172,6 @@ func (cau *coolAttendanceUsecase) GetByMeetingId(ctx context.Context, meetingId 
 		return nil, err
 	}
 
-	members := make([]models.GetMemberAttendanceResponse, 0)
-	presentCount := 0
-	absentCount := 0
 	for _, attendance := range attendances {
 		members = append(members, models.GetMemberAttendanceResponse{
 			Type:         models.TYPE_COOL_MEMBER,
@@ -186,6 +189,16 @@ func (cau *coolAttendanceUsecase) GetByMeetingId(ctx context.Context, meetingId 
 		}
 	}
 
+	// Calculate total attendance attempts
+	totalChecksCount := presentCount + absentCount
+	if totalChecksCount > 0 {
+		presentPercentage = float64(presentCount) / float64(totalChecksCount) * 100
+		absencePercentage = float64(absentCount) / float64(totalChecksCount) * 100
+	} else {
+		presentPercentage = 0.00
+		absencePercentage = 0.00
+	}
+
 	var newJoiners []models.CreateNewJoinerAttendanceResponse
 	for _, item := range meeting.NewJoiners {
 		var newJoiner models.CreateNewJoinerAttendanceResponse
@@ -198,25 +211,33 @@ func (cau *coolAttendanceUsecase) GetByMeetingId(ctx context.Context, meetingId 
 	}
 
 	return &models.GetAllAttendanceByMeetingIdResponse{
-		Type:           models.TYPE_COOL_MEETING,
-		CoolMeetingId:  meeting.ID.String(),
-		Name:           meeting.Name,
-		CoolCode:       meeting.CoolCode,
-		Description:    *meeting.Description,
-		MeetingDate:    meeting.MeetingDate.Format("2006-01-02"),
-		MeetingStartAt: meeting.MeetingStartAt,
-		MeetingEndAt:   meeting.MeetingEndAt,
-		PresentCount:   presentCount,
-		AbsentCount:    absentCount,
-		Members:        members,
-		NewJoiners:     newJoiners,
+		Type:              models.TYPE_COOL_MEETING,
+		CoolMeetingId:     meeting.ID.String(),
+		Name:              meeting.Name,
+		CoolCode:          meeting.CoolCode,
+		Description:       *meeting.Description,
+		MeetingDate:       meeting.MeetingDate.Format("2006-01-02"),
+		MeetingStartAt:    meeting.MeetingStartAt,
+		MeetingEndAt:      meeting.MeetingEndAt,
+		PresentCount:      presentCount,
+		AbsentCount:       absentCount,
+		PresentPercentage: presentPercentage,
+		AbsentPercentage:  absencePercentage,
+		Members:           members,
+		NewJoiners:        newJoiners,
 	}, nil
 }
 
-func (cau *coolAttendanceUsecase) GetSummaryByCoolCode(ctx context.Context, request models.GetSummaryAttendanceByCoolCodeRequest) (response []models.GetSummaryAttendanceByCoolCodeResponse, err error) {
+func (cau *coolAttendanceUsecase) GetSummaryByCoolCode(ctx context.Context, request models.GetSummaryAttendanceByCoolCodeRequest) (response *models.GetSummaryAttendanceByCoolCodeResponse, err error) {
 	defer func() {
 		LogService(ctx, err)
 	}()
+
+	var (
+		totalPresentCount, totalAbsentCount                   int
+		overallAttendancePercentage, overallAbsencePercentage float64
+		memberResponse                                        []models.GetMemberAttendanceSummaryResponse
+	)
 
 	existCool, err := cau.r.Cool.CheckByCode(ctx, request.CoolCode)
 	if err != nil {
@@ -253,16 +274,34 @@ func (cau *coolAttendanceUsecase) GetSummaryByCoolCode(ctx context.Context, requ
 			attendancePercentage = 0.00
 		}
 
-		response = append(response, models.GetSummaryAttendanceByCoolCodeResponse{
+		totalPresentCount += meeting.PresentCount
+		totalAbsentCount += meeting.AbsentCount
+
+		memberResponse = append(memberResponse, models.GetMemberAttendanceSummaryResponse{
 			Type:                 models.TYPE_USER,
 			Name:                 meeting.Name,
 			CommunityId:          meeting.CommunityId,
 			PresentCount:         meeting.PresentCount,
 			AbsentCount:          meeting.AbsentCount,
-			TotalMeetingCount:    meeting.TotalMeetingCount,
 			AttendancePercentage: attendancePercentage,
 		})
 	}
 
-	return response, nil
+	// Calculate total attendance attempts
+	totalChecksCount := totalPresentCount + totalAbsentCount
+	if totalChecksCount > 0 {
+		overallAttendancePercentage = float64(totalPresentCount) / float64(totalChecksCount) * 100
+		overallAbsencePercentage = float64(totalAbsentCount) / float64(totalChecksCount) * 100
+	} else {
+		overallAttendancePercentage = 0.00
+		overallAbsencePercentage = 0.00
+	}
+
+	return &models.GetSummaryAttendanceByCoolCodeResponse{
+		Type:              models.TYPE_COOL_ATTENDANCE,
+		TotalMeetingCount: meetings[0].TotalMeetingCount,
+		PresentPercentage: overallAttendancePercentage,
+		AbsentPercentage:  overallAbsencePercentage,
+		Members:           memberResponse,
+	}, nil
 }

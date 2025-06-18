@@ -1,6 +1,8 @@
 package v2
 
 import (
+	"fmt"
+	"go-community/internal/common"
 	"go-community/internal/config"
 	"go-community/internal/deliveries/http/common/response"
 	"go-community/internal/deliveries/http/middleware"
@@ -158,12 +160,28 @@ func (clh *CoolHandler) CreateCool(ctx echo.Context) error {
 }
 
 func (clh *CoolHandler) GetAll(ctx echo.Context) error {
-	data, err := clh.usecase.Cool.GetAll(ctx.Request().Context())
-	if err != nil {
-		return response.Error(ctx, err)
+	header := ctx.Request().Header.Get("X-Cool-List")
+	if header == "" {
+		header = "option"
 	}
 
-	return response.SuccessListV2(ctx, http.StatusOK, "", data)
+	switch header {
+	case "option":
+		data, err := clh.usecase.Cool.GetAll(ctx.Request().Context())
+		if err != nil {
+			return response.Error(ctx, err)
+		}
+
+		return response.SuccessListV2(ctx, http.StatusOK, "", data)
+	case "list":
+		isFacilitator := common.CheckOneDataInList(ctx.Get("userType").([]string), []string{"cool-facilitator"})
+		isAdmin := common.CheckOneDataInList(ctx.Get("userType").([]string), []string{"cool-admin"})
+		fmt.Println(isFacilitator, isAdmin)
+	default:
+		return response.Error(ctx, models.ErrorInvalidInput)
+	}
+
+	return nil // unreachable
 }
 
 func (clh *CoolHandler) GetCoolPersonal(ctx echo.Context) error {

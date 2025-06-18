@@ -3,6 +3,7 @@ package usecases
 import (
 	"context"
 	"encoding/json"
+	indonesiaAPI "go-community/internal/clients/indonesia-api"
 	"go-community/internal/common"
 	"go-community/internal/config"
 	"go-community/internal/constants"
@@ -25,13 +26,15 @@ type coolUsecase struct {
 	r    pgsql.PostgreRepositories
 	cfg  config.Configuration
 	flag FeatureFlagUsecase
+	i    indonesiaAPI.Client
 }
 
-func NewCoolUsecase(r pgsql.PostgreRepositories, cfg config.Configuration, flag FeatureFlagUsecase) *coolUsecase {
+func NewCoolUsecase(r pgsql.PostgreRepositories, cfg config.Configuration, flag FeatureFlagUsecase, i indonesiaAPI.Client) *coolUsecase {
 	return &coolUsecase{
 		r:    r,
 		cfg:  cfg,
 		flag: flag,
+		i:    i,
 	}
 }
 
@@ -90,8 +93,9 @@ func (clu *coolUsecase) Create(ctx context.Context, request models.CreateCoolReq
 		Category:                *category,
 		Gender:                  &request.Gender,
 		Recurrence:              &request.Recurrence,
-		LocationType:            request.LocationType,
-		LocationName:            &request.LocationName,
+		LocationType:            request.Location.Type,
+		LocationArea:            request.Location.Area,
+		LocationDistrict:        request.Location.District,
 		Status:                  constants.MapStatus[constants.STATUS_ACTIVE],
 	}
 
@@ -209,9 +213,12 @@ func (clu *coolUsecase) Create(ctx context.Context, request models.CreateCoolReq
 		Category:     cool.Category,
 		Gender:       *cool.Gender,
 		Recurrence:   *cool.Recurrence,
-		LocationType: cool.LocationType,
-		LocationName: *cool.LocationName,
-		Status:       constants.MapStatus[constants.STATUS_ACTIVE],
+		Location: models.CoolLocationResponse{
+			Type:     cool.LocationType,
+			Area:     cool.LocationArea,
+			District: cool.LocationDistrict,
+		},
+		Status: constants.MapStatus[constants.STATUS_ACTIVE],
 	}
 
 	return &res, nil
@@ -344,9 +351,12 @@ func (clu *coolUsecase) GetByCommunityId(ctx context.Context, communityId string
 		Category:     cool.Category,
 		Gender:       *cool.Gender,
 		Recurrence:   *cool.Recurrence,
-		LocationType: cool.LocationType,
-		LocationName: *cool.LocationName,
-		Status:       cool.Status,
+		Location: models.CoolLocationResponse{
+			Type:     cool.LocationType,
+			Area:     cool.LocationArea,
+			District: cool.LocationDistrict,
+		},
+		Status: cool.Status,
 	}, nil
 }
 

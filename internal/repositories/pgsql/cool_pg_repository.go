@@ -17,6 +17,7 @@ type CoolRepository interface {
 	GetOneByCommunityId(ctx context.Context, communityId string) (cool models.Cool, err error)
 	GetCoolFacilitatorByCode(ctx context.Context, code string) (facilitators []models.GetCoolMembersByIdDBOutput, err error)
 	GetAllMembersByCode(ctx context.Context, code string) (members []models.GetCoolMembersByIdDBOutput, err error)
+	GetManyByFacilitatorCommunityId(ctx context.Context, communityId string) (cools []models.Cool, err error)
 }
 
 type coolRepository struct {
@@ -121,4 +122,13 @@ func (clr *coolRepository) GetAllMembersByCode(ctx context.Context, code string)
 	err = clr.db.Raw(queryGetAllMembersByCoolCode, code, code).Scan(&members).Error
 
 	return members, err
+}
+
+func (clr *coolRepository) GetManyByFacilitatorCommunityId(ctx context.Context, communityId string) (cools []models.Cool, err error) {
+	defer func() {
+		LogRepository(ctx, err)
+	}()
+
+	err = clr.db.Raw(queryGetCoolsByFacilitatorCommunityId, communityId).Scan(&cools).Error
+	return cools, err
 }

@@ -15,7 +15,10 @@ type (
 		ID             uuid.UUID
 		CoolCode       string
 		Name           string
+		Topic          string
 		Description    *string
+		LocationType   string
+		LocationName   string
 		MeetingDate    time.Time `gorm:"type:date"`
 		MeetingStartAt string    `gorm:"type:time" column:"meeting_start_at"`
 		MeetingEndAt   string    `gorm:"type:time" column:"meeting_end_at"`
@@ -36,8 +39,11 @@ func (m *CreateMeetingResponse) ToResponse() *CreateMeetingResponse {
 		Type:           TYPE_COOL_MEETING,
 		Id:             m.Id,
 		Name:           m.Name,
+		Topic:          m.Topic,
 		CoolCode:       m.CoolCode,
 		Description:    m.Description,
+		LocationType:   m.LocationType,
+		LocationName:   m.LocationName,
 		MeetingDate:    m.MeetingDate,
 		MeetingStartAt: m.MeetingStartAt,
 		MeetingEndAt:   m.MeetingEndAt,
@@ -52,9 +58,12 @@ type (
 		CoolCode          string                  `json:"coolCode" validate:"required"`
 		Name              string                  `json:"name"`
 		Description       string                  `json:"description"`
+		Topic             string                  `json:"topic" validate:"required"`
 		MeetingDate       string                  `json:"meetingDate" validate:"required,yyymmddFormat"`
 		MeetingStartAt    string                  `json:"meetingStartAt" validate:"required,hhmmFormat"`
 		MeetingEndAt      string                  `json:"meetingEndAt" validate:"required,hhmmFormat"`
+		LocationType      string                  `json:"locationType" validate:"required,oneof=online offline"`
+		LocationName      string                  `json:"locationName"`
 		Attendance        CreateAttendanceRequest `json:"attendance" validate:"omitempty"`
 	}
 	CreateMeetingResponse struct {
@@ -62,7 +71,10 @@ type (
 		Id             string                              `json:"attendanceId"`
 		Name           string                              `json:"name"`
 		CoolCode       string                              `json:"coolCode"`
+		Topic          string                              `json:"topic"`
 		Description    string                              `json:"description"`
+		LocationType   string                              `json:"locationType"`
+		LocationName   string                              `json:"locationName"`
 		MeetingDate    string                              `json:"meetingDate"`
 		MeetingStartAt string                              `json:"meetingStartAt"`
 		MeetingEndAt   string                              `json:"meetingEndAt"`
@@ -76,8 +88,11 @@ func (m *GetCoolMeetingScheduleResponse) ToResponse() *GetCoolMeetingScheduleRes
 		Type:           TYPE_COOL_MEETING,
 		Id:             m.Id,
 		Name:           m.Name,
+		Topic:          m.Topic,
 		CoolCode:       m.CoolCode,
 		Description:    m.Description,
+		LocationType:   m.LocationType,
+		LocationName:   m.LocationName,
 		MeetingDate:    m.MeetingDate,
 		MeetingStartAt: m.MeetingStartAt,
 		MeetingEndAt:   m.MeetingEndAt,
@@ -94,7 +109,10 @@ type (
 		ID             uuid.UUID
 		CoolCode       string
 		Name           string
+		Topic          string
 		Description    *string
+		LocationType   string
+		LocationName   string
 		MeetingDate    time.Time `gorm:"type:date"`
 		MeetingStartAt string    `gorm:"type:time" column:"meeting_start_at"`
 		MeetingEndAt   string    `gorm:"type:time" column:"meeting_end_at"`
@@ -103,8 +121,11 @@ type (
 		Type           string `json:"type"`
 		Id             string `json:"id"`
 		Name           string `json:"name"`
+		Topic          string `json:"topic"`
 		CoolCode       string `json:"coolCode"`
 		Description    string `json:"description"`
+		LocationType   string `json:"locationType"`
+		LocationName   string `json:"locationName"`
 		MeetingDate    string `json:"meetingDate"`
 		MeetingStartAt string `json:"meetingStartAt"`
 		MeetingEndAt   string `json:"meetingEndAt"`
@@ -113,7 +134,10 @@ type (
 		ID             uuid.UUID
 		CoolCode       string
 		Name           string
+		Topic          string
 		Description    *string
+		LocationType   string
+		LocationName   string
 		MeetingDate    time.Time `gorm:"type:date"`
 		MeetingStartAt string    `gorm:"type:time" column:"meeting_start_at"`
 		MeetingEndAt   string    `gorm:"type:time" column:"meeting_end_at"`
@@ -126,8 +150,11 @@ type (
 		Type           string `json:"type"`
 		Id             string `json:"id"`
 		Name           string `json:"name"`
+		Topic          string `json:"topic"`
 		CoolCode       string `json:"coolCode"`
 		Description    string `json:"description"`
+		LocationType   string `json:"locationType"`
+		LocationName   string `json:"locationName"`
 		MeetingDate    string `json:"meetingDate"`
 		MeetingStartAt string `json:"meetingStartAt"`
 		MeetingEndAt   string `json:"meetingEndAt"`

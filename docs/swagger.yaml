@@ -412,6 +412,13 @@ definitions:
         type: string
       description:
         type: string
+      locationName:
+        type: string
+      locationType:
+        enum:
+        - online
+        - offline
+        type: string
       markAttendanceNow:
         type: boolean
       meetingDate:
@@ -422,11 +429,15 @@ definitions:
         type: string
       name:
         type: string
+      topic:
+        type: string
     required:
     - coolCode
+    - locationType
     - meetingDate
     - meetingEndAt
     - meetingStartAt
+    - topic
     type: object
   models.CreateMeetingResponse:
     properties:
@@ -435,6 +446,10 @@ definitions:
       coolCode:
         type: string
       description:
+        type: string
+      locationName:
+        type: string
+      locationType:
         type: string
       meetingDate:
         type: string
@@ -452,6 +467,8 @@ definitions:
         items:
           $ref: '#/definitions/models.CreateNewJoinerAttendanceResponse'
         type: array
+      topic:
+        type: string
       type:
         type: string
     type: object

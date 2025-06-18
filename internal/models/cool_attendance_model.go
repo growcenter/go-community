@@ -80,18 +80,20 @@ type (
 		Remarks       string    `json:"remarks"`
 	}
 	GetAllAttendanceByMeetingIdResponse struct {
-		Type           string                              `json:"type"`
-		CoolMeetingId  string                              `json:"coolMeetingId"`
-		Name           string                              `json:"name"`
-		CoolCode       string                              `json:"coolCode"`
-		Description    string                              `json:"description"`
-		MeetingDate    string                              `json:"meetingDate"`
-		MeetingStartAt string                              `json:"meetingStartAt"`
-		MeetingEndAt   string                              `json:"meetingEndAt"`
-		PresentCount   int                                 `json:"presentCount"`
-		AbsentCount    int                                 `json:"absentCount"`
-		Members        []GetMemberAttendanceResponse       `json:"members"`
-		NewJoiners     []CreateNewJoinerAttendanceResponse `json:"newJoiners"`
+		Type              string                              `json:"type"`
+		CoolMeetingId     string                              `json:"coolMeetingId"`
+		Name              string                              `json:"name"`
+		CoolCode          string                              `json:"coolCode"`
+		Description       string                              `json:"description"`
+		MeetingDate       string                              `json:"meetingDate"`
+		MeetingStartAt    string                              `json:"meetingStartAt"`
+		MeetingEndAt      string                              `json:"meetingEndAt"`
+		PresentCount      int                                 `json:"presentCount"`
+		AbsentCount       int                                 `json:"absentCount"`
+		PresentPercentage float64                             `json:"presentPercentage"`
+		AbsentPercentage  float64                             `json:"absentPercentage"`
+		Members           []GetMemberAttendanceResponse       `json:"members"`
+		NewJoiners        []CreateNewJoinerAttendanceResponse `json:"newJoiners"`
 	}
 	GetMemberAttendanceResponse struct {
 		Type         string `json:"type"`
@@ -117,12 +119,19 @@ type (
 		TotalMeetingCount int    `json:"totalMeetingCount"`
 	}
 	GetSummaryAttendanceByCoolCodeResponse struct {
+		Type              string                               `json:"type"`
+		TotalMeetingCount int                                  `json:"totalMeetingCount"`
+		PresentPercentage float64                              `json:"presentPercentage"`
+		AbsentPercentage  float64                              `json:"absentPercentage"`
+		Members           []GetMemberAttendanceSummaryResponse `json:"members"`
+	}
+
+	GetMemberAttendanceSummaryResponse struct {
 		Type                 string  `json:"type"`
 		Name                 string  `json:"name"`
 		CommunityId          string  `json:"communityId"`
 		PresentCount         int     `json:"presentCount"`
 		AbsentCount          int     `json:"absentCount"`
-		TotalMeetingCount    int     `json:"totalMeetingCount"`
 		AttendancePercentage float64 `json:"attendancePercentage"`
 	}
 )
