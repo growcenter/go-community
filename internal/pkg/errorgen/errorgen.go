@@ -49,6 +49,7 @@ var errorMappings = map[error]ErrorMapping{
 	DataNotFound:    {Code: http.StatusNotFound, Status: "DATA_NOT_FOUND"},
 	InvalidInput:    {Code: http.StatusBadRequest, Status: "INVALID_INPUT"},
 	AlreadyExist:    {Code: http.StatusConflict, Status: "ALREADY_EXISTS"},
+	InvalidData:     {Code: http.StatusBadRequest, Status: "INVALID_DATA"},
 }
 
 // ==== Predefined Errors ====
@@ -63,6 +64,7 @@ var (
 	AlreadyExist    = errors.New("the resource that a client tried to create already exists")
 	DataNotFound    = errors.New("a specified resource is not found")
 	InvalidInput    = errors.New("invalid request input")
+	InvalidData     = errors.New("invalid data")
 )
 
 // ==== Error Constructor ====

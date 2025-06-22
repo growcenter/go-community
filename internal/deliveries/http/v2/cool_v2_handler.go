@@ -47,6 +47,7 @@ func NewCoolHandler(api *echo.Group, u *usecases.Usecases, c *config.Configurati
 	endpointCoreAuth := endpoint.Group("") // For cool leader, core team and facilitator
 	endpointCoreAuth.Use(middleware.UserMiddleware(c, u, []string{"cool-manage-add"}))
 	endpointCoreAuth.POST("/:code/members", handler.AddMemberByCode)
+	endpointCoreAuth.DELETE("/:code/members/:communityId", handler.DeleteMemberByCode)
 }
 
 func (clh *CoolHandler) CreateCategory(ctx echo.Context) error {
@@ -237,4 +238,21 @@ func (clh *CoolHandler) AddMemberByCode(ctx echo.Context) error {
 	}
 
 	return response.SuccessV2(ctx, http.StatusCreated, "", members)
+}
+
+func (clh *CoolHandler) DeleteMemberByCode(ctx echo.Context) error {
+	request := models.DeleteCoolMemberRequest{
+		CoolCode:    ctx.Param("code"),
+		CommunityId: ctx.Param("communityId"),
+	}
+
+	if err := validator.Validate(request); err != nil {
+		return response.ErrorValidation(ctx, err)
+	}
+
+	if err := clh.usecase.Cool.DeleteMemberByCode(ctx.Request().Context(), request); err != nil {
+		return response.ErrorV2(ctx, err)
+	}
+
+	return response.SuccessV2(ctx, http.StatusOK, "User's current COOL information has been deleted", nil)
 }

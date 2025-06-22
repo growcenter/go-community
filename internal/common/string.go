@@ -156,3 +156,40 @@ func ContainsAlphabet(s string) bool {
 	}
 	return false
 }
+
+func RemoveSliceIfExact(input []string, toRemove []string) []string {
+	// Build a lookup map for faster checking
+	removalMap := make(map[string]struct{})
+	for _, val := range toRemove {
+		removalMap[val] = struct{}{}
+	}
+
+	var result []string
+	for _, item := range input {
+		if _, found := removalMap[item]; !found {
+			result = append(result, item)
+		}
+	}
+
+	return result
+}
+
+// removeIfContains removes strings that contain any of the blocked substrings
+func RemoveSliceIfContains(input []string, toRemove []string) []string {
+	var result []string
+
+	for _, item := range input {
+		shouldRemove := false
+		for _, rem := range toRemove {
+			if strings.Contains(item, rem) {
+				shouldRemove = true
+				break
+			}
+		}
+		if !shouldRemove {
+			result = append(result, item)
+		}
+	}
+
+	return result
+}

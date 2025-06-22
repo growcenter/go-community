@@ -185,7 +185,7 @@ type (
 
 type (
 	AddCoolMemberRequest struct {
-		CommunityId string `json:"communityId" validate:"required"`
+		CommunityId string `json:"communityId" validate:"required,communityId"`
 		UserType    string `json:"userType" validate:"required,oneof=facilitator leader core member"`
 	}
 	AddCoolMemberResponse struct {
@@ -197,6 +197,13 @@ type (
 		Type        string `json:"type"`
 		CommunityId string `json:"communityId"`
 		UserType    string `json:"userType"`
+	}
+)
+
+type (
+	DeleteCoolMemberRequest struct {
+		CoolCode    string `json:"coolCode" validate:"required"`
+		CommunityId string `json:"communityId" validate:"required,communityId"`
 	}
 )
 
