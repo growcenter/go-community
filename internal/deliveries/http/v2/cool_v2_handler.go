@@ -43,6 +43,10 @@ func NewCoolHandler(api *echo.Group, u *usecases.Usecases, c *config.Configurati
 	endpointInternalAuth.GET("/join", handler.GetAllNewJoiner)
 	endpointInternalAuth.PATCH("/join/:idNewJoiner/:status", handler.UpdateNewJoiner)
 	endpointInternalAuth.POST("", handler.CreateCool)
+
+	endpointCoreAuth := endpoint.Group("") // For cool leader, core team and facilitator
+	endpointCoreAuth.Use(middleware.UserMiddleware(c, u, []string{"cool-manage-add"}))
+	endpointCoreAuth.POST("/:code/members", handler.AddMemberByCode)
 }
 
 func (clh *CoolHandler) CreateCategory(ctx echo.Context) error {
@@ -213,4 +217,24 @@ func (clh *CoolHandler) GetCoolMemberByCode(ctx echo.Context) error {
 	}
 
 	return response.SuccessListV2(ctx, http.StatusOK, "", cools)
+}
+
+func (clh *CoolHandler) AddMemberByCode(ctx echo.Context) error {
+	var request []models.AddCoolMemberRequest
+	if err := ctx.Bind(&request); err != nil {
+		return response.ErrorV2(ctx, models.ErrorInvalidInput)
+	}
+
+	for _, r := range request {
+		if err := validator.Validate(r); err != nil {
+			return response.ErrorValidation(ctx, err)
+		}
+	}
+
+	members, err := clh.usecase.Cool.AddMemberByCode(ctx.Request().Context(), ctx.Param("code"), request)
+	if err != nil {
+		return response.ErrorV2(ctx, err)
+	}
+
+	return response.SuccessV2(ctx, http.StatusCreated, "", members)
 }

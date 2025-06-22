@@ -8,6 +8,7 @@ import (
 	"go-community/internal/config"
 	"go-community/internal/constants"
 	"go-community/internal/models"
+	"go-community/internal/pkg/errorgen"
 	"go-community/internal/pkg/generator"
 	"go-community/internal/repositories/pgsql"
 	"strings"
@@ -20,6 +21,7 @@ type CoolUsecase interface {
 	GetAll(ctx context.Context) (response []models.GetAllCoolOptionsResponse, err error)
 	GetByCommunityId(ctx context.Context, communityId string) (response *models.GetCoolDetailResponse, err error)
 	GetMemberByCode(ctx context.Context, param models.GetCoolMemberByCoolCodeParameter) (response []models.GroupedCoolMembers, err error)
+	AddMemberByCode(ctx context.Context, coolCode string, requests []models.AddCoolMemberRequest) (response *models.AddCoolMemberResponse, err error)
 }
 
 type coolUsecase struct {
@@ -94,8 +96,8 @@ func (clu *coolUsecase) Create(ctx context.Context, request models.CreateCoolReq
 		Gender:                  &request.Gender,
 		Recurrence:              &request.Recurrence,
 		LocationType:            request.Location.Type,
-		LocationArea:            request.Location.Area,
-		LocationDistrict:        request.Location.District,
+		LocationAreaCode:        request.Location.AreaCode,
+		LocationDistrictCode:    request.Location.DistrictCode,
 		Status:                  constants.MapStatus[constants.STATUS_ACTIVE],
 	}
 
@@ -214,9 +216,9 @@ func (clu *coolUsecase) Create(ctx context.Context, request models.CreateCoolReq
 		Gender:       *cool.Gender,
 		Recurrence:   *cool.Recurrence,
 		Location: models.CoolLocationResponse{
-			Type:     cool.LocationType,
-			Area:     cool.LocationArea,
-			District: cool.LocationDistrict,
+			Type:         cool.LocationType,
+			AreaCode:     cool.LocationAreaCode,
+			DistrictCode: cool.LocationDistrictCode,
 		},
 		Status: constants.MapStatus[constants.STATUS_ACTIVE],
 	}
@@ -352,9 +354,9 @@ func (clu *coolUsecase) GetByCommunityId(ctx context.Context, communityId string
 		Gender:       *cool.Gender,
 		Recurrence:   *cool.Recurrence,
 		Location: models.CoolLocationResponse{
-			Type:     cool.LocationType,
-			Area:     cool.LocationArea,
-			District: cool.LocationDistrict,
+			Type:         cool.LocationType,
+			AreaCode:     cool.LocationAreaCode,
+			DistrictCode: cool.LocationDistrictCode,
 		},
 		Status: cool.Status,
 	}, nil
@@ -483,4 +485,81 @@ func (clu *coolUsecase) GetMemberByCode(ctx context.Context, param models.GetCoo
 	response = append(response, models.GroupMembersBySelectedTypes(undividedRes, allCoolTypes)...)
 
 	return response, nil
+}
+
+func (clu *coolUsecase) AddMemberByCode(ctx context.Context, coolCode string, requests []models.AddCoolMemberRequest) (response *models.AddCoolMemberResponse, err error) {
+	defer func() {
+		LogService(ctx, err)
+	}()
+
+	existCool, err := clu.r.Cool.CheckByCode(ctx, coolCode)
+	if err != nil {
+		return response, errorgen.Error(err)
+	}
+
+	if !existCool {
+		return response, errorgen.Error(errorgen.DataNotFound)
+	}
+
+	var memberRes []models.AddedMemberResponse
+	for _, request := range requests {
+		// Get User Type here
+		memberData, err := clu.r.User.GetRBAC(ctx, request.CommunityId)
+		if err != nil {
+			return nil, errorgen.Error(err)
+		}
+
+		if memberData.CoolCode != "" || memberData.CoolCode == coolCode {
+			return nil, errorgen.Error(errorgen.AlreadyExist, "User with communityId %s already in another COOL. Please contact the respective COOL Leader for the member adjustment", memberData.CommunityId)
+		}
+
+		coolUserType, found := constants.CoolUserType.LookupValue(request.UserType)
+		if !found {
+			return nil, models.ErrorInvalidInput
+		}
+
+		existingUserTypes := []string(memberData.UserTypes) // convert pq.StringArray to []string
+		if common.CheckOneDataInList([]string{*coolUserType}, existingUserTypes) && memberData.CoolCode == memberData.CoolCode {
+			continue
+		}
+
+		userTypes := common.CombineMapStrings(existingUserTypes, []string{*coolUserType}) // add core team user type to the user
+		// update user's user types and cool id here
+		if err := clu.r.User.UpdateCoolTeamsByCommunityId(ctx, request.CommunityId, coolCode, userTypes); err != nil {
+			return nil, errorgen.Error(err)
+		}
+
+		memberRes = append(memberRes, models.AddedMemberResponse{
+			Type:        models.TYPE_USER,
+			CommunityId: request.CommunityId,
+			UserType:    request.UserType,
+		})
+	}
+
+	// var communityIds []string
+	// for _, member := range request {
+	// 	communityIds = append(communityIds, member.CommunityId)
+	// }
+
+	// userDatas, err := clu.r.User.GetManyRBAC(ctx, communityIds)
+	// if err != nil {
+	// 	return nil, err
+	// }
+
+	// if len(userDatas) != len(communityIds) {
+	// 	return nil, models.ErrorDataNotFound
+	// }
+
+	// for _, userData := range userDatas {
+	// 	if userData.CoolCode != "" {
+	// 		return nil, models.ErrorAlreadyExist
+	// 	}
+
+	// }
+
+	return &models.AddCoolMemberResponse{
+		Type:         models.TYPE_COOL,
+		CoolCode:     coolCode,
+		AddedMembers: memberRes,
+	}, nil
 }

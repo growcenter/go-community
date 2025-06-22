@@ -34,6 +34,9 @@ var (
 	queryGetRBACByCommunityId = `SELECT community_id, roles, user_types, cool_code
 	FROM users WHERE community_id = ? LIMIT 1`
 
+	queryGetManyUserRBACByCommunityId = `SELECT community_id, roles, user_types, cool_code
+	FROM users WHERE community_id = ? LIMIT 1`
+
 	queryGetUserNameByCommunityId = `SELECT name, community_id
 	FROM users WHERE community_id = ? LIMIT 1`
 

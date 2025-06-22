@@ -3,6 +3,7 @@ package response
 import (
 	"go-community/internal/common"
 	"go-community/internal/models"
+	"go-community/internal/pkg/errorgen"
 	"net/http"
 	"time"
 
@@ -13,6 +14,23 @@ import (
 
 func Error(ctx echo.Context, err error) error {
 	response := models.ErrorMapping(err)
+	requestID, _ := ctx.Get("X-Request-Id").(string)
+	if requestID == "" {
+		requestID = uuid.New().String()
+	}
+	response.Metadata.RequestId = requestID
+
+	timestamp, _ := ctx.Get("X-Timestamp").(string)
+	if timestamp == "" {
+		timestamp = common.Now().Format(time.RFC3339)
+	}
+	response.Metadata.Timestamp = timestamp
+
+	return ctx.JSON(response.Code, response)
+}
+
+func ErrorV2(ctx echo.Context, err error) error {
+	response := errorgen.GetResponse(err)
 	requestID, _ := ctx.Get("X-Request-Id").(string)
 	if requestID == "" {
 		requestID = uuid.New().String()

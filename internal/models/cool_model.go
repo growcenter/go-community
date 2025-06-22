@@ -26,8 +26,8 @@ type Cool struct {
 	Gender                  *string
 	Recurrence              *string
 	LocationType            string
-	LocationArea            string
-	LocationDistrict        string
+	LocationAreaCode        string
+	LocationDistrictCode    string
 	Status                  string
 	CreatedAt               *time.Time
 	UpdatedAt               *time.Time
@@ -55,14 +55,16 @@ func (c *CreateCoolResponse) ToResponse() CreateCoolResponse {
 
 type (
 	CoolLocationRequest struct {
-		Type     string `json:"type" validate:"required,oneof=offline onsite hybrid"`
-		Area     string `json:"area" validate:"required"`
-		District string `json:"district" validate:"required"`
+		Type         string `json:"type" validate:"required,oneof=offline onsite hybrid"`
+		AreaCode     string `json:"areaCode" validate:"required"`
+		DistrictCode string `json:"districtCode" validate:"required"`
 	}
 	CoolLocationResponse struct {
-		Type     string `json:"type"`
-		Area     string `json:"area"`
-		District string `json:"district"`
+		Type         string `json:"type"`
+		AreaCode     string `json:"areaCode"`
+		AreaName     string `json:"areaName,omitempty"`
+		DistrictCode string `json:"districtCode"`
+		DistrictName string `json:"districtName,omitempty"`
 	}
 )
 
@@ -178,6 +180,23 @@ type (
 		Type     string                  `json:"type"`
 		UserType string                  `json:"userType"`
 		Members  []GetCoolMemberResponse `json:"members"`
+	}
+)
+
+type (
+	AddCoolMemberRequest struct {
+		CommunityId string `json:"communityId" validate:"required"`
+		UserType    string `json:"userType" validate:"required, oneof=facilitator leader core member"`
+	}
+	AddCoolMemberResponse struct {
+		Type         string                `json:"type"`
+		CoolCode     string                `json:"coolCode"`
+		AddedMembers []AddedMemberResponse `json:"addedMembers"`
+	}
+	AddedMemberResponse struct {
+		Type        string `json:"type"`
+		CommunityId string `json:"communityId"`
+		UserType    string `json:"userType"`
 	}
 )
 

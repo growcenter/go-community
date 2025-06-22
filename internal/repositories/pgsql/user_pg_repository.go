@@ -35,6 +35,7 @@ type UserRepository interface {
 	CountUserByUserTypeCategory(ctx context.Context, userTypeCategory []string) (count int64, err error)
 	Delete(ctx context.Context, communityId string) (err error)
 	GetRBAC(ctx context.Context, communityId string) (output *models.GetRBACByCommunityIdDBOutput, err error)
+	GetManyRBAC(ctx context.Context, communityIds []string) (output []models.GetRBACByCommunityIdDBOutput, err error)
 	GetUserNamesByMultipleCommunityId(ctx context.Context, communityIds []string) (output []models.GetNameOnUserDBOutput, err error)
 	GetManyNamesByCommunityId(ctx context.Context, communityIds []string) (output []models.GetNameOnUserDBOutput, err error)
 }
@@ -372,6 +373,19 @@ func (ur *userRepository) GetRBAC(ctx context.Context, communityId string) (outp
 	}()
 
 	err = ur.db.Raw(queryGetRBACByCommunityId, communityId).Scan(&output).Error
+	if err != nil {
+		return nil, err
+	}
+
+	return output, nil
+}
+
+func (ur *userRepository) GetManyRBAC(ctx context.Context, communityIds []string) (output []models.GetRBACByCommunityIdDBOutput, err error) {
+	defer func() {
+		LogRepository(ctx, err)
+	}()
+
+	err = ur.db.Raw(queryGetManyUserRBACByCommunityId, communityIds).Scan(&output).Error
 	if err != nil {
 		return nil, err
 	}
