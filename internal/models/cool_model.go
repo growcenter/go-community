@@ -186,7 +186,7 @@ type (
 type (
 	AddCoolMemberRequest struct {
 		CommunityId string `json:"communityId" validate:"required"`
-		UserType    string `json:"userType" validate:"required, oneof=facilitator leader core member"`
+		UserType    string `json:"userType" validate:"required,oneof=facilitator leader core member"`
 	}
 	AddCoolMemberResponse struct {
 		Type         string                `json:"type"`

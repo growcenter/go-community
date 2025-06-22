@@ -30,7 +30,21 @@ func Error(ctx echo.Context, err error) error {
 }
 
 func ErrorV2(ctx echo.Context, err error) error {
-	response := errorgen.GetResponse(err)
+	var response models.Response
+	if err == nil {
+		response = models.Response{
+			Code:    http.StatusInternalServerError,
+			Status:  "ERROR",
+			Message: "Unknown error occurred.",
+		}
+	} else {
+		errorGenResponse := errorgen.GetResponse(err)
+		response = models.Response{
+			Code:    errorGenResponse.Code,
+			Status:  errorGenResponse.Status,
+			Message: errorGenResponse.Message,
+		}
+	}
 	requestID, _ := ctx.Get("X-Request-Id").(string)
 	if requestID == "" {
 		requestID = uuid.New().String()
