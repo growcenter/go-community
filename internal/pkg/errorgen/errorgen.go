@@ -3,6 +3,7 @@ package errorgen
 import (
 	"errors"
 	"fmt"
+	"go-community/internal/common"
 	"go-community/internal/models"
 	"net/http"
 )
@@ -50,6 +51,7 @@ var errorMappings = map[error]ErrorMapping{
 	InvalidInput:    {Code: http.StatusBadRequest, Status: "INVALID_INPUT"},
 	AlreadyExist:    {Code: http.StatusConflict, Status: "ALREADY_EXISTS"},
 	InvalidData:     {Code: http.StatusBadRequest, Status: "INVALID_DATA"},
+	ForbiddenRole:   {Code: http.StatusForbidden, Status: "FORBIDDEN_ROLE"},
 }
 
 // ==== Predefined Errors ====
@@ -65,6 +67,7 @@ var (
 	DataNotFound    = errors.New("a specified resource is not found")
 	InvalidInput    = errors.New("invalid request input")
 	InvalidData     = errors.New("invalid data")
+	ForbiddenRole   = errors.New("you are not allowed to access this feature")
 )
 
 // ==== Error Constructor ====
@@ -85,7 +88,7 @@ func Error(err error, message ...string) *HTTPError {
 	case 1:
 		msg = message[0]
 	default:
-		msg = fmt.Sprintf(message[0], toInterfaces(message[1:])...)
+		msg = fmt.Sprintf(message[0], common.SlicesToInterfaces(message[1:])...)
 	}
 
 	return &HTTPError{
@@ -105,6 +108,7 @@ func GetResponse(err error) Response {
 	if errors.As(err, &httpErr) {
 		return httpErr.Response
 	}
+	
 	return Response{
 		Code:    http.StatusInternalServerError,
 		Status:  "INTERNAL_SERVER_ERROR",
@@ -119,14 +123,4 @@ func AddMapping(err error, code int, status string) {
 		Code:   code,
 		Status: status,
 	}
-}
-
-// ==== Helper: Convert []string to []interface{} ====
-
-func toInterfaces(args []string) []interface{} {
-	result := make([]interface{}, len(args))
-	for i, v := range args {
-		result[i] = v
-	}
-	return result
 }

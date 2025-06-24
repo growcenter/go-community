@@ -1,8 +1,6 @@
 package v2
 
 import (
-	"fmt"
-	"go-community/internal/common"
 	"go-community/internal/config"
 	"go-community/internal/deliveries/http/common/response"
 	"go-community/internal/deliveries/http/middleware"
@@ -25,6 +23,8 @@ func NewCoolHandler(api *echo.Group, u *usecases.Usecases, c *config.Configurati
 	handler := &CoolHandler{usecase: u, conf: c}
 
 	endpoint := api.Group("/cools")
+	endpoint.Use(middleware.OptionalMiddleware(c, u, nil))
+	endpoint.GET("", handler.GetAll)
 
 	// Define campus routes
 	endpointOld := api.Group("/cool")
@@ -35,17 +35,16 @@ func NewCoolHandler(api *echo.Group, u *usecases.Usecases, c *config.Configurati
 	endpointAuth.Use(middleware.UserMiddleware(c, u, nil))
 	endpointAuth.POST("/join", handler.CreateNewJoiner)
 	endpointAuth.GET("/me", handler.GetCoolPersonal)
-	endpoint.GET("", handler.GetAll)
 	endpointAuth.GET("/:code/members", handler.GetCoolMemberByCode)
 
 	endpointInternalAuth := api.Group("/internal/cools")
-	endpointInternalAuth.Use(middleware.UserMiddleware(c, u, []string{"event-internal-view", "event-internal-edit"}))
+	endpointInternalAuth.Use(middleware.UserMiddleware(c, u, []string{"cool-internal-view", "cool-internal-edit"}))
 	endpointInternalAuth.GET("/join", handler.GetAllNewJoiner)
 	endpointInternalAuth.PATCH("/join/:idNewJoiner/:status", handler.UpdateNewJoiner)
 	endpointInternalAuth.POST("", handler.CreateCool)
 
-	endpointCoreAuth := endpoint.Group("") // For cool leader, core team and facilitator
-	endpointCoreAuth.Use(middleware.UserMiddleware(c, u, []string{"cool-manage-add"}))
+	endpointCoreAuth := endpoint.Group("") // For cool admin leader, core team and facilitator
+	endpointCoreAuth.Use(middleware.UserMiddleware(c, u, []string{"cool-member-manage"}))
 	endpointCoreAuth.POST("/:code/members", handler.AddMemberByCode)
 	endpointCoreAuth.DELETE("/:code/members/:communityId", handler.DeleteMemberByCode)
 }
@@ -170,21 +169,19 @@ func (clh *CoolHandler) GetAll(ctx echo.Context) error {
 		header = "option"
 	}
 
-	switch header {
-	case "option":
-		data, err := clh.usecase.Cool.GetAll(ctx.Request().Context())
-		if err != nil {
-			return response.Error(ctx, err)
-		}
-
-		return response.SuccessListV2(ctx, http.StatusOK, "", data)
-	case "list":
-		isFacilitator := common.CheckOneDataInList(ctx.Get("userType").([]string), []string{"cool-facilitator"})
-		isAdmin := common.CheckOneDataInList(ctx.Get("userType").([]string), []string{"cool-admin"})
-		fmt.Println(isFacilitator, isAdmin)
-	default:
-		return response.Error(ctx, models.ErrorInvalidInput)
+	var userTypes []string
+	var communityId string
+	if ctx.Get("userTypes") != nil && ctx.Get("id") != nil {
+		userTypes = ctx.Get("userTypes").([]string)
+		communityId = ctx.Get("id").(string)
 	}
+
+	data, err := clh.usecase.Cool.GetAll(ctx.Request().Context(), header, userTypes, communityId)
+	if err != nil {
+		return response.ErrorV2(ctx, err)
+	}
+
+	return response.SuccessListV2(ctx, http.StatusOK, "", data)
 
 	return nil // unreachable
 }
@@ -232,7 +229,7 @@ func (clh *CoolHandler) AddMemberByCode(ctx echo.Context) error {
 		}
 	}
 
-	members, err := clh.usecase.Cool.AddMemberByCode(ctx.Request().Context(), ctx.Param("code"), request)
+	members, err := clh.usecase.Cool.AddMemberByCode(ctx.Request().Context(), ctx.Get("userTypes").([]string), ctx.Param("code"), request)
 	if err != nil {
 		return response.ErrorV2(ctx, err)
 	}
@@ -250,7 +247,7 @@ func (clh *CoolHandler) DeleteMemberByCode(ctx echo.Context) error {
 		return response.ErrorValidation(ctx, err)
 	}
 
-	if err := clh.usecase.Cool.DeleteMemberByCode(ctx.Request().Context(), request); err != nil {
+	if err := clh.usecase.Cool.DeleteMemberByCode(ctx.Request().Context(), ctx.Get("userTypes").([]string), request); err != nil {
 		return response.ErrorV2(ctx, err)
 	}
 

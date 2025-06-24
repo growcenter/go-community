@@ -28,6 +28,7 @@ func NewCoolAttendanceHandler(api *echo.Group, u *usecases.Usecases, c *config.C
 	endpointCoreAuth.Use(middleware.UserMiddleware(c, u, []string{"cool-attendance-create"}))
 	endpointCoreAuth.GET("/:coolCode/attendances", handler.GetSummaryByCoolCode)
 	endpointCoreAuth.POST("/meetings", handler.CreateMeeting)
+	endpointCoreAuth.POST("/meetings/attendances", handler.CreateAttendance)
 	endpointCoreAuth.GET("/meetings/:id/attendances", handler.GetMeetingAttendances)
 
 	endpointMemberAuth := endpoint.Group("")
@@ -104,7 +105,12 @@ func (cah *CoolAttendanceHandler) GetMeetings(ctx echo.Context) error {
 			return response.Error(ctx, err)
 		}
 	case "previous":
-		meetings, err = cah.usecase.CoolMeeting.GetPreviousMeetings(ctx.Request().Context(), ctx.Get("id").(string), param)
+		tokenValue, err := models.GetValueFromToken(ctx)
+		if err != nil {
+			return response.Error(ctx, err)
+		}
+
+		meetings, err = cah.usecase.CoolMeeting.GetPreviousMeetings(ctx.Request().Context(), tokenValue, param)
 		if err != nil {
 			return response.Error(ctx, err)
 		}

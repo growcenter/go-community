@@ -104,17 +104,6 @@ type (
 	}
 )
 
-func (c *GetAllCoolOptionsResponse) ToResponse() GetAllCoolOptionsResponse {
-	return GetAllCoolOptionsResponse{
-		Type:       TYPE_COOL,
-		Code:       c.Code,
-		Name:       c.Name,
-		CampusCode: c.CampusCode,
-		Leaders:    c.Leaders,
-		Status:     c.Status,
-	}
-}
-
 type (
 	GetAllCoolOptionsDBOutput struct {
 		ID                 int
@@ -123,15 +112,6 @@ type (
 		CampusCode         string
 		LeaderCommunityIds pq.StringArray `gorm:"type:text[]"`
 		Status             string
-	}
-	GetAllCoolOptionsResponse struct {
-		Type       string                      `json:"type"`
-		Code       string                      `json:"code"`
-		Name       string                      `json:"name"`
-		CampusCode string                      `json:"campusCode"`
-		CampusName string                      `json:"campusName"`
-		Leaders    []CoolLeaderAndCoreResponse `json:"leaders"`
-		Status     string                      `json:"status"`
 	}
 )
 
@@ -204,6 +184,54 @@ type (
 	DeleteCoolMemberRequest struct {
 		CoolCode    string `json:"coolCode" validate:"required"`
 		CommunityId string `json:"communityId" validate:"required,communityId"`
+	}
+)
+
+type (
+	UpdateRoleMemberRequest struct {
+		CommunityId string `json:"communityId" validate:"required,communityId"`
+		UserType    string `json:"userType" validate:"required,oneof=facilitator leader core member"`
+	}
+	PreviousAfterUpdateRoleMember struct {
+		CoolCode string   `json:"coolCode"`
+		Role     []string `json:"role"`
+		UserType []string `json:"userType"`
+	}
+	UpdateRoleMemberResponse struct {
+		Type        string                        `json:"type"`
+		CommunityId string                        `json:"communityId"`
+		Previous    PreviousAfterUpdateRoleMember `json:"previous"`
+		After       PreviousAfterUpdateRoleMember `json:"after"`
+	}
+)
+
+type (
+	GetAllCoolListDBOutput struct {
+		Code                    string
+		Name                    string
+		CampusCode              string
+		FacilitatorCommunityIds pq.StringArray `gorm:"type:text[]"`
+		LeaderCommunityIds      pq.StringArray `gorm:"type:text[]"`
+		Category                string
+		Gender                  string
+		LocationType            string
+		LocationAreaCode        string
+		Status                  string
+	}
+	GetAllCoolListResponse struct {
+		Type             string                      `json:"type"`
+		Code             string                      `json:"code"`
+		Name             string                      `json:"name"`
+		CampusCode       string                      `json:"campusCode"`
+		CampusName       string                      `json:"campusName"`
+		Facilitators     []CoolLeaderAndCoreResponse `json:"facilitators,omitempty"`
+		Leaders          []CoolLeaderAndCoreResponse `json:"leaders"`
+		Category         string                      `json:"category,omitempty"`
+		Gender           string                      `json:"gender,omitempty"`
+		LocationType     string                      `json:"locationType,omitempty"`
+		LocationAreaCode string                      `json:"locationAreaCode,omitempty"`
+		LocationAreaName string                      `json:"locationAreaName,omitempty"`
+		Status           string                      `json:"status"`
 	}
 )
 

@@ -14,7 +14,7 @@ run_api: tidy
 
 run_local:
 	swag init -g cmd/api/main.go
-	export ENV="DEV" && go run ./cmd/api/main.go | jq -C -R '. as $$line | try (fromjson) catch $$line'
+	export ENV="DEV" && go run cmd/api/main.go | jq -R 'fromjson? | .' | less
 
 tidy:
 	go mod tidy

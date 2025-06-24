@@ -193,3 +193,12 @@ func RemoveSliceIfContains(input []string, toRemove []string) []string {
 
 	return result
 }
+
+// Convert []string to []interface{}
+func SlicesToInterfaces(args []string) []interface{} {
+	result := make([]interface{}, len(args))
+	for i, v := range args {
+		result[i] = v
+	}
+	return result
+}

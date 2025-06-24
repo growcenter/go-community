@@ -9,6 +9,7 @@ var (
 	USER_TYPE_COOL_MEMBER      = "cool-member"
 	USER_TYPE_COOL_CORE        = "cool-core"
 	USER_TYPE_COOL_LEADER      = "cool-leader"
+	USER_TYPE_COOL_ADMIN       = "cool-admin"
 
 	CoolUserType = Dictionary{
 		USER_TYPE_COOL_CORE:        {"core", "cool-core"},

@@ -11,7 +11,7 @@ import (
 
 type Client interface {
 	// GetProvinces(filterCodes []string) ([]ProvinceData, error)
-	GetCities(campucCode string) ([]CityData, error)
+	GetCities(campucCode string, cityCode ...string) ([]CityData, error)
 	GetDistricts(cityCode string) ([]DistrictData, error)
 }
 
@@ -65,7 +65,7 @@ func NewClient(cfg config.Configuration) Client {
 // 	return result, nil
 // }
 
-func (c *client) GetCities(campusCode string) ([]CityData, error) {
+func (c *client) GetCities(campusCode string, cityCode ...string) ([]CityData, error) {
 	client := resty.New()
 	var combinedResults []CityData
 
@@ -96,6 +96,23 @@ func (c *client) GetCities(campusCode string) ([]CityData, error) {
 		if len(combinedResults) == 0 {
 			return nil, fmt.Errorf("no data received")
 		}
+	}
+
+	if cityCode != nil {
+		if len(cityCode) > 1 {
+			return nil, fmt.Errorf("cannot be more than 1")
+		}
+		filtered := make([]CityData, 0)
+		for _, city := range combinedResults {
+			if common.StringTrimSpaceAndLower(city.Code) == common.StringTrimSpaceAndLower(cityCode[0]) {
+				filtered = append(filtered, city)
+				break // remove this line if you want all matching cities (just in case)
+			}
+		}
+		if len(filtered) == 0 {
+			return nil, fmt.Errorf("cityCode %s not found", cityCode)
+		}
+		return filtered, nil
 	}
 
 	return combinedResults, nil

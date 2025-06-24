@@ -3,6 +3,7 @@ package usecases
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	indonesiaAPI "go-community/internal/clients/indonesia-api"
 	"go-community/internal/common"
 	"go-community/internal/config"
@@ -18,7 +19,7 @@ import (
 
 type CoolUsecase interface {
 	Create(ctx context.Context, request models.CreateCoolRequest) (response *models.CreateCoolResponse, err error)
-	GetAll(ctx context.Context) (response []models.GetAllCoolOptionsResponse, err error)
+	GetAll(ctx context.Context) (response []models.GetAllCoolListResponse, err error)
 	GetByCommunityId(ctx context.Context, communityId string) (response *models.GetCoolDetailResponse, err error)
 	GetMemberByCode(ctx context.Context, param models.GetCoolMemberByCoolCodeParameter) (response []models.GroupedCoolMembers, err error)
 	AddMemberByCode(ctx context.Context, coolCode string, requests []models.AddCoolMemberRequest) (response *models.AddCoolMemberResponse, err error)
@@ -226,53 +227,141 @@ func (clu *coolUsecase) Create(ctx context.Context, request models.CreateCoolReq
 	return &res, nil
 }
 
-func (clu *coolUsecase) GetAll(ctx context.Context) (response []models.GetAllCoolOptionsResponse, err error) {
+func (clu *coolUsecase) GetAll(ctx context.Context, header string, userType []string, communityId string) (response []models.GetAllCoolListResponse, err error) {
 	defer func() {
 		LogService(ctx, err)
 	}()
 
-	cools, err := clu.r.Cool.GetAllOptions(ctx)
-	if err != nil {
-		return nil, err
-	}
-
-	list := make([]models.GetAllCoolOptionsResponse, len(cools))
-	for i, e := range cools {
-		var campusName string
-		if e.CampusCode != "" {
-			value, campus := clu.cfg.Campus[strings.ToLower(e.CampusCode)]
-			if !campus {
-				return nil, models.ErrorDataNotFound
-			}
-			campusName = value
-		}
-
-		users, err := clu.r.User.GetManyNamesByCommunityId(ctx, e.LeaderCommunityIds)
+	switch header {
+	case "option":
+		cools, err := clu.r.Cool.GetAllOptions(ctx)
 		if err != nil {
 			return nil, err
 		}
 
-		var leaders []models.CoolLeaderAndCoreResponse
-		for _, v := range users {
-			leaders = append(leaders, models.CoolLeaderAndCoreResponse{
-				Type:        models.TYPE_USER,
-				CommunityId: v.CommunityId,
-				Name:        v.Name,
-			})
+		list := make([]models.GetAllCoolListResponse, len(cools))
+		for i, e := range cools {
+			var campusName string
+			if e.CampusCode != "" {
+				value, campus := clu.cfg.Campus[strings.ToLower(e.CampusCode)]
+				if !campus {
+					return nil, models.ErrorDataNotFound
+				}
+				campusName = value
+			}
+
+			users, err := clu.r.User.GetManyNamesByCommunityId(ctx, e.LeaderCommunityIds)
+			if err != nil {
+				return nil, err
+			}
+
+			var leaders []models.CoolLeaderAndCoreResponse
+			for _, v := range users {
+				leaders = append(leaders, models.CoolLeaderAndCoreResponse{
+					Type:        models.TYPE_USER,
+					CommunityId: v.CommunityId,
+					Name:        v.Name,
+				})
+			}
+
+			list[i] = models.GetAllCoolListResponse{
+				Type:       models.TYPE_COOL,
+				Code:       e.Code,
+				Name:       e.Name,
+				CampusCode: e.CampusCode,
+				CampusName: campusName,
+				Leaders:    leaders,
+				Status:     e.Status,
+			}
 		}
 
-		list[i] = models.GetAllCoolOptionsResponse{
-			Type:       models.TYPE_COOL,
-			Code:       e.Code,
-			Name:       e.Name,
-			CampusCode: e.CampusCode,
-			CampusName: campusName,
-			Leaders:    leaders,
-			Status:     e.Status,
+		return list, nil
+	case "list":
+		isFacilitator := common.CheckOneDataInList(userType, []string{"cool-facilitator"})
+		isAdmin := common.CheckOneDataInList(userType, []string{"cool-admin"})
+
+		switch {
+		case isFacilitator && isAdmin:
+			// handle both
+		case isFacilitator:
+			// handle facilitator logic
+			cools, err := clu.r.Cool.GetAllByFacilitatorCommunityId(ctx, communityId)
+			if err != nil {
+				return nil, errorgen.Error(err)
+			}
+
+			list := make([]models.GetAllCoolListResponse, len(cools))
+			for i, e := range cools {
+				var campusName string
+				if e.CampusCode != "" {
+					value, campus := clu.cfg.Campus[strings.ToLower(e.CampusCode)]
+					if !campus {
+						return nil, models.ErrorDataNotFound
+					}
+					campusName = value
+				}
+
+				leaderData, err := clu.r.User.GetManyNamesByCommunityId(ctx, e.LeaderCommunityIds)
+				if err != nil {
+					return nil, err
+				}
+
+				var leaders []models.CoolLeaderAndCoreResponse
+				for _, v := range leaderData {
+					leaders = append(leaders, models.CoolLeaderAndCoreResponse{
+						Type:        models.TYPE_USER,
+						CommunityId: v.CommunityId,
+						Name:        v.Name,
+					})
+				}
+
+				facilitatorData, err := clu.r.User.GetManyNamesByCommunityId(ctx, e.LeaderCommunityIds)
+				if err != nil {
+					return nil, err
+				}
+
+				var facilitators []models.CoolLeaderAndCoreResponse
+				for _, v := range facilitatorData {
+					facilitators = append(facilitators, models.CoolLeaderAndCoreResponse{
+						Type:        models.TYPE_USER,
+						CommunityId: v.CommunityId,
+						Name:        v.Name,
+					})
+				}
+
+				areaName, err := clu.i.GetCities(common.StringTrimSpaceAndLower(e.CampusCode), e.LocationAreaCode)
+				if err != nil {
+					return nil, errorgen.Error(err)
+				}
+
+				list[i] = models.GetAllCoolListResponse{
+					Type:             models.TYPE_COOL,
+					Code:             e.Code,
+					Name:             e.Name,
+					CampusCode:       e.CampusCode,
+					CampusName:       campusName,
+					Facilitators:     facilitators,
+					Leaders:          leaders,
+					Category:         e.Category,
+					Gender:           e.Gender,
+					LocationType:     e.LocationType,
+					LocationAreaCode: e.LocationAreaCode,
+					LocationAreaName: areaName[0].Name,
+					Status:           e.Status,
+				}
+			}
+
+			return list, nil
+		case isAdmin:
+			// handle admin logic
+		default:
+			return nil, errorgen.Error(errorgen.ForbiddenRole) // no valid role
 		}
+	default:
+		return nil, errorgen.Error(errorgen.InvalidInput, "Invalid header value")
 	}
 
-	return list, nil
+	return
 }
 
 func (clu *coolUsecase) GetByCommunityId(ctx context.Context, communityId string) (response *models.GetCoolDetailResponse, err error) {
@@ -487,49 +576,98 @@ func (clu *coolUsecase) GetMemberByCode(ctx context.Context, param models.GetCoo
 	return response, nil
 }
 
-func (clu *coolUsecase) AddMemberByCode(ctx context.Context, coolCode string, requests []models.AddCoolMemberRequest) (response *models.AddCoolMemberResponse, err error) {
+func (clu *coolUsecase) AddMemberByCode(ctx context.Context, requestingUserType []string, coolCode string, requests []models.AddCoolMemberRequest) (response *models.AddCoolMemberResponse, err error) {
 	defer func() {
 		LogService(ctx, err)
 	}()
 
-	existCool, err := clu.r.Cool.CheckByCode(ctx, coolCode)
+	// Get Data from COOL Table
+	cool, err := clu.r.Cool.GetOneByCode(ctx, coolCode)
 	if err != nil {
 		return response, errorgen.Error(err)
 	}
 
-	if !existCool {
+	// Check if COOL exist
+	if cool.Code == "" {
 		return response, errorgen.Error(errorgen.DataNotFound)
 	}
 
+	// Here we check user one by one
 	var memberRes []models.AddedMemberResponse
 	for _, request := range requests {
-		// Get User Type here
+		// Get Community ID, User Type, Roles, and Cool Code here
 		memberData, err := clu.r.User.GetRBAC(ctx, request.CommunityId)
 		if err != nil {
 			return nil, errorgen.Error(err)
 		}
 
+		// Check if user exist
 		if memberData.CommunityId == "" {
 			return nil, errorgen.Error(errorgen.DataNotFound)
 		}
 
+		// Logic: If user is already in another COOL, return error
 		if memberData.CoolCode != "" || memberData.CoolCode == coolCode {
 			return nil, errorgen.Error(errorgen.AlreadyExist, "User with communityId %s already in another COOL. Please contact the respective COOL Leader for the member adjustment", memberData.CommunityId)
 		}
 
+		// Check if user type is valid (only user type related to COOL)
 		coolUserType, found := constants.CoolUserType.LookupValue(request.UserType)
 		if !found {
 			return nil, models.ErrorInvalidInput
 		}
 
 		existingUserTypes := []string(memberData.UserTypes) // convert pq.StringArray to []string
-		if common.CheckOneDataInList([]string{*coolUserType}, existingUserTypes) && memberData.CoolCode == memberData.CoolCode {
+		// Check if user type already exist
+		if common.CheckOneDataInList([]string{*coolUserType}, existingUserTypes) {
+			fmt.Println("kena sini ye")
 			continue
 		}
 
-		userTypes := common.CombineMapStrings(existingUserTypes, []string{*coolUserType}) // add core team user type to the user
-		// update user's user types and cool id here
+		// combine the requested user type with existing user type in User Table
+		userTypes := common.CombineMapStrings(existingUserTypes, []string{*coolUserType})
+
+		// Logic to add community ids to cool table
+		switch *coolUserType {
+		case constants.USER_TYPE_COOL_FACILITATOR:
+			if !common.CheckOneDataInList([]string{constants.USER_TYPE_COOL_ADMIN}, requestingUserType) {
+				return nil, errorgen.Error(errorgen.ErrForbidden, "Only COOL Admin can add COOL Facilitator")
+			}
+
+			if common.CheckOneDataInList([]string{request.CommunityId}, cool.FacilitatorCommunityIds) && memberData.CoolCode == cool.Code {
+				return nil, errorgen.Error(errorgen.AlreadyExist, "User with communityId %s already in another COOL. Please contact the respective COOL Leader for the member adjustment", memberData.CommunityId)
+			}
+
+			cool.FacilitatorCommunityIds = append(cool.FacilitatorCommunityIds, memberData.CommunityId)
+		case constants.USER_TYPE_COOL_LEADER:
+			if !common.CheckOneDataInList([]string{constants.USER_TYPE_COOL_ADMIN, constants.USER_TYPE_COOL_FACILITATOR}, requestingUserType) {
+				return nil, errorgen.Error(errorgen.ErrForbidden, "Only COOL Admin and Facilitator can add COOL Leader")
+			}
+
+			if common.CheckOneDataInList([]string{request.CommunityId}, cool.LeaderCommunityIds) && memberData.CoolCode == cool.Code {
+				return nil, errorgen.Error(errorgen.AlreadyExist, "User with communityId %s already in another COOL. Please contact the respective COOL Leader for the member adjustment", memberData.CommunityId)
+			}
+
+			cool.LeaderCommunityIds = append(cool.LeaderCommunityIds, memberData.CommunityId)
+		case constants.USER_TYPE_COOL_CORE:
+			if !common.CheckOneDataInList([]string{constants.USER_TYPE_COOL_LEADER}, requestingUserType) {
+				return nil, errorgen.Error(errorgen.ForbiddenRole, "Only COOL Leader can add their core team")
+			}
+
+			if common.CheckOneDataInList([]string{request.CommunityId}, cool.CoreCommunityIds) && memberData.CoolCode == cool.Code {
+				return nil, errorgen.Error(errorgen.AlreadyExist, "User with communityId %s already in another COOL. Please contact the respective COOL Leader for the member adjustment", memberData.CommunityId)
+			}
+
+			cool.CoreCommunityIds = append(cool.CoreCommunityIds, memberData.CommunityId)
+		}
+
+		// update user's user types and cool id into user table
 		if err := clu.r.User.UpdateCoolTeamsByCommunityId(ctx, request.CommunityId, coolCode, userTypes); err != nil {
+			return nil, errorgen.Error(err)
+		}
+
+		// update user's cool data here
+		if err := clu.r.Cool.Update(ctx, &cool); err != nil {
 			return nil, errorgen.Error(err)
 		}
 
@@ -547,43 +685,75 @@ func (clu *coolUsecase) AddMemberByCode(ctx context.Context, coolCode string, re
 	}, nil
 }
 
-func (clu *coolUsecase) DeleteMemberByCode(ctx context.Context, request models.DeleteCoolMemberRequest) (err error) {
+func (clu *coolUsecase) DeleteMemberByCode(ctx context.Context, requestingUserType []string, request models.DeleteCoolMemberRequest) (err error) {
 	defer func() {
 		LogService(ctx, err)
 	}()
 
-	existCool, err := clu.r.Cool.CheckByCode(ctx, request.CoolCode)
+	// Get Data from COOL Table
+	cool, err := clu.r.Cool.GetOneByCode(ctx, request.CoolCode)
 	if err != nil {
 		return errorgen.Error(err)
 	}
 
-	if !existCool {
+	// Check if COOL exist
+	if cool.Code == "" {
 		return errorgen.Error(errorgen.DataNotFound)
 	}
 
+	// Get Community ID, User Type, Roles, and Cool Code here
 	member, err := clu.r.User.GetRBAC(ctx, request.CommunityId)
 	if err != nil {
 		return errorgen.Error(err)
 	}
 
-	if member.CommunityId == "" && member.CoolCode == "" {
+	// Check if user is not exist
+	if member.CommunityId == "" || member.CoolCode == "" {
 		return errorgen.Error(errorgen.DataNotFound)
 	}
 
+	// Check if user's cool code is the same as the request
 	if request.CoolCode != member.CoolCode {
 		return errorgen.Error(errorgen.InvalidData, "Member with communityId %s is not in COOL %s", member.CommunityId, request.CoolCode)
+	}
+
+	// Remove community id from cool table (depend on user's cool user type)
+	if common.CheckOneDataInList(cool.FacilitatorCommunityIds, []string{request.CommunityId}) {
+		if !common.CheckOneDataInList([]string{constants.USER_TYPE_COOL_ADMIN}, requestingUserType) {
+			return errorgen.Error(errorgen.ErrForbidden, "Only COOL Admin can delete COOL Facilitator")
+		}
+
+		cool.FacilitatorCommunityIds = common.RemoveSliceIfExact(cool.FacilitatorCommunityIds, []string{request.CommunityId})
+	} else if common.CheckOneDataInList(cool.LeaderCommunityIds, []string{request.CommunityId}) {
+		if !common.CheckOneDataInList([]string{constants.USER_TYPE_COOL_ADMIN, constants.USER_TYPE_COOL_FACILITATOR}, requestingUserType) {
+			return errorgen.Error(errorgen.ErrForbidden, "Only COOL Admin and Facilitator can delete COOL Leader")
+		}
+
+		cool.LeaderCommunityIds = common.RemoveSliceIfExact(cool.LeaderCommunityIds, []string{request.CommunityId})
+	} else if common.CheckOneDataInList(cool.CoreCommunityIds, []string{request.CommunityId}) {
+		if !common.CheckOneDataInList([]string{constants.USER_TYPE_COOL_LEADER}, requestingUserType) {
+			return errorgen.Error(errorgen.ErrForbidden, "Only COOL Leader can delete COOL Leader")
+		}
+
+		cool.CoreCommunityIds = common.RemoveSliceIfExact(cool.CoreCommunityIds, []string{request.CommunityId})
 	}
 
 	existingUserTypes := []string(member.UserTypes) // convert pq.StringArray to []string
 	coolUserTypes := []string{constants.USER_TYPE_COOL_CORE, constants.USER_TYPE_COOL_FACILITATOR, constants.USER_TYPE_COOL_LEADER, constants.USER_TYPE_COOL_MEMBER}
 
+	// Check if user's user types have one of cool user types
 	if !common.CheckOneDataInList(coolUserTypes, existingUserTypes) {
 		return errorgen.Error(errorgen.InvalidData, "Member with communityId %s is not in COOL %s", member.CommunityId, request.CoolCode)
 	}
 
+	// Remove user's cool user types in user table
 	newUserTypes := common.RemoveSliceIfExact(existingUserTypes, coolUserTypes)
-
 	if err := clu.r.User.UpdateCoolTeamsByCommunityId(ctx, request.CommunityId, "", newUserTypes); err != nil {
+		return errorgen.Error(err)
+	}
+
+	// update the cool data in cool table (the removed community id)
+	if err := clu.r.Cool.Update(ctx, &cool); err != nil {
 		return errorgen.Error(err)
 	}
 

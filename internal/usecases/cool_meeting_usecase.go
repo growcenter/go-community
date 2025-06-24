@@ -174,7 +174,7 @@ func (cmu *coolMeetingUsecase) GetUpcomingMeetings(ctx context.Context, paramete
 	return response, nil
 }
 
-func (cmu *coolMeetingUsecase) GetPreviousMeetings(ctx context.Context, communityId string, parameter models.GetPreviousUpcomingMeetingsParameter) (response []models.GetPreviousCoolMeetingResponse, err error) {
+func (cmu *coolMeetingUsecase) GetPreviousMeetings(ctx context.Context, tokenValue models.TokenValues, parameter models.GetPreviousUpcomingMeetingsParameter) (response []models.GetPreviousCoolMeetingResponse, err error) {
 	defer func() {
 		LogService(ctx, err)
 	}()
@@ -188,9 +188,9 @@ func (cmu *coolMeetingUsecase) GetPreviousMeetings(ctx context.Context, communit
 		return nil, err
 	}
 
-	threeMonthsAgo := meetingEndDate.AddDate(0, -cmu.cfg.Cool.PreviousDateMeeting, 0)
-	meetingStartDate := time.Date(threeMonthsAgo.Year(), threeMonthsAgo.Month(), 1, 0, 0, 0, 0, meetingEndDate.Location())
-	meetings, err := cmu.r.CoolMeeting.GetPreviousMeetings(ctx, communityId, parameter.CoolCode, meetingStartDate, meetingEndDate)
+	monthRange := meetingEndDate.AddDate(0, -cmu.cfg.Cool.PreviousDateMeeting, 0)
+	meetingStartDate := time.Date(monthRange.Year(), monthRange.Month(), 1, 0, 0, 0, 0, meetingEndDate.Location())
+	meetings, err := cmu.r.CoolMeeting.GetPreviousMeetings(ctx, tokenValue.Id, parameter.CoolCode, meetingStartDate, meetingEndDate)
 	if err != nil {
 		return nil, err
 	}
