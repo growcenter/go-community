@@ -188,13 +188,15 @@ type (
 )
 
 type (
-	UpdateRoleMemberRequest struct {
+	UpdateRoleMemberParameter struct {
 		CommunityId string `json:"communityId" validate:"required,communityId"`
-		UserType    string `json:"userType" validate:"required,oneof=facilitator leader core member"`
+		CoolCode    string `json:"coolCode" validate:"required"`
+	}
+	UpdateRoleMemberRequest struct {
+		UserType string `json:"userType" validate:"required,oneof=facilitator leader core member"`
 	}
 	PreviousAfterUpdateRoleMember struct {
 		CoolCode string   `json:"coolCode"`
-		Role     []string `json:"role"`
 		UserType []string `json:"userType"`
 	}
 	UpdateRoleMemberResponse struct {

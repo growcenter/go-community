@@ -759,3 +759,119 @@ func (clu *coolUsecase) DeleteMemberByCode(ctx context.Context, requestingUserTy
 
 	return nil
 }
+
+func (clu *coolUsecase) UpdateMember(ctx context.Context, parameter models.UpdateRoleMemberParameter, request models.UpdateRoleMemberRequest, requestingUserType []string) (response *models.UpdateRoleMemberResponse, err error) {
+	defer func() {
+		LogService(ctx, err)
+	}()
+
+	// Get Data from COOL Table
+	cool, err := clu.r.Cool.GetOneByCode(ctx, parameter.CoolCode)
+	if err != nil {
+		return nil, errorgen.Error(err)
+	}
+
+	// Check if COOL exist
+	if cool.Code == "" {
+		return nil, errorgen.Error(errorgen.DataNotFound)
+	}
+
+	// Get Community ID, User Type, Roles, and Cool Code here
+	member, err := clu.r.User.GetRBAC(ctx, parameter.CommunityId)
+	if err != nil {
+		return nil, errorgen.Error(err)
+	}
+
+	// Check if user is not exist
+	if member.CommunityId == "" || member.CoolCode == "" {
+		return nil, errorgen.Error(errorgen.DataNotFound)
+	}
+
+	// Check if user's cool code is the same as the request
+	if parameter.CoolCode != member.CoolCode {
+		return nil, errorgen.Error(errorgen.InvalidData, "Member with communityId %s is not in COOL %s", member.CommunityId, parameter.CoolCode)
+	}
+
+	previousData := models.PreviousAfterUpdateRoleMember{
+		CoolCode: member.CoolCode,
+		UserType: member.UserTypes,
+	}
+
+	existingUserTypes := []string(member.UserTypes) // convert pq.StringArray to []string
+	coolUserTypes := []string{constants.USER_TYPE_COOL_CORE, constants.USER_TYPE_COOL_FACILITATOR, constants.USER_TYPE_COOL_LEADER, constants.USER_TYPE_COOL_MEMBER}
+
+	// Check if user's user types have one of cool user types
+	if !common.CheckOneDataInList(coolUserTypes, existingUserTypes) {
+		return nil, errorgen.Error(errorgen.InvalidData, "Member with communityId %s is not in COOL %s", member.CommunityId, parameter.CoolCode)
+	}
+
+	// Remove user's cool user types in user table
+	changedUserTypes := common.RemoveSliceIfExact(existingUserTypes, coolUserTypes)
+
+	// Remove community id from cool table (depend on user's cool user type)
+	if common.CheckOneDataInList(cool.FacilitatorCommunityIds, []string{parameter.CommunityId}) {
+		if !common.CheckOneDataInList([]string{constants.USER_TYPE_COOL_ADMIN}, requestingUserType) {
+			return nil, errorgen.Error(errorgen.ErrForbidden, "Only COOL Admin can delete COOL Facilitator")
+		}
+
+		cool.FacilitatorCommunityIds = common.RemoveSliceIfExact(cool.FacilitatorCommunityIds, []string{parameter.CommunityId})
+	} else if common.CheckOneDataInList(cool.LeaderCommunityIds, []string{parameter.CommunityId}) {
+		if !common.CheckOneDataInList([]string{constants.USER_TYPE_COOL_ADMIN, constants.USER_TYPE_COOL_FACILITATOR}, requestingUserType) {
+			return nil, errorgen.Error(errorgen.ErrForbidden, "Only COOL Admin and Facilitator can delete COOL Leader")
+		}
+
+		cool.LeaderCommunityIds = common.RemoveSliceIfExact(cool.LeaderCommunityIds, []string{parameter.CommunityId})
+	} else if common.CheckOneDataInList(cool.CoreCommunityIds, []string{parameter.CommunityId}) {
+		if !common.CheckOneDataInList([]string{constants.USER_TYPE_COOL_LEADER}, requestingUserType) {
+			return nil, errorgen.Error(errorgen.ErrForbidden, "Only COOL Leader can delete COOL Leader")
+		}
+
+		cool.CoreCommunityIds = common.RemoveSliceIfExact(cool.CoreCommunityIds, []string{parameter.CommunityId})
+	}
+
+	switch request.UserType {
+	case constants.USER_TYPE_COOL_FACILITATOR:
+		if !common.CheckOneDataInList([]string{constants.USER_TYPE_COOL_ADMIN}, requestingUserType) {
+			return nil, errorgen.Error(errorgen.ErrForbidden, "Only COOL Admin can delete COOL Facilitator")
+		}
+
+		cool.Code = clu.cfg.Cool.FacilitatorCode
+		changedUserTypes = append(changedUserTypes, constants.USER_TYPE_COOL_FACILITATOR)
+		cool.FacilitatorCommunityIds = append(cool.FacilitatorCommunityIds, member.CommunityId)
+	case constants.USER_TYPE_COOL_LEADER:
+		if !common.CheckOneDataInList([]string{constants.USER_TYPE_COOL_ADMIN, constants.USER_TYPE_COOL_FACILITATOR}, requestingUserType) {
+			return nil, errorgen.Error(errorgen.ErrForbidden, "Only COOL Admin and Facilitator can delete COOL Leader")
+		}
+
+		changedUserTypes = append(changedUserTypes, constants.USER_TYPE_COOL_LEADER)
+		cool.LeaderCommunityIds = append(cool.LeaderCommunityIds, member.CommunityId)
+	case constants.USER_TYPE_COOL_CORE:
+		if !common.CheckOneDataInList([]string{constants.USER_TYPE_COOL_LEADER}, requestingUserType) {
+			return nil, errorgen.Error(errorgen.ErrForbidden, "Only COOL Leader can delete COOL Leader")
+		}
+
+		changedUserTypes = append(changedUserTypes, constants.USER_TYPE_COOL_CORE)
+		cool.CoreCommunityIds = append(cool.CoreCommunityIds, member.CommunityId)
+	case constants.USER_TYPE_COOL_MEMBER:
+		changedUserTypes = append(changedUserTypes, constants.USER_TYPE_COOL_MEMBER)
+	}
+
+	if err := clu.r.User.UpdateCoolTeamsByCommunityId(ctx, member.CommunityId, "", changedUserTypes); err != nil {
+		return nil, errorgen.Error(err)
+	}
+	if err := clu.r.Cool.Update(ctx, &cool); err != nil {
+		return nil, errorgen.Error(err)
+	}
+
+	afterData := models.PreviousAfterUpdateRoleMember{
+		CoolCode: member.CoolCode,
+		UserType: changedUserTypes,
+	}
+
+	return &models.UpdateRoleMemberResponse{
+		Type:        models.TYPE_USER,
+		CommunityId: member.CommunityId,
+		Previous:    previousData,
+		After:       afterData,
+	}, nil
+}

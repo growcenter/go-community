@@ -47,6 +47,7 @@ func NewCoolHandler(api *echo.Group, u *usecases.Usecases, c *config.Configurati
 	endpointCoreAuth.Use(middleware.UserMiddleware(c, u, []string{"cool-member-manage"}))
 	endpointCoreAuth.POST("/:code/members", handler.AddMemberByCode)
 	endpointCoreAuth.DELETE("/:code/members/:communityId", handler.DeleteMemberByCode)
+	endpointCoreAuth.PATCH("/:code/members/:communityId", handler.UpdateMemberByCode)
 }
 
 func (clh *CoolHandler) CreateCategory(ctx echo.Context) error {
@@ -252,4 +253,27 @@ func (clh *CoolHandler) DeleteMemberByCode(ctx echo.Context) error {
 	}
 
 	return response.SuccessV2(ctx, http.StatusOK, "User's current COOL information has been deleted", nil)
+}
+
+func (clh *CoolHandler) UpdateMemberByCode(ctx echo.Context) error {
+	parameter := models.UpdateRoleMemberParameter{
+		CoolCode:    ctx.Param("code"),
+		CommunityId: ctx.Param("communityId"),
+	}
+
+	var request models.UpdateRoleMemberRequest
+	if err := ctx.Bind(&request); err != nil {
+		return response.ErrorV2(ctx, models.ErrorInvalidInput)
+	}
+
+	if err := validator.Validate(request); err != nil {
+		return response.ErrorValidation(ctx, err)
+	}
+
+	coolData, err := clh.usecase.Cool.UpdateMember(ctx.Request().Context(), parameter, request, ctx.Get("userTypes").([]string))
+	if err != nil {
+		return response.ErrorV2(ctx, err)
+	}
+
+	return response.SuccessV2(ctx, http.StatusOK, "User's current COOL information has been updated", coolData)
 }
