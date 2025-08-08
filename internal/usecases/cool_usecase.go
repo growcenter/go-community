@@ -23,6 +23,7 @@ type CoolUsecase interface {
 	GetByCommunityId(ctx context.Context, communityId string) (response *models.GetCoolDetailResponse, err error)
 	GetMemberByCode(ctx context.Context, param models.GetCoolMemberByCoolCodeParameter) (response []models.GroupedCoolMembers, err error)
 	AddMemberByCode(ctx context.Context, coolCode string, requests []models.AddCoolMemberRequest) (response *models.AddCoolMemberResponse, err error)
+	GetByCode(ctx context.Context, code string) (response *models.GetCoolDetailResponse, err error)
 }
 
 type coolUsecase struct {
@@ -370,6 +371,93 @@ func (clu *coolUsecase) GetByCommunityId(ctx context.Context, communityId string
 	}()
 
 	cool, err := clu.r.Cool.GetOneByCommunityId(ctx, communityId)
+	if err != nil {
+		if err == gorm.ErrRecordNotFound {
+			return nil, models.ErrorDataNotFound
+		}
+
+		return nil, err
+	}
+
+	var campusName string
+	if cool.CampusCode != "" {
+		value, campus := clu.cfg.Campus[strings.ToLower(cool.CampusCode)]
+		if !campus {
+			return nil, models.ErrorDataNotFound
+		}
+		campusName = value
+	}
+
+	facilitators, err := clu.r.User.GetUserNamesByMultipleCommunityId(ctx, cool.FacilitatorCommunityIds)
+	if err != nil {
+		return nil, err
+	}
+
+	leaders, err := clu.r.User.GetUserNamesByMultipleCommunityId(ctx, cool.LeaderCommunityIds)
+	if err != nil {
+		return nil, err
+	}
+
+	core, err := clu.r.User.GetUserNamesByMultipleCommunityId(ctx, cool.CoreCommunityIds)
+	if err != nil {
+		return nil, err
+	}
+
+	var facRes []models.CoolLeaderAndCoreResponse
+	for _, v := range facilitators {
+		facRes = append(facRes, models.CoolLeaderAndCoreResponse{
+			Type:        models.TYPE_USER,
+			CommunityId: v.CommunityId,
+			Name:        v.Name,
+		})
+	}
+
+	var leadRes []models.CoolLeaderAndCoreResponse
+	for _, v := range leaders {
+		leadRes = append(leadRes, models.CoolLeaderAndCoreResponse{
+			Type:        models.TYPE_USER,
+			CommunityId: v.CommunityId,
+			Name:        v.Name,
+		})
+	}
+
+	var coreRes []models.CoolLeaderAndCoreResponse
+	for _, v := range core {
+		coreRes = append(coreRes, models.CoolLeaderAndCoreResponse{
+			Type:        models.TYPE_USER,
+			CommunityId: v.CommunityId,
+			Name:        v.Name,
+		})
+	}
+
+	return &models.GetCoolDetailResponse{
+		Type:         models.TYPE_COOL,
+		Code:         cool.Code,
+		Name:         cool.Name,
+		Description:  *cool.Description,
+		CampusCode:   cool.CampusCode,
+		CampusName:   campusName,
+		Facilitators: facRes,
+		Leaders:      leadRes,
+		CoreTeam:     coreRes,
+		Category:     cool.Category,
+		Gender:       *cool.Gender,
+		Recurrence:   *cool.Recurrence,
+		Location: models.CoolLocationResponse{
+			Type:         cool.LocationType,
+			AreaCode:     cool.LocationAreaCode,
+			DistrictCode: cool.LocationDistrictCode,
+		},
+		Status: cool.Status,
+	}, nil
+}
+
+func (clu *coolUsecase) GetByCode(ctx context.Context, code string) (response *models.GetCoolDetailResponse, err error) {
+	defer func() {
+		LogService(ctx, err)
+	}()
+
+	cool, err := clu.r.Cool.GetOneByCode(ctx, code)
 	if err != nil {
 		if err == gorm.ErrRecordNotFound {
 			return nil, models.ErrorDataNotFound

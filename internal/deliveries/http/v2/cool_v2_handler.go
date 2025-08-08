@@ -46,6 +46,7 @@ func NewCoolHandler(api *echo.Group, u *usecases.Usecases, c *config.Configurati
 	endpointCoreAuth := endpoint.Group("") // For cool admin leader, core team and facilitator
 	endpointCoreAuth.Use(middleware.UserMiddleware(c, u, []string{"cool-member-manage"}))
 	endpointCoreAuth.POST("/:code/members", handler.AddMemberByCode)
+	endpointCoreAuth.GET("/:code", handler.GetCoolByCode)
 	endpointCoreAuth.DELETE("/:code/members/:communityId", handler.DeleteMemberByCode)
 	endpointCoreAuth.PATCH("/:code/members/:communityId", handler.UpdateMemberByCode)
 }
@@ -276,4 +277,13 @@ func (clh *CoolHandler) UpdateMemberByCode(ctx echo.Context) error {
 	}
 
 	return response.SuccessV2(ctx, http.StatusOK, "User's current COOL information has been updated", coolData)
+}
+
+func (clh *CoolHandler) GetCoolByCode(ctx echo.Context) error {
+	cool, err := clh.usecase.Cool.GetByCode(ctx.Request().Context(), ctx.Param("code"))
+	if err != nil {
+		return response.Error(ctx, err)
+	}
+
+	return response.SuccessV2(ctx, http.StatusOK, "", cool)
 }
