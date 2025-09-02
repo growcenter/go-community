@@ -1,6 +1,7 @@
 package usecases
 
 import (
+	indonesiaAPI "go-community/internal/clients/indonesia-api"
 	"go-community/internal/config"
 	"go-community/internal/pkg/authorization"
 	"go-community/internal/pkg/google"
@@ -13,6 +14,7 @@ type Dependencies struct {
 	Authorization *authorization.Auth
 	Salt          []byte
 	Config        *config.Configuration
+	Indonesia     *indonesiaAPI.Client
 }
 
 type Usecases struct {
@@ -31,6 +33,8 @@ type Usecases struct {
 	Config                  configDBUsecase
 	Cool                    coolUsecase
 	CoolNewJoiner           coolNewJoinerUsecase
+	CoolMeeting             coolMeetingUsecase
+	CoolAttendance          coolAttendanceUsecase
 }
 
 func New(d Dependencies) *Usecases {
@@ -48,7 +52,9 @@ func New(d Dependencies) *Usecases {
 		EventInstance:           *NewEventInstanceUsecase(*d.Config, *d.Authorization, *d.Repository),
 		FeatureFlag:             *NewFeatureFlagUsecase(*d.Repository),
 		Config:                  *NewConfigDBUsecase(*d.Repository, *d.Config),
-		Cool:                    *NewCoolUsecase(*d.Repository, *d.Config, &featureFlagUsecase{r: *d.Repository}),
+		Cool:                    *NewCoolUsecase(*d.Repository, *d.Config, &featureFlagUsecase{r: *d.Repository}, *d.Indonesia),
 		CoolNewJoiner:           *NewCoolNewJoinerUsecase(*d.Repository, d.Config, configDBUsecase{r: *d.Repository}),
+		CoolMeeting:             *NewCoolMeetingUsecase(*d.Repository, *d.Config, &coolAttendanceUsecase{r: *d.Repository}),
+		CoolAttendance:          *NewCoolAttendanceUsecase(*d.Repository),
 	}
 }

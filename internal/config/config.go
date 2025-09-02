@@ -18,6 +18,8 @@ type (
 		Auth        Auth              `mapstructure:"auth"`
 		Department  map[string]string `mapstructure:"department"`
 		Campus      map[string]string `mapstructure:"campus"`
+		Cool        Cool              `mapstructure:"cool"`
+		Clients     Clients           `mapstructure:"clients"`
 	}
 	Application struct {
 		Name        string        `mapstructure:"name"`
@@ -54,6 +56,18 @@ type (
 		RefreshDuration int               `mapstructure:"refresh_duration"`
 		APIKey          string            `mapstructure:"api_key"`
 		ClientId        map[string]bool   `mapstructure:"client_id"`
+	}
+	Clients struct {
+		IndonesiaApi IndonesiaApi `mapstructure:"indonesia_api"`
+	}
+	Cool struct {
+		FacilitatorCode     string `mapstructure:"facilitator_code"`
+		PreviousDateMeeting int    `mapstructure:"previous_date_meeting"`
+	}
+
+	IndonesiaApi struct {
+		Url             string              `mapstructure:"url"`
+		AllowedProvince map[string][]string `mapstructure:"allowed_province"`
 	}
 )
 

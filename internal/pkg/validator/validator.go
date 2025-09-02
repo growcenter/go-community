@@ -2,14 +2,17 @@ package validator
 
 import (
 	"errors"
+	"go-community/internal/common"
 	"go-community/internal/models"
 	"reflect"
 	"regexp"
+	"strconv"
 	"strings"
 	"time"
 
 	v10 "github.com/go-playground/validator/v10"
 	"github.com/hashicorp/go-multierror"
+	"go.jetify.com/typeid"
 )
 
 var valid = v10.New()
@@ -27,6 +30,10 @@ func init() {
 	registerEmailOrPhoneField()
 	registerNameIdentifierCommunityIdFields()
 	registerPhoneStandardize()
+	registerhhmmField()
+	registeryyyymmddNoExceedTodayFormat()
+	registerTypeIdFormat()
+	registerDateRange()
 }
 
 func Validate(request interface{}) error {
@@ -232,5 +239,113 @@ func registerPhoneStandardize() {
 		}
 
 		return true
+	})
+}
+
+func registerhhmmField() {
+	valid.RegisterValidation("hhmmFormat", func(fl v10.FieldLevel) bool {
+		// The "15:04" layout is the reference time format for "HH:MM".
+		// time.Parse requires the input string to exactly match the layout.
+		// If parsing is successful and the formatted output matches the input,
+		// it confirms the input was in the correct "HH:MM" format.
+		t, err := time.Parse("15:04", fl.Field().String())
+		if err != nil {
+			return false // Parsing failed, not in HH:MM format
+		}
+
+		// Check if formatting the parsed time back to "15:04" matches the original input.
+		// This handles cases like "25:00" which time.Parse might partially parse but isn't valid HH:MM.
+		return t.Format("15:04") == fl.Field().String()
+	})
+}
+
+func registeryyyymmddNoExceedTodayFormat() {
+	valid.RegisterValidation("yyyymmddNoExceedToday", func(fl v10.FieldLevel) bool {
+		date := fl.Field().String()
+		layout := "2006-01-02" // This layout corresponds to yyyy-mm-dd
+		parsedDate, err := time.Parse(layout, date)
+		if err != nil {
+			return false
+		}
+		return parsedDate.Before(common.Now())
+	})
+}
+
+func registerTypeIdFormat() {
+	valid.RegisterValidation("typeId", func(fl v10.FieldLevel) bool {
+		value := fl.Field().String()
+		_, err := typeid.FromString(value)
+		return err == nil
+	})
+}
+
+func registerDateRange() {
+	valid.RegisterValidation("daterange", func(fl v10.FieldLevel) bool {
+		// Expected format: "StartDateField|EndDateField|Duration"
+		parts := strings.Split(fl.Param(), "-")
+		if len(parts) != 3 {
+			return false
+		}
+
+		startFieldName := parts[0]
+		endFieldName := parts[1]
+		durationStr := parts[2]
+
+		structVal := fl.Parent()
+		if structVal.Kind() != reflect.Struct {
+			return false
+		}
+
+		startField := structVal.FieldByName(startFieldName)
+		endField := structVal.FieldByName(endFieldName)
+
+		if !startField.IsValid() || !endField.IsValid() {
+			return false
+		}
+
+		startDate, ok1 := startField.Interface().(time.Time)
+		endDate, ok2 := endField.Interface().(time.Time)
+
+		if !ok1 || !ok2 {
+			return false
+		}
+
+		now := time.Now()
+
+		// Handle months and years manually since time.Duration can't represent them
+		if strings.HasSuffix(durationStr, "m") {
+			monthsBack, err := strconv.Atoi(durationStr[:len(durationStr)-1])
+			if err != nil {
+				return false
+			}
+			threshold := now.AddDate(0, -monthsBack, 0)
+			if startDate.Before(threshold) || endDate.Before(threshold) {
+				return false
+			}
+			return true
+		} else if strings.HasSuffix(durationStr, "y") {
+			yearsBack, err := strconv.Atoi(durationStr[:len(durationStr)-1])
+			if err != nil {
+				return false
+			}
+			threshold := now.AddDate(-yearsBack, 0, 0)
+			if startDate.Before(threshold) || endDate.Before(threshold) {
+				return false
+			}
+			return true
+		} else if strings.HasSuffix(durationStr, "d") {
+			// days case
+			daysBack, err := strconv.Atoi(durationStr[:len(durationStr)-1])
+			if err != nil {
+				return false
+			}
+			threshold := now.AddDate(0, 0, -daysBack)
+			if startDate.Before(threshold) || endDate.Before(threshold) {
+				return false
+			}
+			return true
+		}
+
+		return false
 	})
 }

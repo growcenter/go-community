@@ -2,8 +2,9 @@ package models
 
 import (
 	"database/sql"
-	"github.com/lib/pq"
 	"time"
+
+	"github.com/lib/pq"
 )
 
 var TYPE_USER = "user"
@@ -23,6 +24,7 @@ type User struct {
 	CampusCode       string
 	CoolCategoryCode string
 	CoolID           int
+	CoolCode         string
 	Department       string
 	DateOfBirth      *time.Time
 	PlaceOfBirth     string
@@ -127,6 +129,7 @@ type (
 		Gender         string   `json:"gender" validate:"omitempty,oneof=male female"`
 		DepartmentCode string   `json:"department_code" example:"MUSIC"`
 		CoolID         int      `json:"coolId" example:"1"`
+		CoolCode       string   `json:"coolCode"`
 		KKJNumber      string   `json:"kkjNumber,omitempty"`
 		JemaatId       string   `json:"jemaatId,omitempty"`
 		IsKOM100       bool     `json:"isKom100"`
@@ -148,6 +151,7 @@ type (
 		Gender         string     `json:"gender"`
 		DepartmentCode string     `json:"departmentCode"`
 		CoolID         int        `json:"coolId" example:"1"`
+		CoolCode       string     `json:"coolCode"`
 		KKJNumber      string     `json:"kkjNumber,omitempty"`
 		JemaatId       string     `json:"jemaatId,omitempty"`
 		IsKOM100       bool       `json:"isKom100"`
@@ -199,6 +203,7 @@ type (
 		Gender         string   `json:"gender" validate:"omitempty,oneof=male female"`
 		DepartmentCode string   `json:"department_code" validate:"required,noStartEndSpaces" example:"MUSIC"`
 		CoolID         int      `json:"coolId" validate:"required" example:"1"`
+		CoolCode       string   `json:"coolCode" validate:"required"`
 		KKJNumber      string   `json:"kkjNumber,omitempty"`
 		JemaatId       string   `json:"jemaatId,omitempty"`
 		IsKOM100       bool     `json:"isKom100" validate:"required"`
@@ -220,6 +225,7 @@ type (
 		Gender         string     `json:"gender"`
 		DepartmentCode string     `json:"departmentCode"`
 		CoolID         int        `json:"coolId" example:"1"`
+		CoolCode       string     `json:"coolCode"`
 		KKJNumber      string     `json:"kkjNumber,omitempty"`
 		JemaatId       string     `json:"jemaatId,omitempty"`
 		IsKOM100       bool       `json:"isKom100"`
@@ -244,6 +250,7 @@ func (u *LoginUserResponse) ToLogin() LoginUserResponse {
 		Gender:         u.Gender,
 		DepartmentCode: u.DepartmentCode,
 		CoolID:         u.CoolID,
+		CoolCode:       u.CoolCode,
 		KKJNumber:      u.KKJNumber,
 		JemaatId:       u.JemaatId,
 		IsKOM100:       u.IsKOM100,
@@ -274,6 +281,7 @@ type (
 		Gender         string        `json:"gender"`
 		DepartmentCode string        `json:"departmentCode"`
 		CoolID         int           `json:"coolId" example:"1"`
+		CoolCode       string        `json:"coolCode" example:"C014KG56DC0EX5V37QMMXTAE5F9"`
 		KKJNumber      string        `json:"kkjNumber,omitempty"`
 		JemaatId       string        `json:"jemaatId,omitempty"`
 		IsKOM100       bool          `json:"isKom100"`
@@ -314,6 +322,7 @@ func (u *GetOneByCommunityIdResponse) ToGetOneByCommunityId() *GetOneByCommunity
 		DepartmentCode: u.DepartmentCode,
 		DepartmentName: u.DepartmentName,
 		CoolID:         u.CoolID,
+		CoolCode:       u.CoolCode,
 		CoolName:       u.CoolName,
 		KKJNumber:      u.KKJNumber,
 		JemaatId:       u.JemaatId,
@@ -345,6 +354,7 @@ type (
 		DepartmentCode string         `json:"departmentCode"`
 		DepartmentName string         `json:"departmentName"`
 		CoolID         int            `json:"coolId" example:"1"`
+		CoolCode       string         `json:"coolCode"`
 		CoolName       string         `json:"coolName"`
 		KKJNumber      string         `json:"kkjNumber,omitempty"`
 		JemaatId       string         `json:"jemaatId,omitempty"`
@@ -416,6 +426,7 @@ type (
 		Address       string
 		CampusCode    string
 		CoolID        int
+		CoolCode      string
 		CoolName      string
 		Department    string
 		DateOfBirth   *time.Time
@@ -437,6 +448,7 @@ type (
 		SearchBy   string `query:"searchBy" validate:"omitempty,oneof=communityId name phoneNumber email"`
 		CampusCode string `query:"campusCode"`
 		CoolId     int    `query:"coolId"`
+		CoolCode   string `query:"coolCode"`
 		Department string `query:"departmentCode"`
 	}
 	GetAllUserCursorResponse struct {
@@ -453,6 +465,7 @@ type (
 		CampusCode     string     `json:"campusCode"`
 		CampusName     string     `json:"campusName"`
 		CoolID         int        `json:"coolId"`
+		CoolCode       string     `json:"coolCode"`
 		CoolName       string     `json:"coolName"`
 		DepartmentCode string     `json:"departmentCode"`
 		DepartmentName string     `json:"departmentName"`
@@ -564,6 +577,7 @@ type (
 		PlaceOfBirth     *string                 `json:"placeOfBirth"`
 		DateOfBirth      string                  `json:"dateOfBirth" validate:"omitempty,yyymmddFormat"`
 		CoolID           *int                    `json:"coolId"`
+		CoolCode         *string                 `json:"coolCode"`
 		DepartmentCode   *string                 `json:"departmentCode" validate:"omitempty,noStartEndSpaces" example:"MUSIC"`
 		MaritalStatus    string                  `json:"maritalStatus" validate:"required,oneof=single married others" example:"active"`
 		DateOfMarriage   *string                 `json:"dateOfMarriage" validate:"omitempty,yyymmddFormat"`
@@ -617,6 +631,7 @@ type (
 		PlaceOfBirth     *string                 `json:"placeOfBirth"`
 		DateOfBirth      string                  `json:"dateOfBirth" validate:"omitempty,yyymmddFormat"`
 		CoolID           *int                    `json:"coolId"`
+		CoolCode         *string                 `json:"coolCode"` // TODO: change to coolId in the future, and change the coolCode to coolInf
 		DepartmentCode   *string                 `json:"departmentCode" validate:"omitempty,noStartEndSpaces" example:"MUSIC"`
 		MaritalStatus    string                  `json:"maritalStatus" validate:"required,oneof=single married others" example:"active"`
 		DateOfMarriage   *string                 `json:"dateOfMarriage" validate:"omitempty,yyymmddFormat"`
@@ -641,6 +656,7 @@ type (
 		Address          string                  `json:"address"`
 		CampusCode       string                  `json:"campusCode"`
 		CoolID           int                     `json:"coolId"`
+		CoolCode         string                  `json:"coolCode"` // TODO: change to coolId in the future, and change the coolCode to coolInf
 		DepartmentCode   string                  `json:"departmentCode"`
 		DateOfBirth      *time.Time              `json:"dateOfBirth"`
 		PlaceOfBirth     string                  `json:"placeOfBirth"`
@@ -670,6 +686,7 @@ func (u *GetUserProfileResponse) ToResponse() *GetUserProfileResponse {
 		CampusCode:       u.CampusCode,
 		CampusName:       u.CampusName,
 		CoolID:           u.CoolID,
+		CoolCode:         u.CoolCode,
 		CoolName:         u.CoolName,
 		DepartmentCode:   u.DepartmentCode,
 		DepartmentName:   u.DepartmentName,
@@ -703,6 +720,7 @@ type (
 		Address            string
 		CampusCode         string
 		CoolID             int
+		CoolCode           string
 		CoolName           string
 		Department         string
 		DateOfBirth        *time.Time
@@ -735,6 +753,7 @@ type (
 		CampusCode       string                         `json:"campusCode"`
 		CampusName       string                         `json:"campusName"`
 		CoolID           int                            `json:"coolId"`
+		CoolCode         string                         `json:"coolCode"`
 		CoolName         string                         `json:"coolName"`
 		DepartmentCode   string                         `json:"departmentCode"`
 		DepartmentName   string                         `json:"departmentName"`
@@ -835,4 +854,5 @@ type GetRBACByCommunityIdDBOutput struct {
 	CommunityId string
 	UserTypes   pq.StringArray `gorm:"type:text[]"`
 	Roles       pq.StringArray `gorm:"type:text[]"`
+	CoolCode    string
 }

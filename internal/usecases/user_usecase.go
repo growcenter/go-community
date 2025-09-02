@@ -11,9 +11,10 @@ import (
 	"go-community/internal/pkg/generator"
 	"go-community/internal/pkg/hash"
 	"go-community/internal/repositories/pgsql"
-	"gorm.io/gorm"
 	"strings"
 	"time"
+
+	"gorm.io/gorm"
 )
 
 type UserUsecase interface {
@@ -78,8 +79,8 @@ func (uu *userUsecase) Create(ctx context.Context, request *models.CreateUserReq
 		}
 	}
 
-	if request.CoolID != 0 {
-		coolExist, err := uu.clr.CheckById(ctx, request.CoolID)
+	if request.CoolCode != "" {
+		coolExist, err := uu.clr.CheckByCode(ctx, request.CoolCode)
 		if err != nil {
 			return nil, err
 		}
@@ -274,7 +275,7 @@ func (uu *userUsecase) CreateVolunteer(ctx context.Context, request *models.Crea
 		return nil, models.ErrorDataNotFound
 	}
 
-	coolExist, err := uu.clr.CheckById(ctx, request.CoolID)
+	coolExist, err := uu.clr.CheckByCode(ctx, request.CoolCode)
 	if err != nil {
 		return nil, err
 	}
@@ -484,7 +485,7 @@ func (uu *userUsecase) GetByCommunityId(ctx context.Context, request models.GetO
 
 	var coolName string
 	if user.CoolID != 0 {
-		cool, err := uu.clr.GetNameById(ctx, user.CoolID)
+		cool, err := uu.clr.GetNameByCode(ctx, user.CoolCode)
 		if err != nil {
 			return nil, err
 		}
@@ -529,6 +530,7 @@ func (uu *userUsecase) GetByCommunityId(ctx context.Context, request models.GetO
 		DepartmentCode: user.Department,
 		DepartmentName: departmentName,
 		CoolID:         user.CoolID,
+		CoolCode:       user.CoolCode, // TODO: change to cool inf
 		CoolName:       coolName,
 		KKJNumber:      user.KKJNumber,
 		JemaatId:       user.JemaatID,
@@ -752,8 +754,8 @@ func (uu *userUsecase) UpdateProfile(ctx context.Context, parameter models.Updat
 		data.DateOfBirth = &dob
 	}
 
-	if *request.CoolID != 0 {
-		coolExist, err := uu.clr.CheckById(ctx, *request.CoolID)
+	if *request.CoolCode != "" {
+		coolExist, err := uu.clr.CheckByCode(ctx, *request.CoolCode)
 		if err != nil {
 			return nil, err
 		}
@@ -1047,6 +1049,7 @@ func (uu *userUsecase) GetUserProfile(ctx context.Context, communityId string, v
 		DateOfBirth:      &dob,
 		Address:          output[0].Address,
 		CoolID:           output[0].CoolID,
+		CoolCode:         output[0].CoolCode,
 		CoolName:         output[0].CoolName,
 		DepartmentCode:   output[0].Department,
 		DepartmentName:   departmentName,
@@ -1123,8 +1126,8 @@ func (uu *userUsecase) UpdateUser(ctx context.Context, parameter models.UpdatePr
 		data.DateOfBirth = &dob
 	}
 
-	if *request.CoolID != 0 {
-		coolExist, err := uu.clr.CheckById(ctx, *request.CoolID)
+	if *request.CoolCode != "" {
+		coolExist, err := uu.clr.CheckByCode(ctx, *request.CoolCode)
 		if err != nil {
 			return nil, err
 		}

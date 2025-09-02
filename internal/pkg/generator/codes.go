@@ -3,6 +3,9 @@ package generator
 import (
 	"crypto/sha256"
 	"encoding/hex"
+	"strings"
+
+	"go.jetify.com/typeid"
 )
 
 func GenerateHashCode(data string, length int) string {
@@ -12,4 +15,11 @@ func GenerateHashCode(data string, length int) string {
 	hashBytes := hash.Sum(nil)
 	// Convert hash to hex string and truncate to the specified length
 	return hex.EncodeToString(hashBytes)[:length]
+}
+
+func TypeId(prefix string) string {
+	tid, _ := typeid.WithPrefix(prefix)
+	combined := tid.Prefix() + tid.Suffix()
+
+	return strings.ToUpper(combined)
 }

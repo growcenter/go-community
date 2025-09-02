@@ -52,6 +52,7 @@ func (eu *eventUsecase) Create(ctx context.Context, request models.CreateEventRe
 	}
 
 	eventStart, _ := time.Parse(time.RFC3339, request.EventStartAt)
+	//common.ParseStringToDatetime(time.RFC3339, request.RegisterAt, common.GetLocation())
 	eventEnd, _ := time.Parse(time.RFC3339, request.EventEndAt)
 
 	code := fmt.Sprintf("event-%d-%d-%d", timeNowNano.UnixNano(), eventStart.UnixNano(), eventEnd.UnixNano())
@@ -128,7 +129,7 @@ func (eu *eventUsecase) Create(ctx context.Context, request models.CreateEventRe
 		AllowedCampuses:    allowedCampuses,
 		IsRecurring:        request.IsRecurring,
 		Recurrence:         request.Recurrence,
-		EventStartAt:       eventStart,
+		EventStartAt:       eventStart.In(common.GetLocation()),
 		EventEndAt:         eventEnd,
 		LocationType:       request.LocationType,
 		LocationName:       request.LocationName,

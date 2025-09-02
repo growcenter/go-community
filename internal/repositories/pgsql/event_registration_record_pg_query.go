@@ -107,7 +107,7 @@ var (
 			coalesce(u.phone_number, '') AS phone_number,
 			coalesce(u.campus_code, '') AS campus_code,
 			coalesce(u.department, '') AS department,
-			coalesce(u.cool_id, 0) AS cool_id,
+			coalesce(u.cool_code, 0) AS cool_code,
 			coalesce(c.name, '') AS cool_name,
 			er.event_code,
 			er.instance_code,
@@ -129,7 +129,7 @@ var (
         	LEFT JOIN events e ON er.event_code = e.code
 			LEFT JOIN event_instances i ON er.instance_code = i.code
 			LEFT JOIN users u ON er.community_id = u.community_id
-			LEFT JOIN cools c ON u.cool_id = c.id
+			LEFT JOIN cools c ON u.cool_code = c.code
         WHERE er.deleted_at IS NULL		
 	`
 
@@ -139,7 +139,7 @@ var (
 			LEFT JOIN events e ON er.event_code = e.code
 			LEFT JOIN event_instances i ON er.instance_code = i.code
 			LEFT JOIN users u ON er.community_id_origin = u.community_id
-			LEFT JOIN cools c ON u.cool_id = c.id
+			LEFT JOIN cools c ON u.cool_code = c.code
 	`
 
 	baseQueryGetDownloadRegisteredRecordList = `
@@ -152,7 +152,7 @@ var (
 			coalesce(u.phone_number, '') AS phone_number,
 			coalesce(u.campus_code, '') AS campus_code,
 			coalesce(u.department, '') AS department,
-			coalesce(u.cool_id, 0) AS cool_id,
+			coalesce(u.cool_code, 0) AS cool_code,
 			coalesce(c.name, '') AS cool_name,
 			er.event_code,
 			er.instance_code,
@@ -174,7 +174,7 @@ var (
         	LEFT JOIN events e ON er.event_code = e.code
 			LEFT JOIN event_instances i ON er.instance_code = i.code
 			LEFT JOIN users u ON er.community_id = u.community_id
-			LEFT JOIN cools c ON u.cool_id = c.id
+			LEFT JOIN cools c ON u.cool_code = c.code
         WHERE er.deleted_at IS NULL	
 	`
 )
@@ -210,7 +210,7 @@ func BuildCountGetRegisteredQuery(param models.GetAllRegisteredCursorParam) (str
 		args = append(args, param.DepartmentCode)
 	}
 	if param.CoolId != "" {
-		queryBuilder.WriteString(" AND u.cool_id = ?")
+		queryBuilder.WriteString(" AND u.cool_code = ?")
 		intCool, _ := strconv.Atoi(param.CoolId)
 		args = append(args, intCool)
 	}
@@ -247,7 +247,7 @@ func BuildGetRegisteredQuery(param models.GetAllRegisteredCursorParam) (string, 
 		args = append(args, param.DepartmentCode)
 	}
 	if param.CoolId != "" {
-		queryBuilder.WriteString(" AND u.cool_id = ?")
+		queryBuilder.WriteString(" AND u.cool_code = ?")
 		intCool, _ := strconv.Atoi(param.CoolId)
 		args = append(args, intCool)
 	}
@@ -322,7 +322,7 @@ func BuildDownloadGetRegisteredQuery(param models.GetDownloadAllRegisteredParam)
 		args = append(args, param.DepartmentCode)
 	}
 	if param.CoolId != "" {
-		queryBuilder.WriteString(" AND u.cool_id = ?")
+		queryBuilder.WriteString(" AND u.cool_code = ?")
 		intCool, _ := strconv.Atoi(param.CoolId)
 		args = append(args, intCool)
 	}

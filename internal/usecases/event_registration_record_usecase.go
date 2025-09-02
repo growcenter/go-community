@@ -6,8 +6,6 @@ import (
 	"database/sql"
 	"encoding/csv"
 	"fmt"
-	"github.com/google/uuid"
-	"github.com/xuri/excelize/v2"
 	"go-community/internal/common"
 	"go-community/internal/config"
 	"go-community/internal/constants"
@@ -16,6 +14,9 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/google/uuid"
+	"github.com/xuri/excelize/v2"
 )
 
 type EventRegistrationRecordUsecase interface {

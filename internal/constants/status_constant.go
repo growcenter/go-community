@@ -40,3 +40,25 @@ var (
 		COOL_JOINER_STATUS_COMPLETED: CoolJoinerStatusCompleted,
 	}
 )
+
+type CoolRsvpStatus int32
+
+const (
+	COOL_RSVP_STATUS_ATTEND CoolRsvpStatus = iota
+	COOL_RSVP_STATUS_CANNOT_ATTEND
+	COOL_RSVP_STATUS_UNKNOWN
+)
+
+const (
+	CoolRsvpStatusAttend  = "attend"
+	CoolRsvpStatusCannot  = "cannotAttend"
+	CoolRsvpStatusUnknown = "unknown"
+)
+
+var (
+	MapCoolRsvpStatus = map[CoolRsvpStatus]string{
+		COOL_RSVP_STATUS_ATTEND:        CoolRsvpStatusAttend,
+		COOL_RSVP_STATUS_CANNOT_ATTEND: CoolRsvpStatusCannot,
+		COOL_RSVP_STATUS_UNKNOWN:       CoolRsvpStatusUnknown,
+	}
+)

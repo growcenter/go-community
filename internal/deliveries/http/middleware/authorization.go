@@ -228,3 +228,18 @@ func GeneralMiddleware(config *config.Configuration, usecase *usecases.Usecases)
 		}
 	}
 }
+
+// Only apply if user has authorization
+func OptionalMiddleware(config *config.Configuration, usecase *usecases.Usecases, allowedRoles []string) echo.MiddlewareFunc {
+	return func(next echo.HandlerFunc) echo.HandlerFunc {
+		return func(ctx echo.Context) error {
+			header := ctx.Request().Header.Get("Authorization")
+			if header == "" {
+				return next(ctx)
+			}
+
+			middleware := UserMiddleware(config, usecase, allowedRoles)
+			return middleware(next)(ctx)
+		}
+	}
+}

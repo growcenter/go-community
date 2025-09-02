@@ -3,6 +3,7 @@ package contract
 import (
 	"context"
 	"fmt"
+	indonesiaAPI "go-community/internal/clients/indonesia-api"
 	"go-community/internal/config"
 	handler "go-community/internal/deliveries/http"
 	"go-community/internal/pkg/authorization"
@@ -56,6 +57,8 @@ func New(config *config.Configuration) *Contract {
 		logger.Logger.Fatal(fmt.Sprintf("[AUTH_ERROR] Failed to setup auth - %v", err), zap.Error(err))
 	}
 
+	// Indonesia API
+	indonesiaAPI := indonesiaAPI.NewClient(*config)
 	// Register Repository
 	postgreRepository := pgsql.New(psql)
 
@@ -65,6 +68,7 @@ func New(config *config.Configuration) *Contract {
 		Google:        oauthGoogle,
 		Authorization: auth,
 		Config:        config,
+		Indonesia:     &indonesiaAPI,
 	})
 
 	// Register Handler

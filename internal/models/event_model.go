@@ -2,10 +2,11 @@ package models
 
 import (
 	"database/sql"
-	"github.com/google/uuid"
-	"github.com/lib/pq"
 	"go-community/internal/common"
 	"time"
+
+	"github.com/google/uuid"
+	"github.com/lib/pq"
 )
 
 var (
@@ -25,8 +26,8 @@ type Event struct {
 	AllowedCampuses    pq.StringArray `gorm:"type:text[]"`
 	IsRecurring        bool
 	Recurrence         string
-	EventStartAt       time.Time
-	EventEndAt         time.Time
+	EventStartAt       time.Time `gorm:"type:timestamptz;not null"`
+	EventEndAt         time.Time `gorm:"type:timestamptz;not null"`
 	RegisterStartAt    time.Time
 	RegisterEndAt      time.Time
 	LocationType       string
@@ -516,66 +517,148 @@ var (
 	}
 )
 
-func DefineAvailabilityStatus(event interface{}) (string, error) {
-	var totalRemainingSeats int
-	var countInstanceRegisterFlows int
-	var totalSeats int
-	//var eventAllowedFor string
-	var eventRegisterStartAt, eventRegisterEndAt time.Time
-	var instanceRegisterFlows []string
+// func DefineAvailabilityStatus(event interface{}) (string, error) {
+// 	var totalRemainingSeats int
+// 	var countInstanceRegisterFlows int
+// 	var totalSeats int
+// 	//var eventAllowedFor string
+// 	var eventRegisterStartAt, eventRegisterEndAt time.Time
+// 	var instanceRegisterFlows []string
 
-	// Type assertion to extract fields from the concrete type
+// 	// Type assertion to extract fields from the concrete type
+// 	switch e := event.(type) {
+// 	case GetAllEventsDBOutput:
+// 		totalRemainingSeats = e.TotalRemainingSeats
+// 		totalSeats = e.InstanceTotalSeats
+// 		instanceRegisterFlows = GetRegisterFlowsFromStringArray(e.InstancesData)
+// 		countInstanceRegisterFlows = CountTotalRegisterFlows(instanceRegisterFlows)
+// 		//eventAllowedFor = e.EventAllowedFor
+// 		eventRegisterStartAt = e.EventRegisterStartAt
+// 		eventRegisterEndAt = e.EventRegisterEndAt
+// 	case *GetEventByCodeDBOutput:
+// 		totalRemainingSeats = e.TotalRemainingSeats
+// 		totalSeats = e.InstanceTotalSeats
+// 		instanceRegisterFlows = GetRegisterFlowsFromStringArray(e.InstancesData)
+// 		countInstanceRegisterFlows = CountTotalRegisterFlows(instanceRegisterFlows)
+// 		//eventAllowedFor = e.EventAllowedFor
+// 		eventRegisterStartAt = e.EventRegisterStartAt
+// 		eventRegisterEndAt = e.EventRegisterEndAt
+// 	case GetInstanceByEventCodeDBOutput:
+// 		totalRemainingSeats = e.TotalRemainingSeats
+// 		totalSeats = e.InstanceTotalSeats
+// 		countInstanceRegisterFlows = RegisterFlowToCount(e.InstanceRegisterFlow)
+// 		eventRegisterStartAt = e.InstanceRegisterStartAt
+// 		eventRegisterEndAt = e.InstanceRegisterEndAt
+// 		//eventAllowedFor = e.EventAllowedFor
+// 		instanceRegisterFlows = []string{e.InstanceRegisterFlow}
+// 	case *GetInstanceByCodeDBOutput:
+// 		totalRemainingSeats = e.TotalRemainingSeats
+// 		totalSeats = e.InstanceTotalSeats
+// 		countInstanceRegisterFlows = RegisterFlowToCount(e.InstanceRegisterFlow)
+// 		eventRegisterStartAt = e.InstanceRegisterStartAt
+// 		eventRegisterEndAt = e.InstanceRegisterEndAt
+// 		//eventAllowedFor = "none"
+// 		instanceRegisterFlows = []string{e.InstanceRegisterFlow}
+// 	default:
+// 		// Return a default or error if the type is not recognized
+// 		return "", ErrorInvalidInput
+// 	}
+
+// 	switch {
+// 	case totalSeats == 0 && countInstanceRegisterFlows == 0:
+// 		return MapAvailabilityStatus[AVAILABILITY_STATUS_WALKIN], nil
+// 	case totalRemainingSeats <= 0 && countInstanceRegisterFlows < len(instanceRegisterFlows):
+// 		return MapAvailabilityStatus[AVAILABILITY_STATUS_AVAILABLE], nil
+// 	//case totalRemainingSeats <= 0 && countInstanceRegisterFlows == len(instanceRegisterFlows) && eventAllowedFor != "private" && totalSeats > 0:
+// 	//	return MapAvailabilityStatus[AVAILABILITY_STATUS_FULL], nil
+// 	case totalRemainingSeats <= 0 && countInstanceRegisterFlows == len(instanceRegisterFlows) && totalSeats > 0:
+// 		return MapAvailabilityStatus[AVAILABILITY_STATUS_FULL], nil
+// 	case common.Now().Before(eventRegisterStartAt.In(common.GetLocation())):
+// 		return MapAvailabilityStatus[AVAILABILITY_STATUS_SOON], nil
+// 	case common.Now().After(eventRegisterEndAt.In(common.GetLocation())):
+// 		return MapAvailabilityStatus[AVAILABILITY_STATUS_UNAVAILABLE], nil
+// 	default:
+// 		return MapAvailabilityStatus[AVAILABILITY_STATUS_AVAILABLE], nil
+// 	}
+// }
+
+func DefineAvailabilityStatus(event interface{}) (string, error) {
+	// Define a struct to hold the extracted fields
+	type eventFields struct {
+		totalRemainingSeats        int
+		totalSeats                 int
+		instanceRegisterFlows      []string
+		countInstanceRegisterFlows int
+		eventRegisterStartAt       time.Time
+		eventRegisterEndAt         time.Time
+	}
+
+	// Extract fields based on event type
+	var fields eventFields
+
 	switch e := event.(type) {
 	case GetAllEventsDBOutput:
-		totalRemainingSeats = e.TotalRemainingSeats
-		totalSeats = e.InstanceTotalSeats
-		instanceRegisterFlows = GetRegisterFlowsFromStringArray(e.InstancesData)
-		countInstanceRegisterFlows = CountTotalRegisterFlows(instanceRegisterFlows)
-		//eventAllowedFor = e.EventAllowedFor
-		eventRegisterStartAt = e.EventRegisterStartAt
-		eventRegisterEndAt = e.EventRegisterEndAt
+		fields = eventFields{
+			totalRemainingSeats:   e.TotalRemainingSeats,
+			totalSeats:            e.InstanceTotalSeats,
+			instanceRegisterFlows: GetRegisterFlowsFromStringArray(e.InstancesData),
+			eventRegisterStartAt:  e.EventRegisterStartAt,
+			eventRegisterEndAt:    e.EventRegisterEndAt,
+		}
+		fields.countInstanceRegisterFlows = CountTotalRegisterFlows(fields.instanceRegisterFlows)
+
 	case *GetEventByCodeDBOutput:
-		totalRemainingSeats = e.TotalRemainingSeats
-		totalSeats = e.InstanceTotalSeats
-		instanceRegisterFlows = GetRegisterFlowsFromStringArray(e.InstancesData)
-		countInstanceRegisterFlows = CountTotalRegisterFlows(instanceRegisterFlows)
-		//eventAllowedFor = e.EventAllowedFor
-		eventRegisterStartAt = e.EventRegisterStartAt
-		eventRegisterEndAt = e.EventRegisterEndAt
+		fields = eventFields{
+			totalRemainingSeats:   e.TotalRemainingSeats,
+			totalSeats:            e.InstanceTotalSeats,
+			instanceRegisterFlows: GetRegisterFlowsFromStringArray(e.InstancesData),
+			eventRegisterStartAt:  e.EventRegisterStartAt,
+			eventRegisterEndAt:    e.EventRegisterEndAt,
+		}
+		fields.countInstanceRegisterFlows = CountTotalRegisterFlows(fields.instanceRegisterFlows)
+
 	case GetInstanceByEventCodeDBOutput:
-		totalRemainingSeats = e.TotalRemainingSeats
-		totalSeats = e.InstanceTotalSeats
-		countInstanceRegisterFlows = RegisterFlowToCount(e.InstanceRegisterFlow)
-		eventRegisterStartAt = e.InstanceRegisterStartAt
-		eventRegisterEndAt = e.InstanceRegisterEndAt
-		//eventAllowedFor = e.EventAllowedFor
-		instanceRegisterFlows = []string{e.InstanceRegisterFlow}
+		fields = eventFields{
+			totalRemainingSeats:        e.TotalRemainingSeats,
+			totalSeats:                 e.InstanceTotalSeats,
+			instanceRegisterFlows:      []string{e.InstanceRegisterFlow},
+			countInstanceRegisterFlows: RegisterFlowToCount(e.InstanceRegisterFlow),
+			eventRegisterStartAt:       e.InstanceRegisterStartAt,
+			eventRegisterEndAt:         e.InstanceRegisterEndAt,
+		}
+
 	case *GetInstanceByCodeDBOutput:
-		totalRemainingSeats = e.TotalRemainingSeats
-		totalSeats = e.InstanceTotalSeats
-		countInstanceRegisterFlows = RegisterFlowToCount(e.InstanceRegisterFlow)
-		eventRegisterStartAt = e.InstanceRegisterStartAt
-		eventRegisterEndAt = e.InstanceRegisterEndAt
-		//eventAllowedFor = "none"
-		instanceRegisterFlows = []string{e.InstanceRegisterFlow}
+		fields = eventFields{
+			totalRemainingSeats:        e.TotalRemainingSeats,
+			totalSeats:                 e.InstanceTotalSeats,
+			instanceRegisterFlows:      []string{e.InstanceRegisterFlow},
+			countInstanceRegisterFlows: RegisterFlowToCount(e.InstanceRegisterFlow),
+			eventRegisterStartAt:       e.InstanceRegisterStartAt,
+			eventRegisterEndAt:         e.InstanceRegisterEndAt,
+		}
+
 	default:
 		// Return a default or error if the type is not recognized
 		return "", ErrorInvalidInput
 	}
 
+	// Determine availability status based on extracted fields
 	switch {
-	case totalSeats == 0 && countInstanceRegisterFlows == 0:
+	case fields.totalSeats == 0 && fields.countInstanceRegisterFlows == 0:
 		return MapAvailabilityStatus[AVAILABILITY_STATUS_WALKIN], nil
-	case totalRemainingSeats <= 0 && countInstanceRegisterFlows < len(instanceRegisterFlows):
+
+	case fields.totalRemainingSeats <= 0 && fields.countInstanceRegisterFlows < len(fields.instanceRegisterFlows):
 		return MapAvailabilityStatus[AVAILABILITY_STATUS_AVAILABLE], nil
-	//case totalRemainingSeats <= 0 && countInstanceRegisterFlows == len(instanceRegisterFlows) && eventAllowedFor != "private" && totalSeats > 0:
-	//	return MapAvailabilityStatus[AVAILABILITY_STATUS_FULL], nil
-	case totalRemainingSeats <= 0 && countInstanceRegisterFlows == len(instanceRegisterFlows) && totalSeats > 0:
+
+	case fields.totalRemainingSeats <= 0 && fields.countInstanceRegisterFlows == len(fields.instanceRegisterFlows) && fields.totalSeats > 0:
 		return MapAvailabilityStatus[AVAILABILITY_STATUS_FULL], nil
-	case common.Now().Before(eventRegisterStartAt.In(common.GetLocation())):
+
+	case common.Now().Before(fields.eventRegisterStartAt.In(common.GetLocation())):
 		return MapAvailabilityStatus[AVAILABILITY_STATUS_SOON], nil
-	case common.Now().After(eventRegisterEndAt.In(common.GetLocation())):
+
+	case common.Now().After(fields.eventRegisterEndAt.In(common.GetLocation())):
 		return MapAvailabilityStatus[AVAILABILITY_STATUS_UNAVAILABLE], nil
+
 	default:
 		return MapAvailabilityStatus[AVAILABILITY_STATUS_AVAILABLE], nil
 	}

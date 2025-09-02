@@ -2,6 +2,7 @@ SET TIME ZONE 'Asia/Jakarta';
 
 CREATE TABLE "cools" (
     "id" BIGSERIAL NOT NULL PRIMARY KEY,
+    "code" varchar(30) UNIQUE NOT NULL,
     "name" varchar(255) UNIQUE NOT NULL,
     "description" TEXT,
     "campus_code" varchar(3) NOT NULL,
@@ -11,8 +12,9 @@ CREATE TABLE "cools" (
     "category" varchar(40) NOT NULL,
     "gender" varchar(6),
     "recurrence" VARCHAR(50),
-    "location_type" varchar(6),
-    "location_name" varchar(255),
+    "location_type" varchar(10),
+    "location_area_code" varchar(255),
+    "location_district_code" varchar(255),
     "status" varchar(8) NOT NULL,
     "created_at" TIMESTAMP NOT NULL DEFAULT now(),
     "updated_at" TIMESTAMP NOT NULL DEFAULT now(),

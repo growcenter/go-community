@@ -3,15 +3,23 @@ package pgsql
 import (
 	"context"
 	"go-community/internal/models"
+
 	"gorm.io/gorm"
 )
 
 type CoolRepository interface {
-	CheckById(ctx context.Context, id int) (dataExist bool, err error)
-	GetOneById(ctx context.Context, id int) (cool models.Cool, err error)
-	GetNameById(ctx context.Context, id int) (cool models.Cool, err error)
+	CheckByCode(ctx context.Context, code string) (dataExist bool, err error)
+	GetOneByCode(ctx context.Context, code string) (cool models.Cool, err error)
+	GetNameByCode(ctx context.Context, code string) (cool models.Cool, err error)
 	Create(ctx context.Context, cool *models.Cool) (err error)
 	GetAllOptions(ctx context.Context) (cool []models.GetAllCoolOptionsDBOutput, err error)
+	GetCoolMemberByCode(ctx context.Context, code string) (cool []models.GetCoolMembersByIdDBOutput, err error)
+	GetOneByCommunityId(ctx context.Context, communityId string) (cool models.Cool, err error)
+	GetCoolFacilitatorByCode(ctx context.Context, code string) (facilitators []models.GetCoolMembersByIdDBOutput, err error)
+	GetAllMembersByCode(ctx context.Context, code string) (members []models.GetCoolMembersByIdDBOutput, err error)
+	GetManyByFacilitatorCommunityId(ctx context.Context, communityId string) (cools []models.Cool, err error)
+	Update(ctx context.Context, cool *models.Cool) (err error)
+	GetAllByFacilitatorCommunityId(ctx context.Context, facilitatorCommunityId string) (cools []models.GetAllCoolListDBOutput, err error)
 }
 
 type coolRepository struct {
@@ -23,12 +31,12 @@ func NewCoolRepository(db *gorm.DB, trx TransactionRepository) CoolRepository {
 	return &coolRepository{db: db, trx: trx}
 }
 
-func (clr *coolRepository) CheckById(ctx context.Context, id int) (dataExist bool, err error) {
+func (clr *coolRepository) CheckByCode(ctx context.Context, code string) (dataExist bool, err error) {
 	defer func() {
 		LogRepository(ctx, err)
 	}()
 
-	err = clr.db.Raw(queryCheckCoolById, id).Scan(&dataExist).Error
+	err = clr.db.Raw(queryCheckCoolByCode, code).Scan(&dataExist).Error
 	if err != nil {
 		return false, err
 	}
@@ -36,24 +44,24 @@ func (clr *coolRepository) CheckById(ctx context.Context, id int) (dataExist boo
 	return dataExist, nil
 }
 
-func (clr *coolRepository) GetOneById(ctx context.Context, id int) (cool models.Cool, err error) {
+func (clr *coolRepository) GetOneByCode(ctx context.Context, code string) (cool models.Cool, err error) {
 	defer func() {
 		LogRepository(ctx, err)
 	}()
 
 	var cl models.Cool
-	err = clr.db.Where("id = ?", id).Find(&cl).Error
+	err = clr.db.Where("code = ?", code).Find(&cl).Error
 
 	return cl, err
 }
 
-func (clr *coolRepository) GetNameById(ctx context.Context, id int) (cool models.Cool, err error) {
+func (clr *coolRepository) GetNameByCode(ctx context.Context, code string) (cool models.Cool, err error) {
 	defer func() {
 		LogRepository(ctx, err)
 	}()
 
 	var cl models.Cool
-	err = clr.db.Raw(queryGetNameById, id).Scan(&cl).Error
+	err = clr.db.Raw(queryGetNameByCode, code).Scan(&cl).Error
 
 	return cl, err
 }
@@ -75,4 +83,71 @@ func (clr *coolRepository) GetAllOptions(ctx context.Context) (cool []models.Get
 	err = clr.db.Raw(queryGetCoolsOptions).Scan(&cl).Error
 
 	return cl, err
+}
+
+func (clr *coolRepository) GetCoolMemberByCode(ctx context.Context, code string) (cool []models.GetCoolMembersByIdDBOutput, err error) {
+	defer func() {
+		LogRepository(ctx, err)
+	}()
+
+	var cl []models.GetCoolMembersByIdDBOutput
+	err = clr.db.Raw(queryGetCoolMemberByCode, code).Scan(&cl).Error
+
+	return cl, err
+}
+
+func (clr *coolRepository) GetOneByCommunityId(ctx context.Context, communityId string) (cool models.Cool, err error) {
+	defer func() {
+		LogRepository(ctx, err)
+	}()
+
+	err = clr.db.Raw(queryGetCoolByCommunityId, communityId).Scan(&cool).Error
+
+	return cool, err
+}
+
+func (clr *coolRepository) GetCoolFacilitatorByCode(ctx context.Context, code string) (facilitators []models.GetCoolMembersByIdDBOutput, err error) {
+	defer func() {
+		LogRepository(ctx, err)
+	}()
+
+	err = clr.db.Raw(queryGetCoolFacilitatorByCode, code).Scan(&facilitators).Error
+
+	return facilitators, err
+}
+
+func (clr *coolRepository) GetAllMembersByCode(ctx context.Context, code string) (members []models.GetCoolMembersByIdDBOutput, err error) {
+	defer func() {
+		LogRepository(ctx, err)
+	}()
+
+	err = clr.db.Raw(queryGetAllMembersByCoolCode, code, code).Scan(&members).Error
+
+	return members, err
+}
+
+func (clr *coolRepository) GetManyByFacilitatorCommunityId(ctx context.Context, communityId string) (cools []models.Cool, err error) {
+	defer func() {
+		LogRepository(ctx, err)
+	}()
+
+	err = clr.db.Raw(queryGetCoolsByFacilitatorCommunityId, communityId).Scan(&cools).Error
+	return cools, err
+}
+
+func (clr *coolRepository) Update(ctx context.Context, cool *models.Cool) (err error) {
+	defer func() {
+		LogRepository(ctx, err)
+	}()
+
+	return clr.db.Save(&cool).Error
+}
+
+func (clr *coolRepository) GetAllByFacilitatorCommunityId(ctx context.Context, facilitatorCommunityId string) (cools []models.GetAllCoolListDBOutput, err error) {
+	defer func() {
+		LogRepository(ctx, err)
+	}()
+
+	err = clr.db.Raw(queryGetCoolsByFacilitatorCommunityId, facilitatorCommunityId).Scan(&cools).Error
+	return cools, err
 }
