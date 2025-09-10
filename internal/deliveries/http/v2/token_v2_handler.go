@@ -60,7 +60,7 @@ func (th *TokenHandler) Refresh(ctx echo.Context) error {
 			return response.Error(ctx, models.ErrorUserNotFound)
 		}
 
-		tokens, err := th.auth.GenerateTokens(user.CommunityId, user.Roles, user.UserTypes)
+		tokens, err := th.auth.GenerateTokens(user.CommunityId, user.UserTypes, user.Roles)
 		if err != nil {
 			response.Error(ctx, err)
 		}
@@ -100,7 +100,7 @@ func (th *TokenHandler) RefreshPost(ctx echo.Context) error {
 			return response.Error(ctx, models.ErrorUserNotFound)
 		}
 
-		tokens, err := th.auth.GenerateTokens(user.CommunityId, user.Roles, user.UserTypes)
+		tokens, err := th.auth.GenerateTokens(user.CommunityId, user.UserTypes, user.Roles)
 		if err != nil {
 			response.Error(ctx, err)
 		}
