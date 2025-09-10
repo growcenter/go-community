@@ -19,7 +19,6 @@ import (
 
 type UserUsecase interface {
 	Create(ctx context.Context, request *models.CreateUserRequest) (response *models.CreateUserResponse, err error)
-	CreateVolunteer(ctx context.Context, request *models.CreateVolunteerRequest) (user *models.User, err error)
 	Login(ctx context.Context, request models.LoginUserRequest) (user *models.User, token string, err error)
 	GetByCommunityId(ctx context.Context, request models.GetOneByCommunityIdParameter) (response *models.GetOneByCommunityIdResponse, err error)
 	Check(ctx context.Context, identifier string) (isExist bool, err error)
@@ -34,28 +33,14 @@ type UserUsecase interface {
 }
 
 type userUsecase struct {
-	ur  pgsql.UserRepository
-	urr pgsql.UserRelationRepository
-	cr  pgsql.CampusRepository
-	ccr pgsql.CoolCategoryRepository
-	clr pgsql.CoolRepository
-	utr pgsql.UserTypeRepository
-	rr  pgsql.RoleRepository
 	r   pgsql.PostgreRepositories
 	cfg *config.Configuration
 	a   authorization.Auth
 	s   []byte
 }
 
-func NewUserUsecase(ur pgsql.UserRepository, urr pgsql.UserRelationRepository, cr pgsql.CampusRepository, ccr pgsql.CoolCategoryRepository, clr pgsql.CoolRepository, utr pgsql.UserTypeRepository, rr pgsql.RoleRepository, r pgsql.PostgreRepositories, cfg config.Configuration, a authorization.Auth, s []byte) *userUsecase {
+func NewUserUsecase(r pgsql.PostgreRepositories, cfg config.Configuration, a authorization.Auth, s []byte) *userUsecase {
 	return &userUsecase{
-		ur:  ur,
-		urr: urr,
-		cr:  cr,
-		ccr: ccr,
-		clr: clr,
-		utr: utr,
-		rr:  rr,
 		r:   r,
 		cfg: &cfg,
 		a:   a,
@@ -80,7 +65,7 @@ func (uu *userUsecase) Create(ctx context.Context, request *models.CreateUserReq
 	}
 
 	if request.CoolCode != "" {
-		coolExist, err := uu.clr.CheckByCode(ctx, request.CoolCode)
+		coolExist, err := uu.r.Cool.CheckByCode(ctx, request.CoolCode)
 		if err != nil {
 			return nil, err
 		}
@@ -97,7 +82,7 @@ func (uu *userUsecase) Create(ctx context.Context, request *models.CreateUserReq
 		}
 	}
 
-	userTypes, err := uu.utr.GetByArray(ctx, request.UserTypes)
+	userTypes, err := uu.r.UserType.GetByArray(ctx, request.UserTypes)
 	if err != nil {
 		return nil, err
 	}
@@ -106,7 +91,7 @@ func (uu *userUsecase) Create(ctx context.Context, request *models.CreateUserReq
 		return nil, models.ErrorDataNotFound
 	}
 
-	userExist, err := uu.ur.GetOneByEmailPhoneNumber(ctx, common.StringTrimSpaceAndLower(request.Email), common.StringTrimSpaceAndLower(request.PhoneNumber))
+	userExist, err := uu.r.User.GetOneByEmailPhoneNumber(ctx, common.StringTrimSpaceAndLower(request.Email), common.StringTrimSpaceAndLower(request.PhoneNumber))
 	if err != nil {
 		return nil, err
 	}
@@ -156,7 +141,7 @@ func (uu *userUsecase) Create(ctx context.Context, request *models.CreateUserReq
 		userExist.IsBaptized = request.IsBaptized
 		userExist.IsKom100 = request.IsKOM100
 
-		if err := uu.ur.Update(ctx, &userExist); err != nil {
+		if err := uu.r.User.Update(ctx, &userExist); err != nil {
 			return nil, err
 		}
 
@@ -228,7 +213,7 @@ func (uu *userUsecase) Create(ctx context.Context, request *models.CreateUserReq
 			IsKom100:      request.IsKOM100,
 		}
 
-		if err := uu.ur.Create(ctx, &input); err != nil {
+		if err := uu.r.User.Create(ctx, &input); err != nil {
 			return nil, err
 		}
 
@@ -261,164 +246,12 @@ func (uu *userUsecase) Create(ctx context.Context, request *models.CreateUserReq
 	}
 }
 
-func (uu *userUsecase) CreateVolunteer(ctx context.Context, request *models.CreateVolunteerRequest) (user *models.User, err error) {
-	defer func() {
-		LogService(ctx, err)
-	}()
-
-	if request.Email == "" && request.PhoneNumber == "" {
-		return nil, models.ErrorEmailPhoneNumberEmpty
-	}
-
-	_, departmentExist := uu.cfg.Department[strings.ToLower(request.DepartmentCode)]
-	if !departmentExist {
-		return nil, models.ErrorDataNotFound
-	}
-
-	coolExist, err := uu.clr.CheckByCode(ctx, request.CoolCode)
-	if err != nil {
-		return nil, err
-	}
-
-	if !coolExist {
-		return nil, models.ErrorDataNotFound
-	}
-
-	_, campusExist := uu.cfg.Campus[strings.ToLower(request.CampusCode)]
-	if !campusExist {
-		return nil, models.ErrorDataNotFound
-	}
-
-	userExist, err := uu.ur.GetOneByEmailPhoneNumber(ctx, common.StringTrimSpaceAndLower(request.Email), common.StringTrimSpaceAndLower(request.PhoneNumber))
-	if err != nil {
-		return nil, err
-	}
-
-	if userExist.ID != 0 {
-		salted := append([]byte(request.Password), uu.s...)
-		password, err := hash.Generate(salted)
-		if err != nil {
-			return nil, err
-		}
-
-		location, _ := time.LoadLocation("Asia/Jakarta")
-		dob, err := common.ParseStringToDatetime("2006-01-02", request.DateOfBirth, location)
-		if err != nil {
-			return nil, err
-		}
-
-		//userExist.Name = strings.TrimSpace(common.CapitalizeFirstWord(request.Name))
-		//userExist.PhoneNumber = strings.TrimSpace(request.PhoneNumber)
-		//userExist.Email = common.StringTrimSpaceAndLower(request.Email)
-		//userExist.Password = password
-		//userExist.UserType = "volunteer"
-		//userExist.Status = models.UserStatusActive
-		//userExist.Gender = strings.ToLower(request.Gender)
-		//userExist.Address = request.Address
-		//userExist.CampusCode = strings.ToUpper(request.CampusCode)
-		//userExist.CoolID = request.CoolID
-		//userExist.Department = strings.ToUpper(request.DepartmentCode)
-		//userExist.PlaceOfBirth = request.PlaceOfBirth
-		//userExist.DateOfBirth = &dob
-		//userExist.MaritalStatus = request.MaritalStatus
-		//userExist.KKJNumber = request.KKJNumber
-		//userExist.JemaatID = request.JemaatId
-		//userExist.IsBaptized = request.IsBaptized
-		//userExist.IsKom100 = request.IsKOM100
-		//
-		//if err := uu.ur.Update(ctx, &userExist); err != nil {
-		//	return nil, err
-		//}
-		//
-		//return &userExist, nil
-
-		input := models.User{
-			//CommunityID:   userExist.CommunityID,
-			Name:          strings.TrimSpace(common.CapitalizeFirstWord(request.Name)),
-			PhoneNumber:   strings.TrimSpace(request.PhoneNumber),
-			Email:         common.StringTrimSpaceAndLower(request.Email),
-			Password:      password,
-			UserTypes:     request.UserTypes,
-			Status:        "active",
-			Gender:        strings.ToLower(request.Gender),
-			Address:       request.Address,
-			CampusCode:    request.CampusCode,
-			CoolID:        request.CoolID,
-			Department:    request.DepartmentCode,
-			PlaceOfBirth:  request.PlaceOfBirth,
-			DateOfBirth:   &dob,
-			MaritalStatus: request.MaritalStatus,
-			KKJNumber:     request.KKJNumber,
-			JemaatID:      request.JemaatId,
-			IsBaptized:    request.IsBaptized,
-			IsKom100:      request.IsKOM100,
-		}
-
-		if err := uu.ur.UpdateByEmailPhoneNumber(ctx, common.StringTrimSpaceAndLower(request.Email), strings.TrimSpace(request.PhoneNumber), &input); err != nil {
-			return nil, err
-		}
-
-		input.CommunityID = userExist.CommunityID
-		return &input, nil
-	}
-
-	var communityId string
-	switch {
-	case request.JemaatId != "" && request.KKJNumber != "":
-		communityId = request.JemaatId
-	case request.JemaatId != "" && request.KKJNumber == "":
-		return nil, models.ErrorDidNotFillKKJNumber
-	default:
-		communityId = generator.LuhnAccountNumber()
-	}
-
-	salted := append([]byte(request.Password), uu.s...)
-	password, err := hash.Generate(salted)
-	if err != nil {
-		return nil, err
-	}
-
-	location, _ := time.LoadLocation("Asia/Jakarta")
-	dob, err := common.ParseStringToDatetime("2006-01-02", request.DateOfBirth, location)
-	if err != nil {
-		return nil, err
-	}
-
-	input := models.User{
-		CommunityID:   communityId,
-		Name:          strings.TrimSpace(common.CapitalizeFirstWord(request.Name)),
-		PhoneNumber:   strings.TrimSpace(request.PhoneNumber),
-		Email:         common.StringTrimSpaceAndLower(request.Email),
-		Password:      password,
-		UserTypes:     request.UserTypes,
-		Status:        "active",
-		Gender:        strings.ToLower(request.Gender),
-		Address:       request.Address,
-		CampusCode:    request.CampusCode,
-		CoolID:        request.CoolID,
-		Department:    request.DepartmentCode,
-		PlaceOfBirth:  request.PlaceOfBirth,
-		DateOfBirth:   &dob,
-		MaritalStatus: request.MaritalStatus,
-		KKJNumber:     request.KKJNumber,
-		JemaatID:      request.JemaatId,
-		IsBaptized:    request.IsBaptized,
-		IsKom100:      request.IsKOM100,
-	}
-
-	if err := uu.ur.Create(ctx, &input); err != nil {
-		return nil, err
-	}
-
-	return &input, nil
-}
-
 func (uu *userUsecase) Login(ctx context.Context, request *models.LoginUserRequest) (usr *models.User, tokens *models.UserToken, err error) {
 	defer func() {
 		LogService(ctx, err)
 	}()
 
-	user, err := uu.ur.GetOneByIdentifier(ctx, common.StringTrimSpaceAndLower(request.Identifier))
+	user, err := uu.r.User.GetOneByIdentifier(ctx, common.StringTrimSpaceAndLower(request.Identifier))
 	if err != nil {
 		return nil, nil, err
 	}
@@ -432,7 +265,7 @@ func (uu *userUsecase) Login(ctx context.Context, request *models.LoginUserReque
 		return nil, nil, models.ErrorInvalidPassword
 	}
 
-	userType, err := uu.utr.GetByArray(ctx, user.UserTypes)
+	userType, err := uu.r.UserType.GetByArray(ctx, user.UserTypes)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -457,7 +290,7 @@ func (uu *userUsecase) GetByCommunityId(ctx context.Context, request models.GetO
 		LogService(ctx, err)
 	}()
 
-	user, err := uu.ur.GetOneByCommunityId(ctx, request.CommunityId)
+	user, err := uu.r.User.GetOneByCommunityId(ctx, request.CommunityId)
 	if err != nil {
 		return nil, err
 	}
@@ -485,7 +318,7 @@ func (uu *userUsecase) GetByCommunityId(ctx context.Context, request models.GetO
 
 	var coolName string
 	if user.CoolID != 0 {
-		cool, err := uu.clr.GetNameByCode(ctx, user.CoolCode)
+		cool, err := uu.r.Cool.GetNameByCode(ctx, user.CoolCode)
 		if err != nil {
 			return nil, err
 		}
@@ -493,7 +326,7 @@ func (uu *userUsecase) GetByCommunityId(ctx context.Context, request models.GetO
 		coolName = cool.Name
 	}
 
-	userType, err := uu.utr.GetByArray(ctx, user.UserTypes)
+	userType, err := uu.r.UserType.GetByArray(ctx, user.UserTypes)
 	if err != nil {
 		return nil, err
 	}
@@ -504,7 +337,7 @@ func (uu *userUsecase) GetByCommunityId(ctx context.Context, request models.GetO
 	}
 
 	userRoles := common.CombineMapStrings(rolesInUserType, user.Roles)
-	roles, err := uu.rr.GetByArray(ctx, userRoles)
+	roles, err := uu.r.Role.GetByArray(ctx, userRoles)
 	if err != nil {
 		return nil, err
 	}
@@ -549,7 +382,7 @@ func (uu *userUsecase) Check(ctx context.Context, identifier string) (isExist bo
 		LogService(ctx, err)
 	}()
 
-	isExist, err = uu.ur.CheckByEmailPhoneNumber(ctx, identifier, identifier)
+	isExist, err = uu.r.User.CheckByEmailPhoneNumber(ctx, identifier, identifier)
 	if err != nil {
 		return false, err
 	}
@@ -566,7 +399,7 @@ func (uu *userUsecase) UpdatePassword(ctx context.Context, param *models.UpdateU
 		return nil, models.ErrorMismatchFields
 	}
 
-	data, err := uu.ur.GetOneByIdentifier(ctx, strings.ToLower(param.Identifier))
+	data, err := uu.r.User.GetOneByIdentifier(ctx, strings.ToLower(param.Identifier))
 	if err != nil {
 		return nil, err
 	}
@@ -582,7 +415,7 @@ func (uu *userUsecase) UpdatePassword(ctx context.Context, param *models.UpdateU
 	}
 
 	data.Password = password
-	if err := uu.ur.Update(ctx, &data); err != nil {
+	if err := uu.r.User.Update(ctx, &data); err != nil {
 		return nil, err
 	}
 
@@ -594,7 +427,7 @@ func (uu *userUsecase) GetAllCursor(ctx context.Context, params models.GetAllUse
 		LogService(ctx, err)
 	}()
 
-	output, prev, next, total, err := uu.ur.GetAllWithCursor(ctx, params)
+	output, prev, next, total, err := uu.r.User.GetAllWithCursor(ctx, params)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -667,7 +500,7 @@ func (uu *userUsecase) UpdateRolesOrUserType(ctx context.Context, request *model
 		LogService(ctx, err)
 	}()
 
-	countUser, err := uu.ur.CheckMultiple(ctx, request.CommunityIds)
+	countUser, err := uu.r.User.CheckMultiple(ctx, request.CommunityIds)
 	if err != nil {
 		return nil, err
 	}
@@ -678,7 +511,7 @@ func (uu *userUsecase) UpdateRolesOrUserType(ctx context.Context, request *model
 
 	switch request.Field {
 	case "role":
-		countRole, err := uu.rr.CheckMultiple(ctx, request.Changes)
+		countRole, err := uu.r.Role.CheckMultiple(ctx, request.Changes)
 		if err != nil {
 			return nil, err
 		}
@@ -687,11 +520,11 @@ func (uu *userUsecase) UpdateRolesOrUserType(ctx context.Context, request *model
 			return nil, models.ErrorDataNotFound
 		}
 
-		if err := uu.ur.BulkUpdateRolesByCommunityIds(ctx, request.CommunityIds, request.Changes); err != nil {
+		if err := uu.r.User.BulkUpdateRolesByCommunityIds(ctx, request.CommunityIds, request.Changes); err != nil {
 			return nil, err
 		}
 	case "userType":
-		countUserType, err := uu.utr.CheckMultiple(ctx, request.Changes)
+		countUserType, err := uu.r.UserType.CheckMultiple(ctx, request.Changes)
 		if err != nil {
 			return nil, err
 		}
@@ -700,7 +533,7 @@ func (uu *userUsecase) UpdateRolesOrUserType(ctx context.Context, request *model
 			return nil, models.ErrorDataNotFound
 		}
 
-		if err := uu.ur.BulkUpdateUserTypesByCommunityIds(ctx, request.CommunityIds, request.Changes); err != nil {
+		if err := uu.r.User.BulkUpdateUserTypesByCommunityIds(ctx, request.CommunityIds, request.Changes); err != nil {
 			return nil, err
 		}
 	default:
@@ -728,7 +561,7 @@ func (uu *userUsecase) UpdateProfile(ctx context.Context, parameter models.Updat
 		return nil, models.ErrorDifferentCommunityId
 	}
 
-	data, err := uu.ur.GetOneByCommunityId(ctx, parameter.CommunityId)
+	data, err := uu.r.User.GetOneByCommunityId(ctx, parameter.CommunityId)
 	if err != nil {
 		return nil, err
 	}
@@ -755,7 +588,7 @@ func (uu *userUsecase) UpdateProfile(ctx context.Context, parameter models.Updat
 	}
 
 	if *request.CoolCode != "" {
-		coolExist, err := uu.clr.CheckByCode(ctx, *request.CoolCode)
+		coolExist, err := uu.r.Cool.CheckByCode(ctx, *request.CoolCode)
 		if err != nil {
 			return nil, err
 		}
@@ -813,7 +646,7 @@ func (uu *userUsecase) updateProfileAtomic(ctx context.Context, parameter models
 
 	err = uu.r.Transaction.Atomic(ctx, func(ctx context.Context, r *pgsql.PostgreRepositories) error {
 
-		if err := uu.ur.UpdateByCommunityId(ctx, parameter.CommunityId, user); err != nil {
+		if err := uu.r.User.UpdateByCommunityId(ctx, parameter.CommunityId, user); err != nil {
 			return err
 		}
 
@@ -830,7 +663,7 @@ func (uu *userUsecase) updateProfileAtomic(ctx context.Context, parameter models
 
 		if request.Relation != nil {
 			for _, relation := range request.Relation {
-				relationExist, err := uu.ur.CheckByCommunityId(ctx, relation.CommunityId)
+				relationExist, err := uu.r.User.CheckByCommunityId(ctx, relation.CommunityId)
 				if err != nil {
 					return err
 				}
@@ -839,7 +672,7 @@ func (uu *userUsecase) updateProfileAtomic(ctx context.Context, parameter models
 					return models.ErrorDataNotFound
 				}
 
-				existingRelation, err := uu.urr.GetOneByRelatedCommunityIds(ctx, parameter.CommunityId, relation.CommunityId)
+				existingRelation, err := uu.r.UserRelation.GetOneByRelatedCommunityIds(ctx, parameter.CommunityId, relation.CommunityId)
 				if err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
 					return err
 				}
@@ -847,23 +680,23 @@ func (uu *userUsecase) updateProfileAtomic(ctx context.Context, parameter models
 				switch {
 				case existingRelation.ID > 0:
 					existingRelation.RelationshipType = relation.Type
-					if err := uu.urr.Update(ctx, existingRelation); err != nil {
+					if err := uu.r.UserRelation.Update(ctx, existingRelation); err != nil {
 						return err
 					}
 
-					existingRelationRecriprocal, err := uu.urr.GetOneByRelatedCommunityIds(ctx, relation.CommunityId, parameter.CommunityId)
+					existingRelationRecriprocal, err := uu.r.UserRelation.GetOneByRelatedCommunityIds(ctx, relation.CommunityId, parameter.CommunityId)
 					if err != nil {
 						return err
 					}
 
 					if existingRelationRecriprocal.ID > 0 {
 						existingRelationRecriprocal.RelationshipType = models.ReciprocalRelationshipType(relation.Type)
-						if err := uu.urr.Update(ctx, existingRelationRecriprocal); err != nil {
+						if err := uu.r.UserRelation.Update(ctx, existingRelationRecriprocal); err != nil {
 							return err
 						}
 					}
 				case existingRelation.ID == 0 || errors.Is(err, gorm.ErrRecordNotFound):
-					err := uu.urr.Create(ctx, &models.UserRelation{
+					err := uu.r.UserRelation.Create(ctx, &models.UserRelation{
 						CommunityId:        parameter.CommunityId,
 						RelatedCommunityId: relation.CommunityId,
 						RelationshipType:   relation.Type,
@@ -873,7 +706,7 @@ func (uu *userUsecase) updateProfileAtomic(ctx context.Context, parameter models
 						return err
 					}
 
-					err = uu.urr.Create(ctx, &models.UserRelation{
+					err = uu.r.UserRelation.Create(ctx, &models.UserRelation{
 						CommunityId:        relation.CommunityId,
 						RelatedCommunityId: parameter.CommunityId,
 						RelationshipType:   models.ReciprocalRelationshipType(relation.Type),
@@ -891,12 +724,12 @@ func (uu *userUsecase) updateProfileAtomic(ctx context.Context, parameter models
 
 		if request.DeleteRelation != nil {
 			for _, deleteRelation := range request.DeleteRelation {
-				err := uu.urr.Delete(ctx, parameter.CommunityId, deleteRelation)
+				err := uu.r.UserRelation.Delete(ctx, parameter.CommunityId, deleteRelation)
 				if err != nil {
 					return err
 				}
 
-				err = uu.urr.Delete(ctx, deleteRelation, parameter.CommunityId)
+				err = uu.r.UserRelation.Delete(ctx, deleteRelation, parameter.CommunityId)
 				if err != nil {
 					return err
 				}
@@ -986,7 +819,7 @@ func (uu *userUsecase) GetUserProfile(ctx context.Context, communityId string, v
 		departmentName = value
 	}
 
-	userType, err := uu.utr.GetByArray(ctx, output[0].UserTypes)
+	userType, err := uu.r.UserType.GetByArray(ctx, output[0].UserTypes)
 	if err != nil {
 		return nil, err
 	}
@@ -1013,7 +846,7 @@ func (uu *userUsecase) GetUserProfile(ctx context.Context, communityId string, v
 		userRoles = rolesInUserType
 	}
 
-	roles, err := uu.rr.GetByArray(ctx, userRoles)
+	roles, err := uu.r.Role.GetByArray(ctx, userRoles)
 	if err != nil {
 		return nil, err
 	}
@@ -1100,7 +933,7 @@ func (uu *userUsecase) UpdateUser(ctx context.Context, parameter models.UpdatePr
 		return nil, models.ErrorEmailPhoneNumberEmpty
 	}
 
-	data, err := uu.ur.GetOneByCommunityId(ctx, parameter.CommunityId)
+	data, err := uu.r.User.GetOneByCommunityId(ctx, parameter.CommunityId)
 	if err != nil {
 		return nil, err
 	}
@@ -1127,7 +960,7 @@ func (uu *userUsecase) UpdateUser(ctx context.Context, parameter models.UpdatePr
 	}
 
 	if *request.CoolCode != "" {
-		coolExist, err := uu.clr.CheckByCode(ctx, *request.CoolCode)
+		coolExist, err := uu.r.Cool.CheckByCode(ctx, *request.CoolCode)
 		if err != nil {
 			return nil, err
 		}
@@ -1213,7 +1046,7 @@ func (uu *userUsecase) updateUserAtomic(ctx context.Context, parameter models.Up
 
 	err = uu.r.Transaction.Atomic(ctx, func(ctx context.Context, r *pgsql.PostgreRepositories) error {
 
-		if err := uu.ur.UpdateByCommunityId(ctx, parameter.CommunityId, user); err != nil {
+		if err := uu.r.User.UpdateByCommunityId(ctx, parameter.CommunityId, user); err != nil {
 			return err
 		}
 
@@ -1230,7 +1063,7 @@ func (uu *userUsecase) updateUserAtomic(ctx context.Context, parameter models.Up
 
 		if request.Relation != nil {
 			for _, relation := range request.Relation {
-				relationExist, err := uu.ur.CheckByCommunityId(ctx, relation.CommunityId)
+				relationExist, err := uu.r.User.CheckByCommunityId(ctx, relation.CommunityId)
 				if err != nil {
 					return err
 				}
@@ -1239,7 +1072,7 @@ func (uu *userUsecase) updateUserAtomic(ctx context.Context, parameter models.Up
 					return models.ErrorDataNotFound
 				}
 
-				existingRelation, err := uu.urr.GetOneByRelatedCommunityIds(ctx, parameter.CommunityId, relation.CommunityId)
+				existingRelation, err := uu.r.UserRelation.GetOneByRelatedCommunityIds(ctx, parameter.CommunityId, relation.CommunityId)
 				if err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
 					return err
 				}
@@ -1247,23 +1080,23 @@ func (uu *userUsecase) updateUserAtomic(ctx context.Context, parameter models.Up
 				switch {
 				case existingRelation.ID > 0:
 					existingRelation.RelationshipType = relation.Type
-					if err := uu.urr.Update(ctx, existingRelation); err != nil {
+					if err := uu.r.UserRelation.Update(ctx, existingRelation); err != nil {
 						return err
 					}
 
-					existingRelationRecriprocal, err := uu.urr.GetOneByRelatedCommunityIds(ctx, relation.CommunityId, parameter.CommunityId)
+					existingRelationRecriprocal, err := uu.r.UserRelation.GetOneByRelatedCommunityIds(ctx, relation.CommunityId, parameter.CommunityId)
 					if err != nil {
 						return err
 					}
 
 					if existingRelationRecriprocal.ID > 0 {
 						existingRelationRecriprocal.RelationshipType = models.ReciprocalRelationshipType(relation.Type)
-						if err := uu.urr.Update(ctx, existingRelationRecriprocal); err != nil {
+						if err := uu.r.UserRelation.Update(ctx, existingRelationRecriprocal); err != nil {
 							return err
 						}
 					}
 				case existingRelation.ID == 0 || errors.Is(err, gorm.ErrRecordNotFound):
-					err := uu.urr.Create(ctx, &models.UserRelation{
+					err := uu.r.UserRelation.Create(ctx, &models.UserRelation{
 						CommunityId:        parameter.CommunityId,
 						RelatedCommunityId: relation.CommunityId,
 						RelationshipType:   relation.Type,
@@ -1273,7 +1106,7 @@ func (uu *userUsecase) updateUserAtomic(ctx context.Context, parameter models.Up
 						return err
 					}
 
-					err = uu.urr.Create(ctx, &models.UserRelation{
+					err = uu.r.UserRelation.Create(ctx, &models.UserRelation{
 						CommunityId:        relation.CommunityId,
 						RelatedCommunityId: parameter.CommunityId,
 						RelationshipType:   models.ReciprocalRelationshipType(relation.Type),
@@ -1291,12 +1124,12 @@ func (uu *userUsecase) updateUserAtomic(ctx context.Context, parameter models.Up
 
 		if request.DeleteRelation != nil {
 			for _, deleteRelation := range request.DeleteRelation {
-				err := uu.urr.Delete(ctx, parameter.CommunityId, deleteRelation)
+				err := uu.r.UserRelation.Delete(ctx, parameter.CommunityId, deleteRelation)
 				if err != nil {
 					return err
 				}
 
-				err = uu.urr.Delete(ctx, deleteRelation, parameter.CommunityId)
+				err = uu.r.UserRelation.Delete(ctx, deleteRelation, parameter.CommunityId)
 				if err != nil {
 					return err
 				}
@@ -1341,7 +1174,7 @@ func (uu *userUsecase) Delete(ctx context.Context, parameter models.DeleteUserPa
 		LogService(ctx, err)
 	}()
 
-	data, err := uu.ur.GetOneByCommunityId(ctx, parameter.CommunityId)
+	data, err := uu.r.User.GetOneByCommunityId(ctx, parameter.CommunityId)
 	if err != nil {
 		return nil, err
 	}
@@ -1350,7 +1183,7 @@ func (uu *userUsecase) Delete(ctx context.Context, parameter models.DeleteUserPa
 		return nil, models.ErrorDataNotFound
 	}
 
-	if err := uu.ur.Delete(ctx, parameter.CommunityId); err != nil {
+	if err := uu.r.User.Delete(ctx, parameter.CommunityId); err != nil {
 		return nil, err
 	}
 
@@ -1375,7 +1208,7 @@ func (uu *userUsecase) GetRBAC(ctx context.Context, communityId string) (user *m
 		return nil, models.ErrorIdentifierCommunityIdEmpty
 	}
 
-	user, err = uu.ur.GetRBAC(ctx, communityId)
+	user, err = uu.r.User.GetRBAC(ctx, communityId)
 	if err != nil {
 		return nil, err
 	}

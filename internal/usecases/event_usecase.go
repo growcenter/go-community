@@ -9,17 +9,19 @@ import (
 	"go-community/internal/constants"
 	"go-community/internal/models"
 	"go-community/internal/pkg/authorization"
+	"go-community/internal/pkg/errorgen"
 	"go-community/internal/pkg/generator"
 	"go-community/internal/repositories/pgsql"
-	"gorm.io/gorm"
 	"strings"
 	"time"
+
+	"gorm.io/gorm"
 )
 
 type EventUsecase interface {
 	Create(ctx context.Context, request models.CreateEventRequest) (response *models.CreateEventResponse, err error)
 	GetAll(ctx context.Context, roles []string) (responses *[]models.GetAllEventsResponse, err error)
-	GetByCode(ctx context.Context, code string) (response *models.GetEventByCodeResponse, err error)
+	GetByCode(ctx context.Context, code string, roles []string, userTypes []string, communityId string) (detail *models.GetEventByCodeResponse, data []models.GetInstancesByEventCodeResponse, err error)
 	GetRegistered(ctx context.Context, communityIdOrigin string) (eventRegistrations []models.GetAllRegisteredUserResponse, err error)
 	GetTitles(ctx context.Context) (eventTitles []models.GetEventTitlesResponse, err error)
 	GetSummary(ctx context.Context, code string) (detail *models.GetEventSummaryResponse, data []models.GetInstanceSummaryResponse, err error)
@@ -30,241 +32,187 @@ type eventUsecase struct {
 	a    authorization.Auth
 	r    pgsql.PostgreRepositories
 	flag FeatureFlagUsecase
+	ei   EventInstanceUsecase
+	f    FormUsecase
 }
 
-func NewEventUsecase(cfg config.Configuration, a authorization.Auth, r pgsql.PostgreRepositories, flag FeatureFlagUsecase) *eventUsecase {
+func NewEventUsecase(cfg config.Configuration, a authorization.Auth, r pgsql.PostgreRepositories, flag FeatureFlagUsecase, ei EventInstanceUsecase, f FormUsecase) *eventUsecase {
 	return &eventUsecase{
 		cfg:  &cfg,
 		a:    a,
 		r:    r,
 		flag: flag,
+		ei:   ei,
+		f:    f,
 	}
 }
 
-func (eu *eventUsecase) Create(ctx context.Context, request models.CreateEventRequest) (response *models.CreateEventResponse, err error) {
+func (eu *eventUsecase) Create(ctx context.Context, request models.CreateEventRequest, createdBy string) (response *models.CreateEventResponse, err error) {
 	defer func() {
 		LogService(ctx, err)
 	}()
 
-	timeNowNano, err := common.NowWithNanoTime()
-	if err != nil {
-		return nil, err
+	eventTimes, _ := common.ParseMultipleTime([]string{request.TimeConfig.StartAt, request.TimeConfig.EndAt}, "Asia/Jakarta", time.RFC3339)
+	if eventTimes[0].After(eventTimes[1]) {
+		return nil, errorgen.Error(errorgen.ErrInvalidDate, "start time cannot be later than end time")
 	}
 
-	eventStart, _ := time.Parse(time.RFC3339, request.EventStartAt)
-	//common.ParseStringToDatetime(time.RFC3339, request.RegisterAt, common.GetLocation())
-	eventEnd, _ := time.Parse(time.RFC3339, request.EventEndAt)
-
-	code := fmt.Sprintf("event-%d-%d-%d", timeNowNano.UnixNano(), eventStart.UnixNano(), eventEnd.UnixNano())
-	eventCode := generator.GenerateHashCode(code, 7)
+	timeNowNano, _ := common.NowWithNanoTime()
+	eventCode := generator.GenerateHashCode(fmt.Sprintf("event-%d-%d-%d", timeNowNano.UnixNano(), eventTimes[0].UnixNano(), eventTimes[1].UnixNano()), 7)
 	eventExist, err := eu.r.Event.CheckByCode(ctx, eventCode)
 	if err != nil {
 		return nil, err
 	}
 
 	if eventExist {
-		return nil, models.ErrorAlreadyExist
+		return nil, errorgen.Error(errorgen.AlreadyExist, "event code already exist")
 	}
 
-	var allowedRoles []string
-	var allowedUsers []string
-	var allowedCampuses []string
-	switch {
-	case request.AllowedFor == "public":
-		allowedRoles = nil
-		allowedUsers = nil
-		allowedCampuses = nil
-	case request.AllowedFor == "private" && request.AllowedCampuses != nil && request.AllowedRoles != nil && request.AllowedUsers != nil:
-		countRole, err := eu.r.Role.CheckMultiple(ctx, request.AllowedRoles)
-		if err != nil {
+	var allowedUsers, allowedRoles, allowedCampuses, allowedUserTypes []string
+	switch request.AccessConfig.Visibility {
+	case "public":
+		break
+	case "private":
+		if request.AccessConfig.Campuses == nil && request.AccessConfig.CommunityIds == nil && request.AccessConfig.Roles == nil && request.AccessConfig.UserTypes == nil {
+			return nil, errorgen.Error(errorgen.ErrMissingFields, "one of the fields is required for private events")
+		}
+
+		if err := eu.validatePrivateEventConstraint(ctx, request.AccessConfig.Roles, eu.r.Role.CheckMultiple, "roles"); err != nil {
 			return nil, err
 		}
+		allowedRoles = request.AccessConfig.Roles
 
-		if int(countRole) != len(request.AllowedRoles) {
-			return nil, models.ErrorDataNotFound
-		}
-
-		countUserType, err := eu.r.UserType.CheckMultiple(ctx, request.AllowedUsers)
-		if err != nil {
+		if err := eu.validatePrivateEventConstraint(ctx, request.AccessConfig.CommunityIds, eu.r.User.CheckMultiple, "users"); err != nil {
 			return nil, err
 		}
+		allowedUsers = request.AccessConfig.CommunityIds
 
-		if int(countUserType) != len(request.AllowedUsers) {
-			return nil, models.ErrorDataNotFound
+		if err := eu.validatePrivateEventConstraint(ctx, request.AccessConfig.UserTypes, eu.r.UserType.CheckMultiple, "user types"); err != nil {
+			return nil, err
 		}
+		allowedUserTypes = request.AccessConfig.UserTypes
 
-		for i, str := range request.AllowedCampuses {
-			request.AllowedCampuses[i] = strings.ToLower(str)
+		if request.AccessConfig.Campuses != nil {
+			lowerCampuses := make([]string, len(request.AccessConfig.Campuses))
+			for i, c := range request.AccessConfig.Campuses {
+				lowerCampuses[i] = strings.ToLower(c)
+			}
+
+			if !common.CheckAllDataMapStructure(eu.cfg.Campus, lowerCampuses) {
+				return nil, errorgen.Error(errorgen.DataNotFound, "one of the campuses don't exist")
+			}
+			allowedCampuses = request.AccessConfig.Campuses
 		}
-
-		campusExist := common.CheckAllDataMapStructure(eu.cfg.Campus, request.AllowedCampuses)
-		if !campusExist {
-			return nil, models.ErrorDataNotFound
-		}
-
-		for i, str := range request.AllowedCampuses {
-			request.AllowedCampuses[i] = strings.ToUpper(str)
-		}
-
-		allowedRoles = request.AllowedRoles
-		allowedUsers = request.AllowedUsers
-		allowedCampuses = request.AllowedCampuses
 	default:
-		return nil, models.ErrorViolateAllowedForPrivate
+		return nil, errorgen.Error(errorgen.ErrMissingFields, "one of the fields is required for private events")
 	}
 
-	if eventStart.After(eventEnd) {
-		return nil, models.ErrorStartDateLater
+	var eventStatus string
+	if request.IsPublish {
+		eventStatus = string(constants.EVENT_STATUS_ACTIVE)
+	} else {
+		eventStatus = string(constants.EVENT_STATUS_DRAFT)
 	}
 
 	event := models.Event{
-		Code:               eventCode,
-		Title:              request.Title,
-		Topics:             request.Topics,
-		Description:        request.Description,
-		TermsAndConditions: request.TermsAndConditions,
-		AllowedFor:         request.AllowedFor,
-		AllowedUsers:       allowedUsers,
-		AllowedRoles:       allowedRoles,
-		AllowedCampuses:    allowedCampuses,
-		IsRecurring:        request.IsRecurring,
-		Recurrence:         request.Recurrence,
-		EventStartAt:       eventStart.In(common.GetLocation()),
-		EventEndAt:         eventEnd,
-		LocationType:       request.LocationType,
-		LocationName:       request.LocationName,
-		Status:             constants.MapStatus[constants.STATUS_ACTIVE],
+		Code:                 eventCode,
+		Title:                request.Title,
+		Topics:               request.Topics,
+		Description:          request.Description,
+		TermsAndConditions:   request.TermsAndConditions,
+		ImageLinks:           request.ImageLinks,
+		RedirectLink:         request.RedirectLink,
+		CreatedBy:            createdBy,
+		Visibility:           request.AccessConfig.Visibility,
+		AllowedCommunityIds:  allowedUsers,
+		AllowedRoles:         allowedRoles,
+		AllowedCampuses:      allowedCampuses,
+		AllowedUserTypes:     allowedUserTypes,
+		Recurrence:           request.TimeConfig.Recurrence,
+		StartAt:              eventTimes[0].In(common.GetLocation()),
+		EndAt:                eventTimes[1].In(common.GetLocation()),
+		LocationType:         request.Location.Type,
+		LocationOfflineVenue: request.Location.OfflineVenue,
+		LocationOnlineLink:   request.Location.OnlineLink,
+		Status:               eventStatus,
 	}
 
-	instances := make([]models.EventInstance, 0)
-	countInstance, err := eu.r.EventInstance.CountByCode(ctx, eventCode)
-	if err != nil {
-		return nil, err
-	}
-
-	if countInstance == 0 {
-		countInstance = 1
-	}
-
-	for i, instanceRequest := range request.Instances {
-		instanceStart, _ := time.Parse(time.RFC3339, instanceRequest.InstanceStartAt)
-		instanceEnd, _ := time.Parse(time.RFC3339, instanceRequest.InstanceEndAt)
-		instanceRegisterStart, _ := time.Parse(time.RFC3339, instanceRequest.RegisterStartAt)
-		instanceRegisterEnd, _ := time.Parse(time.RFC3339, instanceRequest.RegisterEndAt)
-		instanceAllowVerifyAt, _ := time.Parse(time.RFC3339, instanceRequest.AllowVerifyAt)
-		instanceDisallowVerifyAt, _ := time.Parse(time.RFC3339, instanceRequest.DisallowVerifyAt)
-
-		numberForCode := int(countInstance) + i
-		code := fmt.Sprintf("instance-%s-%d-%d", eventCode, numberForCode, timeNowNano.UnixNano())
-		instanceCode := fmt.Sprintf("%s-%s", eventCode, generator.GenerateHashCode(code, 7))
-
-		if instanceStart.After(instanceEnd) || instanceRegisterStart.After(instanceRegisterEnd) || instanceAllowVerifyAt.After(instanceDisallowVerifyAt) {
-			return nil, models.ErrorStartDateLater
+	var instanceRes []models.CreateInstanceResponse
+	var questionRes []models.FormQuestionResponse
+	err = eu.r.Transaction.Atomic(ctx, func(ctx context.Context, r *pgsql.PostgreRepositories) error {
+		if err := eu.r.Event.Create(ctx, &event); err != nil {
+			return nil
 		}
 
-		if instanceRequest.RegisterFlow != models.MapRegisterFlow[models.REGISTER_FLOW_NONE] {
-			if instanceRequest.MaxPerTransaction == 0 {
-				if request.IsRecurring && instanceRequest.IsOnePerTicket {
-					instanceRequest.MaxPerTransaction = 1
-				}
-				return nil, models.ErrorMaxPerTrxIsZero
+		instanceRes, err = eu.ei.Create(ctx, &event, request.Instances)
+		if err != nil {
+			return nil
+		}
+
+		if request.Questions != nil {
+			form := models.CreateFormRequest{
+				Name:        event.Title,
+				Description: event.Description,
+				Questions:   request.Questions,
 			}
 
-			if instanceRequest.CheckType == "" {
-				return nil, models.ErrorAttendanceTypeWhenRequired
+			formRes, err := eu.f.Create(ctx, &form)
+			if err != nil {
+				return nil
 			}
-		} else {
-			instanceRequest.IsOnePerAccount = false
-			instanceRequest.IsOnePerTicket = false
-			instanceRequest.RegisterFlow = models.MapRegisterFlow[models.REGISTER_FLOW_NONE]
-			instanceRequest.MaxPerTransaction = 0
-			instanceRequest.CheckType = "none"
-			instanceRequest.TotalSeats = 0
+
+			questionRes = formRes.Questions
 		}
+		return nil
+	})
 
-		instance := models.EventInstance{
-			Code:              instanceCode,
-			EventCode:         eventCode,
-			Title:             instanceRequest.Title,
-			Description:       instanceRequest.Description,
-			InstanceStartAt:   instanceStart,
-			InstanceEndAt:     instanceEnd,
-			RegisterStartAt:   instanceRegisterStart,
-			RegisterEndAt:     instanceRegisterEnd,
-			AllowVerifyAt:     instanceAllowVerifyAt,
-			DisallowVerifyAt:  instanceDisallowVerifyAt,
-			LocationType:      instanceRequest.LocationType,
-			LocationName:      instanceRequest.LocationName,
-			MaxPerTransaction: instanceRequest.MaxPerTransaction,
-			IsOnePerAccount:   instanceRequest.IsOnePerAccount,
-			IsOnePerTicket:    instanceRequest.IsOnePerTicket,
-			RegisterFlow:      instanceRequest.RegisterFlow,
-			CheckType:         instanceRequest.CheckType,
-			TotalSeats:        instanceRequest.TotalSeats,
-			Status:            constants.MapStatus[constants.STATUS_ACTIVE],
-		}
-
-		instances = append(instances, instance)
-	}
-
-	if err := eu.r.Event.Create(ctx, &event); err != nil {
-		return nil, err
-	}
-
-	if err = eu.r.EventInstance.BulkCreate(ctx, &instances); err != nil {
-		return nil, err
-	}
-
-	instanceResponse := make([]models.CreateInstanceResponse, len(instances))
-	for i, p := range instances {
-		instanceResponse[i] = models.CreateInstanceResponse{
-			Type:              models.TYPE_EVENT_INSTANCE,
-			InstanceCode:      p.Code,
-			EventCode:         p.EventCode,
-			Title:             p.Title,
-			Description:       p.Description,
-			InstanceStartAt:   p.InstanceStartAt,
-			InstanceEndAt:     p.InstanceEndAt,
-			RegisterStartAt:   p.RegisterStartAt,
-			RegisterEndAt:     p.RegisterEndAt,
-			AllowVerifyAt:     p.AllowVerifyAt,
-			DisallowVerifyAt:  p.DisallowVerifyAt,
-			LocationType:      p.LocationType,
-			LocationName:      p.LocationName,
-			MaxPerTransaction: p.MaxPerTransaction,
-			IsOnePerTicket:    p.IsOnePerTicket,
-			IsOnePerAccount:   p.IsOnePerAccount,
-			RegisterFlow:      p.RegisterFlow,
-			CheckType:         p.CheckType,
-			TotalSeats:        p.TotalSeats,
-			Status:            p.Status,
-		}
-	}
-
-	mainResponse := models.CreateEventResponse{
+	return &models.CreateEventResponse{
 		Type:               models.TYPE_EVENT,
 		Code:               event.Code,
 		Title:              event.Title,
 		Topics:             event.Topics,
 		Description:        event.Description,
 		TermsAndConditions: event.TermsAndConditions,
-		AllowedFor:         event.AllowedFor,
-		AllowedUsers:       event.AllowedUsers,
-		AllowedRoles:       event.AllowedRoles,
-		AllowedCampuses:    event.AllowedCampuses,
-		IsRecurring:        event.IsRecurring,
-		Recurrence:         event.Recurrence,
-		EventStartAt:       event.EventStartAt,
-		EventEndAt:         event.EventEndAt,
-		RegisterStartAt:    event.RegisterStartAt,
-		RegisterEndAt:      event.RegisterEndAt,
-		LocationType:       event.LocationType,
-		LocationName:       event.LocationName,
-		Status:             event.Status,
-		Instances:          instanceResponse,
+		ImageLinks:         event.ImageLinks,
+		RedirectLink:       event.RedirectLink,
+		AccessConfig: models.EventAccessConfigResponse{
+			Visibility:   event.Visibility,
+			CommunityIds: event.AllowedCommunityIds,
+			Roles:        event.AllowedRoles,
+			UserTypes:    event.AllowedUserTypes,
+			Campuses:     event.AllowedCampuses},
+		TimeConfig: models.EventTimeConfigResponse{
+			StartAt:    event.StartAt.Format(time.RFC3339),
+			EndAt:      event.EndAt.Format(time.RFC3339),
+			Recurrence: event.Recurrence,
+		},
+		Location: models.EventLocationResponse{
+			Type:         event.LocationType,
+			OfflineVenue: event.LocationOfflineVenue,
+			OnlineLink:   event.LocationOnlineLink,
+		},
+		Status:    event.Status,
+		Instances: instanceRes,
+		Questions: questionRes,
+	}, nil
+}
+
+// validatePrivateEventConstraint checks if the provided IDs exist in the database.
+func (eu *eventUsecase) validatePrivateEventConstraint(ctx context.Context, ids []string, checkFunc func(context.Context, []string) (int64, error), entityName string) error {
+	if ids == nil {
+		return nil
 	}
 
-	return &mainResponse, nil
+	count, err := checkFunc(ctx, ids)
+	if err != nil {
+		return errorgen.Error(err)
+	}
+
+	if int(count) != len(ids) {
+		return errorgen.Error(errorgen.DataNotFound, fmt.Sprintf("one of the %s don't exist", entityName))
+	}
+
+	return nil
 }
 
 func (eu *eventUsecase) GetAll(ctx context.Context, roles []string, userTypes []string) (responses *[]models.GetAllEventsResponse, err error) {

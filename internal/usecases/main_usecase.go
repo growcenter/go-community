@@ -27,6 +27,8 @@ type Usecases struct {
 	Role                    roleUsecase
 	UserType                userTypeUsecase
 	Event                   eventUsecase
+	EventRegistration       eventRegistrationUsecase
+	EventAttendance         eventAttendanceUsecase
 	EventRegistrationRecord eventRegistrationRecordUsecase
 	EventInstance           eventInstanceUsecase
 	FeatureFlag             featureFlagUsecase
@@ -35,26 +37,45 @@ type Usecases struct {
 	CoolNewJoiner           coolNewJoinerUsecase
 	CoolMeeting             coolMeetingUsecase
 	CoolAttendance          coolAttendanceUsecase
+	Form                    formUsecase
+	FormQuestion            formQuestionUsecase
+	FormAnswer              formAnswerUsecase
+	FormAssociation         formAssociationUsecase
 }
 
 func New(d Dependencies) *Usecases {
+	formQuestionUsecase := *NewFormQuestionUsecase(*d.Repository)
+	formUsecase := *NewFormUsecase(*d.Repository, &formQuestionUsecase)
+	formAnswerUsecase := *NewFormAnswerUsecase(*d.Repository, *d.Config)
+	formAssociationUsecase := NewFormAssociationUsecase(*d.Repository)
+	featureFlagUsecase := *NewFeatureFlagUsecase(*d.Repository)
+	eventInstanceUsecase := *NewEventInstanceUsecase(*d.Config, *d.Authorization, *d.Repository)
+	coolAttendanceUsecase := *NewCoolAttendanceUsecase(*d.Repository)
+	configDBUsecase := *NewConfigDBUsecase(*d.Repository, *d.Config)
+
 	return &Usecases{
 		Health:                  *NewHealthUsecase(d.Repository.Health),
 		Campus:                  *NewCampusUsecase(d.Repository.Campus),
 		CoolCategory:            *NewCoolCategoryUsecase(d.Repository.CoolCategory),
 		Location:                *NewLocationUsecase(d.Repository.Location, d.Repository.Campus),
-		User:                    *NewUserUsecase(d.Repository.User, d.Repository.UserRelation, d.Repository.Campus, d.Repository.CoolCategory, d.Repository.Cool, d.Repository.UserType, d.Repository.Role, *d.Repository, *d.Config, *d.Authorization, d.Salt),
+		User:                    *NewUserUsecase(*d.Repository, *d.Config, *d.Authorization, d.Salt),
 		EventCommunityRequest:   *NewEventCommunityRequestUsecase(d.Repository.EventCommunityRequest, d.Repository.User),
 		Role:                    *NewRoleUsecase(d.Repository.Role),
 		UserType:                *NewUserTypeUsecase(*d.Repository),
-		Event:                   *NewEventUsecase(*d.Config, *d.Authorization, *d.Repository, &featureFlagUsecase{r: *d.Repository}),
+		Event:                   *NewEventUsecase(*d.Config, *d.Authorization, *d.Repository, &featureFlagUsecase, &eventInstanceUsecase, &formUsecase),
+		EventRegistration:       *NewEventRegistrationUsecase(*d.Config, *d.Repository, &formAnswerUsecase, &formAssociationUsecase),
+		EventAttendance:         *NewEventAttendanceUsecase(*d.Config, *d.Repository),
 		EventRegistrationRecord: *NewEventRegistrationRecordUsecase(*d.Repository, *d.Config),
-		EventInstance:           *NewEventInstanceUsecase(*d.Config, *d.Authorization, *d.Repository),
-		FeatureFlag:             *NewFeatureFlagUsecase(*d.Repository),
-		Config:                  *NewConfigDBUsecase(*d.Repository, *d.Config),
-		Cool:                    *NewCoolUsecase(*d.Repository, *d.Config, &featureFlagUsecase{r: *d.Repository}, *d.Indonesia),
-		CoolNewJoiner:           *NewCoolNewJoinerUsecase(*d.Repository, d.Config, configDBUsecase{r: *d.Repository}),
-		CoolMeeting:             *NewCoolMeetingUsecase(*d.Repository, *d.Config, &coolAttendanceUsecase{r: *d.Repository}),
-		CoolAttendance:          *NewCoolAttendanceUsecase(*d.Repository),
+		EventInstance:           eventInstanceUsecase,
+		FeatureFlag:             featureFlagUsecase,
+		Config:                  configDBUsecase,
+		Cool:                    *NewCoolUsecase(*d.Repository, *d.Config, &featureFlagUsecase, *d.Indonesia),
+		CoolNewJoiner:           *NewCoolNewJoinerUsecase(*d.Repository, d.Config, configDBUsecase),
+		CoolMeeting:             *NewCoolMeetingUsecase(*d.Repository, *d.Config, &coolAttendanceUsecase),
+		CoolAttendance:          coolAttendanceUsecase,
+		Form:                    formUsecase,
+		FormQuestion:            formQuestionUsecase,
+		FormAnswer:              formAnswerUsecase,
+		FormAssociation:         formAssociationUsecase,
 	}
 }

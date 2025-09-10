@@ -3,15 +3,17 @@ package pgsql
 import "gorm.io/gorm"
 
 type PostgreRepositories struct {
-	Transaction           TransactionRepository
-	Health                HealthRepository
-	Campus                CampusRepository
-	CoolCategory          CoolCategoryRepository
-	Cool                  CoolRepository
-	Location              LocationRepository
-	User                  UserRepository
-	UserRelation          UserRelationRepository
-	EventCommunityRequest EventCommunityRequestRepository
+	Transaction               TransactionRepository
+	Health                    HealthRepository
+	Campus                    CampusRepository
+	CoolCategory              CoolCategoryRepository
+	Cool                      CoolRepository
+	Location                  LocationRepository
+	User                      UserRepository
+	UserRelation              UserRelationRepository
+	EventCommunityRequest     EventCommunityRequestRepository
+	EventRegistration         EventRegistrationRepository
+	EventAttendance           EventAttendanceRepository
 
 	FeatureFlag FeatureFlagRepository
 	Config      ConfigRepository
@@ -26,6 +28,10 @@ type PostgreRepositories struct {
 
 	CoolMeeting    CoolMeetingRepository
 	CoolAttendance CoolAttendanceRepository
+	Form           FormRepository
+	FormQuestion   FormQuestionRepository
+	FormAnswer     FormAnswerRepository
+	FormAssociation FormAssociationRepository
 }
 
 func New(db *gorm.DB) *PostgreRepositories {
@@ -39,6 +45,8 @@ func New(db *gorm.DB) *PostgreRepositories {
 		User:                    NewUserRepository(db, NewTransactionRepository(db)),
 		UserRelation:            NewUserRelationRepository(db, NewTransactionRepository(db)),
 		EventCommunityRequest:   NewEventCommunityRequestRepository(db, NewTransactionRepository(db)),
+		EventRegistration:       NewEventRegistrationRepository(db),
+		EventAttendance:         NewEventAttendanceRepository(db),
 		Role:                    NewRoleRepository(db, NewTransactionRepository(db)),
 		UserType:                NewUserTypeRepository(db, NewTransactionRepository(db)),
 		Event:                   NewEventRepository(db, NewTransactionRepository(db)),
@@ -50,5 +58,9 @@ func New(db *gorm.DB) *PostgreRepositories {
 		Config:                  NewConfigRepository(db),
 		CoolMeeting:             NewCoolMeetingRepository(db),
 		CoolAttendance:          NewCoolAttendanceRepository(db),
+		Form:                    NewFormRepository(db),
+		FormQuestion:            NewFormQuestionRepository(db),
+		FormAnswer:              NewFormAnswerRepository(db),
+		FormAssociation:         NewFormAssociationRepository(db),
 	}
 }

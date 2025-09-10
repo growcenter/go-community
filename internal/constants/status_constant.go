@@ -62,3 +62,26 @@ var (
 		COOL_RSVP_STATUS_UNKNOWN:       CoolRsvpStatusUnknown,
 	}
 )
+
+type RegistrationStatus string
+
+const (
+	REGISTRATION_STATUS_BOOKED    RegistrationStatus = "BOOKED"
+	REGISTRATION_STATUS_CANCELLED RegistrationStatus = "CANCELLED"
+	REGISTRATION_STATUS_ATTENDED  RegistrationStatus = "ATTENDED"
+)
+
+const (
+	ATTENDEE_ROLE_LEADER   AttendeeRole = "LEADER"
+	ATTENDEE_ROLE_MEMBER   AttendeeRole = "MEMBER"
+	ATTENDEE_ROLE_GUEST    AttendeeRole = "GUEST"
+	ATTENDEE_ROLE_EXTERNAL AttendeeRole = "EXTERNAL"
+)
+
+type EventStatus string
+
+const (
+	EVENT_STATUS_ACTIVE   EventStatus = "active"
+	EVENT_STATUS_DRAFT    EventStatus = "draft"
+	EVENT_STATUS_INACTIVE EventStatus = "inactive"
+)

@@ -215,6 +215,64 @@ var (
 		GROUP BY
 			e.code, e.title, e.allowed_for, COALESCE(e.allowed_roles, ARRAY[]::TEXT[]), COALESCE(e.allowed_users, ARRAY[]::TEXT[]), COALESCE(e.allowed_campuses, ARRAY[]::TEXT[]), e.status
 `
+	queryGetEventAndInstanceByCodes = `
+		SELECT
+			e.id AS event_id,
+			e.code AS event_code,
+			e.title AS event_title,
+			e.topics AS event_topics,
+			e.description AS event_description,
+			e.terms_and_conditions AS event_terms_and_conditions,
+			e.image_links AS event_image_links,
+			e.redirect_link AS event_redirect_link,
+			e.created_by AS event_created_by,
+			e.location_type AS event_location_type,
+			e.location_offline_venue AS event_location_offline_venue,
+			e.location_online_link AS event_location_online_link,
+			e.visibility AS event_visibility,
+			e.allowed_community_ids AS event_allowed_community_ids,
+			e.allowed_user_types AS event_allowed_user_types,
+			e.allowed_roles AS event_allowed_roles,
+			e.allowed_campuses AS event_allowed_campuses,
+			e.organizer_community_ids AS event_organizer_community_ids,
+			e.recurrence AS event_recurrence,
+			e.start_at AS event_start_at,
+			e.end_at AS event_end_at,
+			e.post_details AS event_post_details,
+			e.status AS event_status,
+			ei.id AS instance_id,
+			ei.code AS instance_code,
+			ei.title AS instance_title,
+			ei.description AS instance_description,
+			ei.validate_parent_identifier AS instance_validate_parent_identifier,
+			ei.parent_identifier_input AS instance_parent_identifier_input,
+			ei.validate_child_identifier AS instance_validate_child_identifier,
+			ei.child_identifier_input AS instance_child_identifier_input,
+			ei.enforce_community_id AS instance_enforce_community_id,
+			ei.enforce_uniqueness AS instance_enforce_uniqueness,
+			ei.methods AS instance_methods,
+			ei.flow AS instance_flow,
+			ei.start_at AS instance_start_at,
+			ei.end_at AS instance_end_at,
+			ei.register_start_at AS instance_register_start_at,
+			ei.register_end_at AS instance_register_end_at,
+			ei.verify_start_at AS instance_verify_start_at,
+			ei.verify_end_at AS instance_verify_end_at,
+			ei.timezone AS instance_timezone,
+			ei.location_type AS instance_location_type,
+			ei.location_offline_venue AS instance_location_offline_venue,
+			ei.location_online_link AS instance_location_online_link,
+			ei.quota_per_user AS instance_quota_per_user,
+			ei.capacity AS instance_capacity,
+			ei.post_details AS instance_post_details,
+			ei.status AS instance_status
+		FROM
+			events e
+		JOIN
+			event_instances ei ON e.code = ei.event_code
+		WHERE
+			e.code = ? AND ei.code = ?
+	`
 )
 
 func BuildQueryGetAllEvents(isNotGeneral bool) string {

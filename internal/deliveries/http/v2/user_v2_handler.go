@@ -82,37 +82,6 @@ func (uh *UserHandler) Create(ctx echo.Context) error {
 	return response.Success(ctx, http.StatusCreated, user.ToCreateUser())
 }
 
-// CreateVolunteer godoc
-// @Summary Create Volunteer User
-// @Description Create user for volunteer
-// @Tags users
-// @Accept json
-// @Produce json
-// @Param user body models.CreateVolunteerRequest true "User object that needs to be added"
-// @Param X-API-Key header string true "mandatory header to access endpoint"
-// @Success 201 {object} models.CreateVolunteerResponse "Response indicates that the request succeeded and the resources has been fetched and transmitted in the message body"
-// @Failure 400 {object} models.ErrorResponse "Bad Request"
-// @Failure 422 {object} models.ErrorResponse{errors=models.ErrorValidateResponse} "Validation error. This can happen if there is an error validation while create account"
-// @Router /v2/users/volunteer [post]
-func (uh *UserHandler) CreateVolunteer(ctx echo.Context) error {
-	var request models.CreateVolunteerRequest
-	if err := ctx.Bind(&request); err != nil {
-		return response.Error(ctx, err)
-	}
-
-	if err := validator.Validate(request); err != nil {
-		return response.ErrorValidation(ctx, err)
-	}
-
-	user, err := uh.usecase.User.CreateVolunteer(ctx.Request().Context(), &request)
-	if err != nil {
-		return response.Error(ctx, err)
-	}
-
-	res := models.CreateVolunteerResponse{Type: models.TYPE_USER, CommunityId: user.CommunityID, Name: user.Name, PhoneNumber: user.PhoneNumber, Email: user.Email, CampusCode: user.CampusCode, PlaceOfBirth: user.PlaceOfBirth, DateOfBirth: user.DateOfBirth, Address: user.Address, Gender: user.Gender, DepartmentCode: user.Department, CoolID: user.CoolID, KKJNumber: user.KKJNumber, JemaatId: user.JemaatID, IsKOM100: user.IsKom100, IsBaptis: user.IsBaptized, MaritalStatus: user.MaritalStatus, Status: user.Status, CreatedAt: user.CreatedAt, UpdatedAt: user.UpdatedAt}
-	return response.Success(ctx, http.StatusCreated, res.ToCreateVolunteer())
-}
-
 // Login godoc
 // @Summary Login User
 // @Description Login for all type of users

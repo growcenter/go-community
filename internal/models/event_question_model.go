@@ -3,9 +3,10 @@ package models
 import (
 	"database/sql"
 	"fmt"
-	"github.com/google/uuid"
 	"go-community/internal/constants"
 	"time"
+
+	"github.com/google/uuid"
 )
 
 var TYPE_EVENT_QUESTION = "eventQuestion"
@@ -150,3 +151,41 @@ func CreateQuestionSetup(qType constants.QuestionType, desc string, options []st
 
 	return &questionType, description, nil
 }
+
+type (
+	GetAllByInstanceCodeRequest struct {
+		InstanceCode string `json:"instanceCode" validate:"required,min=15,max=15" example:"xxxxxxx-yyyyyyy"`
+	}
+	GetAllQuestionByInstanceCodeResponse struct {
+		Type                string                 `json:"type" example:"question"`
+		EventCode           string                 `json:"eventCode" example:"xxxxxxx"`
+		EventTitle          string                 `json:"eventTitle" example:"Event Title"`
+		Description         string                 `json:"eventDescription" example:"Event Description"`
+		InstanceCode        string                 `json:"instanceCode" example:"xxxxxxx-yyyyyyy"`
+		InstanceTitle       string                 `json:"instanceTitle" example:"Instance Title"`
+		InstanceDescription string                 `json:"instanceDescription" example:"Instance Description"`
+		ParentQuestion      []InstanceQuestionForm `json:"parentQuestion"`
+		ChildQuestion       []InstanceQuestionForm `json:"childQuestion"`
+	}
+	// ParentQuestionForm struct {
+	// 	Name        string                 `json:"name"`
+	// 	CommunityId string                 `json:"communityId"`
+	// 	Identifier  string                 `json:"identifier"`
+	// 	Questions   []InstanceQuestionForm `json:"questions"`
+	// }
+	// ChildQuestionForm struct {
+	// 	Name      string                 `json:"name"`
+	// 	Questions []InstanceQuestionForm `json:"questions"`
+	// }
+	InstanceQuestionForm struct {
+		Type         string                   `json:"type"`
+		Code         string                   `json:"code"`
+		QuestionType string                   `json:"questionType"`
+		QuestionText string                   `json:"text"`
+		Rules        *QuestionValidationRules `json:"rules,omitempty"`
+		Options      *QuestionOptions         `json:"options,omitempty"`
+		IsMandatory  bool                     `json:"isMandatory"`
+		Instruction  []string                 `json:"instructions,omitempty"`
+		DisplayOrder int                      `json:"displayOrder" validate:"omitempty,numeric"`
+	}
+)

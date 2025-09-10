@@ -8,13 +8,14 @@ import (
 	"go-community/internal/constants"
 	"go-community/internal/models"
 	"go-community/internal/pkg/authorization"
+	"go-community/internal/pkg/errorgen"
 	"go-community/internal/pkg/generator"
 	"go-community/internal/repositories/pgsql"
 	"time"
 )
 
 type EventInstanceUsecase interface {
-	Create(ctx context.Context, request models.CreateInstanceExistingEventRequest) (response *models.CreateInstanceResponse, err error)
+	Create(ctx context.Context, event *models.Event, requests []models.CreateInstanceRequest) (response []models.CreateInstanceResponse, err error)
 }
 
 type eventInstanceUsecase struct {
@@ -31,123 +32,147 @@ func NewEventInstanceUsecase(cfg config.Configuration, a authorization.Auth, r p
 	}
 }
 
-func (eiu *eventInstanceUsecase) Create(ctx context.Context, request models.CreateInstanceExistingEventRequest) (response *models.CreateInstanceResponse, err error) {
+func (eiu *eventInstanceUsecase) Create(ctx context.Context, event *models.Event, requests []models.CreateInstanceRequest) (response []models.CreateInstanceResponse, err error) {
 	defer func() {
 		LogService(ctx, err)
 	}()
 
-	eventExist, err := eiu.r.Event.GetByCode(ctx, request.EventCode)
-	if err != nil {
-		return nil, err
-	}
-
-	if eventExist.ID == 0 {
-		return nil, models.ErrorDataNotFound
-	}
-
-	timeNowNano, err := common.NowWithNanoTime()
-	if err != nil {
-		return nil, err
-	}
-
-	countInstance, err := eiu.r.EventInstance.CountByCode(ctx, request.EventCode)
-	if err != nil {
-		return nil, err
-	}
-
-	instanceStart, _ := time.Parse(time.RFC3339, request.InstanceStartAt)
-	instanceEnd, _ := time.Parse(time.RFC3339, request.InstanceEndAt)
-	instanceRegisterStart, _ := time.Parse(time.RFC3339, request.RegisterStartAt)
-	instanceRegisterEnd, _ := time.Parse(time.RFC3339, request.RegisterEndAt)
-	instanceAllowVerifyAt, _ := time.Parse(time.RFC3339, request.AllowVerifyAt)
-	instanceDisallowVerifyAt, _ := time.Parse(time.RFC3339, request.DisallowVerifyAt)
-	numberForCode := int(countInstance) + 1
-	code := fmt.Sprintf("instance-%s-%d-%d", request.EventCode, numberForCode, timeNowNano.UnixNano())
-	instanceCode := fmt.Sprintf("%s-%s", request.EventCode, generator.GenerateHashCode(code, 7))
-
-	if instanceStart.After(instanceEnd) || instanceRegisterStart.After(instanceRegisterEnd) || instanceAllowVerifyAt.After(instanceDisallowVerifyAt) {
-		return nil, models.ErrorStartDateLater
-	}
-
-	if request.RegisterFlow != models.MapRegisterFlow[models.REGISTER_FLOW_NONE] {
-		if request.MaxPerTransaction == 0 {
-			if eventExist.IsRecurring && request.IsOnePerTicket {
-				request.MaxPerTransaction = 1
+	var instances []models.EventInstance
+	for i, request := range requests {
+		if event == nil {
+			eventExist, err := eiu.r.Event.GetByCode(ctx, request.EventCode)
+			if err != nil {
+				return nil, err
 			}
-			return nil, models.ErrorMaxPerTrxIsZero
+
+			if eventExist.ID == 0 {
+				return nil, models.ErrorDataNotFound
+			}
+
+			event = &eventExist
 		}
 
-		if request.CheckType == "" {
-			return nil, models.ErrorAttendanceTypeWhenRequired
+		var instanceStatus string
+		if request.IsPublish {
+			instanceStatus = string(constants.EVENT_STATUS_ACTIVE)
+		} else {
+			instanceStatus = string(constants.EVENT_STATUS_DRAFT)
 		}
-	} else {
-		request.IsOnePerAccount = false
-		request.IsOnePerTicket = false
-		request.RegisterFlow = models.MapRegisterFlow[models.REGISTER_FLOW_NONE]
-		request.MaxPerTransaction = 0
-		request.CheckType = "none"
-		request.TotalSeats = 0
-	}
 
-	instance := models.EventInstance{
-		Code:              instanceCode,
-		EventCode:         request.EventCode,
-		Title:             request.Title,
-		Description:       request.Description,
-		InstanceStartAt:   instanceStart,
-		InstanceEndAt:     instanceEnd,
-		RegisterStartAt:   instanceRegisterStart,
-		RegisterEndAt:     instanceRegisterEnd,
-		AllowVerifyAt:     instanceAllowVerifyAt,
-		DisallowVerifyAt:  instanceDisallowVerifyAt,
-		LocationType:      request.LocationType,
-		LocationName:      request.LocationName,
-		MaxPerTransaction: request.MaxPerTransaction,
-		IsOnePerAccount:   request.IsOnePerAccount,
-		IsOnePerTicket:    request.IsOnePerTicket,
-		RegisterFlow:      request.RegisterFlow,
-		CheckType:         request.CheckType,
-		TotalSeats:        request.TotalSeats,
-		Status:            constants.MapStatus[constants.STATUS_ACTIVE],
-	}
-
-	if err := eiu.r.EventInstance.Create(ctx, &instance); err != nil {
-		return nil, err
-	}
-
-	if request.IsUpdateEventTime {
-		eventExist.EventStartAt = instanceStart
-		eventExist.EventEndAt = instanceEnd
-		eventExist.RegisterStartAt = instanceRegisterStart
-		eventExist.RegisterEndAt = instanceRegisterEnd
-
-		if err := eiu.r.Event.Update(ctx, &eventExist); err != nil {
+		countInstance, err := eiu.r.EventInstance.CountByCode(ctx, request.EventCode)
+		if err != nil {
 			return nil, err
 		}
+
+		instanceTimes, _ := common.ParseMultipleTime([]string{request.TimeConfig.StartAt, request.TimeConfig.EndAt, request.TimeConfig.RegisterStartAt, request.TimeConfig.RegisterEndAt, request.TimeConfig.VerifyStartAt, request.TimeConfig.VerifyEndAt}, "Asia/Jakarta", time.RFC3339)
+		timeNowNano, _ := common.NowWithNanoTime()
+		numberForCode := int(countInstance) + i
+		instanceCode := fmt.Sprintf("%s-%s", request.EventCode, generator.GenerateHashCode(fmt.Sprintf("instance-%s-%d-%d", request.EventCode, numberForCode, timeNowNano.UnixNano()), 7))
+
+		if instanceTimes[0].After(instanceTimes[1]) || instanceTimes[2].After(instanceTimes[3]) || instanceTimes[4].After(instanceTimes[5]) {
+			return nil, models.ErrorStartDateLater
+		}
+
+		if len(request.RegistrationConfig.Methods) != 0 {
+			if request.RegistrationConfig.Capacity == 0 {
+				if event.Recurrence != "" && request.RegistrationConfig.EnforceUniqueness {
+					request.RegistrationConfig.QuotaPerUser = 1
+				}
+				return nil, errorgen.Error(errorgen.ErrInvalidInput, "capacity cannot be zero")
+			}
+
+			if request.RegistrationConfig.Flow == "" {
+				return nil, models.ErrorAttendanceTypeWhenRequired
+			}
+		} else {
+			request.RegistrationConfig.EnforceCommunityId = false
+			request.RegistrationConfig.EnforceUniqueness = false
+			request.RegistrationConfig.Capacity = 0
+			request.RegistrationConfig.Flow = "free"
+			request.RegistrationConfig.QuotaPerUser = 0
+		}
+
+		instance := models.EventInstance{
+			Code:                     instanceCode,
+			EventCode:                request.EventCode,
+			Title:                    request.Title,
+			Description:              request.Description,
+			ValidateParentIdentifier: request.IdentifierConfig.ValidateParentIdentifier,
+			ParentIdentifierInput:    request.IdentifierConfig.ParentIdentifierInput,
+			ValidateChildIdentifier:  request.IdentifierConfig.ValidateChildIdentifier,
+			ChildIdentifierInput:     request.IdentifierConfig.ChildIdentifierInput,
+			StartAt:                  instanceTimes[0].In(common.GetLocation()),
+			EndAt:                    instanceTimes[1].In(common.GetLocation()),
+			RegisterStartAt:          instanceTimes[2].In(common.GetLocation()),
+			RegisterEndAt:            instanceTimes[3].In(common.GetLocation()),
+			VerifyStartAt:            instanceTimes[4].In(common.GetLocation()),
+			VerifyEndAt:              instanceTimes[5].In(common.GetLocation()),
+			LocationType:             request.Location.Type,
+			LocationOfflineVenue:     request.Location.OfflineVenue,
+			LocationOnlineLink:       request.Location.OnlineLink,
+			Timezone:                 request.TimeConfig.Timezone,
+			Capacity:                 request.RegistrationConfig.Capacity,
+			QuotaPerUser:             request.RegistrationConfig.QuotaPerUser,
+			EnforceCommunityId:       request.RegistrationConfig.EnforceCommunityId,
+			EnforceUniqueness:        request.RegistrationConfig.EnforceUniqueness,
+			Methods:                  request.RegistrationConfig.Methods,
+			Flow:                     request.RegistrationConfig.Flow,
+			Status:                   instanceStatus,
+		}
+		instances = append(instances, instance)
+
+		if request.IsUpdateEventTime {
+			if event.StartAt != instanceTimes[0].In(common.GetLocation()) && event.EndAt != instanceTimes[1].In(common.GetLocation()) {
+				event.StartAt = instanceTimes[0].In(common.GetLocation())
+				event.EndAt = instanceTimes[1].In(common.GetLocation())
+
+				if err := eiu.r.Event.Update(ctx, event); err != nil {
+					return nil, err
+				}
+			}
+		}
+
+		response = append(response, models.CreateInstanceResponse{
+			Type:         models.TYPE_EVENT_INSTANCE,
+			InstanceCode: instanceCode,
+			EventCode:    instance.EventCode,
+			Title:        instance.Title,
+			Description:  instance.Description,
+			IdentifierConfig: models.InstanceIdentifierConfigResponse{
+				ValidateParentIdentifier: instance.ValidateParentIdentifier,
+				ParentIdentifierInput:    instance.ParentIdentifierInput,
+				ValidateChildIdentifier:  instance.ValidateChildIdentifier,
+				ChildIdentifierInput:     instance.ChildIdentifierInput,
+			},
+			TimeConfig: models.InstanceTimeConfigResponse{
+				StartAt:         instance.StartAt.Format(time.RFC3339),
+				EndAt:           instance.EndAt.Format(time.RFC3339),
+				RegisterStartAt: instance.RegisterStartAt.Format(time.RFC3339),
+				RegisterEndAt:   instance.RegisterEndAt.Format(time.RFC3339),
+				VerifyStartAt:   instance.VerifyStartAt.Format(time.RFC3339),
+				VerifyEndAt:     instance.VerifyEndAt.Format(time.RFC3339),
+				Timezone:        instance.Timezone,
+			},
+			Location: models.EventLocationResponse{
+				Type:         instance.LocationType,
+				OfflineVenue: instance.LocationOfflineVenue,
+				OnlineLink:   instance.LocationOnlineLink,
+			},
+			RegistrationConfig: models.InstanceRegistrationConfigResponse{
+				Capacity:           instance.Capacity,
+				QuotaPerUser:       instance.QuotaPerUser,
+				EnforceCommunityId: instance.EnforceCommunityId,
+				EnforceUniqueness:  instance.EnforceUniqueness,
+				Methods:            instance.Methods,
+				Flow:               instance.Flow,
+			},
+			Status: constants.MapStatus[constants.STATUS_ACTIVE],
+		})
 	}
 
-	res := models.CreateInstanceResponse{
-		Type:              models.TYPE_EVENT_INSTANCE,
-		InstanceCode:      instanceCode,
-		EventCode:         request.EventCode,
-		Title:             request.Title,
-		Description:       request.Description,
-		InstanceStartAt:   instanceStart,
-		InstanceEndAt:     instanceEnd,
-		RegisterStartAt:   instanceRegisterStart,
-		RegisterEndAt:     instanceRegisterEnd,
-		AllowVerifyAt:     instanceAllowVerifyAt,
-		DisallowVerifyAt:  instanceDisallowVerifyAt,
-		LocationType:      request.LocationType,
-		LocationName:      request.LocationName,
-		MaxPerTransaction: request.MaxPerTransaction,
-		IsOnePerAccount:   request.IsOnePerAccount,
-		IsOnePerTicket:    request.IsOnePerTicket,
-		RegisterFlow:      request.RegisterFlow,
-		CheckType:         request.CheckType,
-		TotalSeats:        request.TotalSeats,
-		Status:            constants.MapStatus[constants.STATUS_ACTIVE],
+	if err := eiu.r.EventInstance.BulkCreate(ctx, &instances); err != nil {
+		return nil, err
 	}
 
-	return &res, nil
+	return response, nil
 }

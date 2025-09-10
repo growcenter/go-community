@@ -13,7 +13,5 @@ func LogService(ctx context.Context, err error) {
 		logError := zap.Error(err)
 
 		logger.Logger.Warn("[SERVICE-ERROR]", logStatusError, logError)
-	} else {
-		logger.Logger.Info("[SERVICE]", zap.String("status", "success"))
 	}
 }

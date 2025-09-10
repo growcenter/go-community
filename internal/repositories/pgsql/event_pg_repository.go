@@ -10,6 +10,7 @@ import (
 type EventRepository interface {
 	Create(ctx context.Context, event *models.Event) (err error)
 	GetByCode(ctx context.Context, code string) (campus models.Event, err error)
+	GetEventAndInstanceByCodes(ctx context.Context, eventCode string, instanceCode string) (output *models.GetEventAndInstanceByCodesDBOutput, err error)
 	GetAll(ctx context.Context) (campus []models.Event, err error)
 	GetAllByRolesAndUserTypes(ctx context.Context, roles []string, uTypes []string, isTypeNotGeneral bool, status string) (output []models.GetAllEventsDBOutput, err error)
 	CheckByCode(ctx context.Context, code string) (dataExist bool, err error)
@@ -48,6 +49,19 @@ func (er *eventRepository) GetByCode(ctx context.Context, code string) (campus m
 	err = er.db.Where("code = ?", code).Find(&e).Error
 
 	return e, err
+}
+
+func (er *eventRepository) GetEventAndInstanceByCodes(ctx context.Context, eventCode string, instanceCode string) (output *models.GetEventAndInstanceByCodesDBOutput, err error) {
+	defer func() {
+		LogRepository(ctx, err)
+	}()
+
+	err = er.db.Raw(queryGetEventAndInstanceByCodes, eventCode, instanceCode).Scan(&output).Error
+	if err != nil {
+		return nil, err
+	}
+
+	return output, nil
 }
 
 func (er *eventRepository) GetAll(ctx context.Context) (campus []models.Event, err error) {

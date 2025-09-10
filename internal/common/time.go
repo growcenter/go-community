@@ -114,3 +114,20 @@ func ParseDuration(str string) (time.Duration, error) {
 		return 0, errors.New("invalid duration unit, use d/m/y")
 	}
 }
+
+func ParseMultipleTime(stringTimes []string, timezone string, format string) (timeTimes []time.Time, err error) {
+	loc, err := time.LoadLocation(timezone)
+	if err != nil {
+		return nil, err
+	}
+
+	for _, t := range stringTimes {
+		time, err := time.ParseInLocation(format, t, loc)
+		if err != nil {
+			return nil, err
+		}
+		timeTimes = append(timeTimes, time)
+	}
+
+	return timeTimes, nil
+}

@@ -41,33 +41,37 @@ type ErrorMapping struct {
 // ==== Error Mapping Configuration ====
 
 var errorMappings = map[error]ErrorMapping{
-	ErrUserNotFound: {Code: http.StatusNotFound, Status: "DATA_NOT_FOUND"},
-	ErrInvalidInput: {Code: http.StatusBadRequest, Status: "BAD_REQUEST"},
-	ErrUnauthorized: {Code: http.StatusUnauthorized, Status: "UNAUTHORIZED"},
-	ErrForbidden:    {Code: http.StatusForbidden, Status: "FORBIDDEN"},
-	ErrEmailExists:  {Code: http.StatusConflict, Status: "CONFLICT"},
-	ErrTokenExpired: {Code: http.StatusUnauthorized, Status: "TOKEN_EXPIRED"},
-	DataNotFound:    {Code: http.StatusNotFound, Status: "DATA_NOT_FOUND"},
-	InvalidInput:    {Code: http.StatusBadRequest, Status: "INVALID_INPUT"},
-	AlreadyExist:    {Code: http.StatusConflict, Status: "ALREADY_EXISTS"},
-	InvalidData:     {Code: http.StatusBadRequest, Status: "INVALID_DATA"},
-	ForbiddenRole:   {Code: http.StatusForbidden, Status: "FORBIDDEN_ROLE"},
+	ErrUserNotFound:  {Code: http.StatusNotFound, Status: "DATA_NOT_FOUND"},
+	ErrInvalidInput:  {Code: http.StatusBadRequest, Status: "BAD_REQUEST"},
+	ErrUnauthorized:  {Code: http.StatusUnauthorized, Status: "UNAUTHORIZED"},
+	ErrForbidden:     {Code: http.StatusForbidden, Status: "FORBIDDEN"},
+	ErrEmailExists:   {Code: http.StatusConflict, Status: "CONFLICT"},
+	ErrTokenExpired:  {Code: http.StatusUnauthorized, Status: "TOKEN_EXPIRED"},
+	DataNotFound:     {Code: http.StatusNotFound, Status: "DATA_NOT_FOUND"},
+	InvalidInput:     {Code: http.StatusBadRequest, Status: "INVALID_INPUT"},
+	AlreadyExist:     {Code: http.StatusConflict, Status: "ALREADY_EXISTS"},
+	InvalidData:      {Code: http.StatusBadRequest, Status: "INVALID_DATA"},
+	ForbiddenRole:    {Code: http.StatusForbidden, Status: "FORBIDDEN_ROLE"},
+	ErrMissingFields: {Code: http.StatusBadRequest, Status: "MISSING_FIELDS"},
+	ErrInvalidDate:   {Code: http.StatusBadRequest, Status: "INVALID_DATE"},
 }
 
 // ==== Predefined Errors ====
 
 var (
-	ErrUserNotFound = errors.New("user not found")
-	ErrInvalidInput = errors.New("invalid input")
-	ErrUnauthorized = errors.New("unauthorized")
-	ErrForbidden    = errors.New("forbidden")
-	ErrEmailExists  = errors.New("email already exists")
-	ErrTokenExpired = errors.New("token expired")
-	AlreadyExist    = errors.New("the resource that a client tried to create already exists")
-	DataNotFound    = errors.New("a specified resource is not found")
-	InvalidInput    = errors.New("invalid request input")
-	InvalidData     = errors.New("invalid data")
-	ForbiddenRole   = errors.New("you are not allowed to access this feature")
+	ErrUserNotFound  = errors.New("user not found")
+	ErrInvalidInput  = errors.New("invalid input")
+	ErrUnauthorized  = errors.New("unauthorized")
+	ErrForbidden     = errors.New("forbidden")
+	ErrEmailExists   = errors.New("email already exists")
+	ErrTokenExpired  = errors.New("token expired")
+	AlreadyExist     = errors.New("the resource that a client tried to create already exists")
+	DataNotFound     = errors.New("a specified resource is not found")
+	InvalidInput     = errors.New("invalid request input")
+	InvalidData      = errors.New("invalid data")
+	ForbiddenRole    = errors.New("you are not allowed to access this feature")
+	ErrMissingFields = errors.New("missing fields")
+	ErrInvalidDate   = errors.New("start time cannot be later than end time")
 )
 
 // ==== Error Constructor ====
@@ -108,7 +112,7 @@ func GetResponse(err error) Response {
 	if errors.As(err, &httpErr) {
 		return httpErr.Response
 	}
-	
+
 	return Response{
 		Code:    http.StatusInternalServerError,
 		Status:  "INTERNAL_SERVER_ERROR",

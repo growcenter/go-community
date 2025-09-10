@@ -1,7 +1,6 @@
 package v2
 
 import (
-	"github.com/labstack/echo/v4"
 	"go-community/internal/config"
 	"go-community/internal/deliveries/http/common/response"
 	"go-community/internal/deliveries/http/middleware"
@@ -10,6 +9,8 @@ import (
 	"go-community/internal/pkg/validator"
 	"go-community/internal/usecases"
 	"net/http"
+
+	"github.com/labstack/echo/v4"
 )
 
 type EventHandler struct {
@@ -33,11 +34,11 @@ func NewEventHandler(api *echo.Group, u *usecases.Usecases, c *config.Configurat
 
 	endpointUserInternal := api.Group("/internal/events")
 	endpointUserInternal.Use(middleware.UserMiddleware(c, u, []string{"event-internal-view", "event-internal-edit"}))
-	endpointUserInternal.POST("", handler.Create)
+	// endpointUserInternal.POST("", handler.Create)
 	endpointUserInternal.GET("", handler.GetTitles)
 	endpointUserInternal.GET("/:eventCode/summary", handler.GetSummary)
 	endpointUserInternal.GET("/registers", handler.GetAllRegisteredInternal)
-	endpointUserInternal.POST("/instances", handler.CreateInstance)
+	// endpointUserInternal.POST("/instances", handler.CreateInstance)
 	endpointUserInternal.GET("/registers/download", handler.DownloadInternal)
 }
 
@@ -54,23 +55,23 @@ func NewEventHandler(api *echo.Group, u *usecases.Usecases, c *config.Configurat
 // @Failure 400 {object} models.ErrorResponse "Bad Request"
 // @Failure 422 {object} models.ErrorResponse{errors=models.ErrorValidateResponse} "Validation error. This can happen if there is an error validation while create account"
 // @Router /v2/internal/events [post]
-func (eh *EventHandler) Create(ctx echo.Context) error {
-	var request models.CreateEventRequest
-	if err := ctx.Bind(&request); err != nil {
-		return response.Error(ctx, err)
-	}
+// func (eh *EventHandler) Create(ctx echo.Context) error {
+// 	var request models.CreateEventRequest
+// 	if err := ctx.Bind(&request); err != nil {
+// 		return response.Error(ctx, err)
+// 	}
 
-	if err := validator.Validate(request); err != nil {
-		return response.ErrorValidation(ctx, err)
-	}
+// 	if err := validator.Validate(request); err != nil {
+// 		return response.ErrorValidation(ctx, err)
+// 	}
 
-	event, err := eh.usecase.Event.Create(ctx.Request().Context(), request)
-	if err != nil {
-		return response.Error(ctx, err)
-	}
+// 	event, err := eh.usecase.Event.Create(ctx.Request().Context(), request)
+// 	if err != nil {
+// 		return response.Error(ctx, err)
+// 	}
 
-	return response.Success(ctx, http.StatusCreated, event.ToResponse())
-}
+// 	return response.Success(ctx, http.StatusCreated, event.ToResponse())
+// }
 
 // GetAll godoc
 // @Summary Get All Events
@@ -288,23 +289,23 @@ func (eh *EventHandler) GetSummary(ctx echo.Context) error {
 // @Failure 400 {object} models.ErrorResponse "Bad Request"
 // @Failure 422 {object} models.ErrorResponse{errors=models.ErrorValidateResponse} "Validation error. This can happen if there is an error validation while create account"
 // @Router /v2/internal/events/instances [post]
-func (eh *EventHandler) CreateInstance(ctx echo.Context) error {
-	var request models.CreateInstanceExistingEventRequest
-	if err := ctx.Bind(&request); err != nil {
-		return response.Error(ctx, err)
-	}
+// func (eh *EventHandler) CreateInstance(ctx echo.Context) error {
+// 	var request models.CreateInstanceExistingEventRequest
+// 	if err := ctx.Bind(&request); err != nil {
+// 		return response.Error(ctx, err)
+// 	}
 
-	if err := validator.Validate(request); err != nil {
-		return response.ErrorValidation(ctx, err)
-	}
+// 	if err := validator.Validate(request); err != nil {
+// 		return response.ErrorValidation(ctx, err)
+// 	}
 
-	instance, err := eh.usecase.EventInstance.Create(ctx.Request().Context(), request)
-	if err != nil {
-		return response.Error(ctx, err)
-	}
+// 	instance, err := eh.usecase.EventInstance.Create(ctx.Request().Context(), request)
+// 	if err != nil {
+// 		return response.Error(ctx, err)
+// 	}
 
-	return response.Success(ctx, http.StatusCreated, instance.ToResponse())
-}
+// 	return response.Success(ctx, http.StatusCreated, instance.ToResponse())
+// }
 
 func (eh *EventHandler) GetEventAttendance(ctx echo.Context) error {
 	var request models.GetEventAttendanceParameter

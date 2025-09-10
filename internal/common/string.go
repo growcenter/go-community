@@ -2,13 +2,14 @@ package common
 
 import (
 	"fmt"
+	"reflect"
+	"strings"
+	"unicode"
+
 	"github.com/google/uuid"
 	"github.com/spf13/viper"
 	"golang.org/x/text/cases"
 	"golang.org/x/text/language"
-	"reflect"
-	"strings"
-	"unicode"
 )
 
 func CapitalizeFirstWord(str string) string {
@@ -194,6 +195,23 @@ func RemoveSliceIfContains(input []string, toRemove []string) []string {
 	return result
 }
 
+// CheckPresenceOfValue checks for the presence of specific strings in a slice
+// and returns a map indicating if each string was found.
+func CheckPresenceOfValue(slice []string, values ...string) map[string]bool {
+	presenceMap := make(map[string]bool)
+	for _, v := range values {
+		presenceMap[v] = false
+	}
+
+	for _, item := range slice {
+		if _, ok := presenceMap[item]; ok {
+			presenceMap[item] = true
+		}
+	}
+
+	return presenceMap
+}
+
 // Convert []string to []interface{}
 func SlicesToInterfaces(args []string) []interface{} {
 	result := make([]interface{}, len(args))
@@ -201,4 +219,81 @@ func SlicesToInterfaces(args []string) []interface{} {
 		result[i] = v
 	}
 	return result
+}
+
+func CombineMapUUID(mappingA, mappingB []uuid.UUID) []uuid.UUID {
+	uniqueUUIDs := make(map[uuid.UUID]bool)
+
+	// Add roles from userTypeRoles
+	for _, mappedUUID := range mappingA {
+		uniqueUUIDs[mappedUUID] = true
+	}
+
+	// Add roles from additionalRoles
+	for _, mappedUUID := range mappingB {
+		uniqueUUIDs[mappedUUID] = true
+	}
+
+	// Convert map keys back to a slice
+	var allMappedUUIDs []uuid.UUID
+	for mappedUUID := range uniqueUUIDs {
+		allMappedUUIDs = append(allMappedUUIDs, mappedUUID)
+	}
+
+	return allMappedUUIDs
+}
+
+// Utility function to get unique values from a slice of structs
+func GetUniqueFieldValuesFromModelUUID(data interface{}, fieldName string) ([]uuid.UUID, error) {
+	// Ensure that the input is a slice
+	val := reflect.ValueOf(data)
+	if val.Kind() != reflect.Slice {
+		return nil, fmt.Errorf("expected a slice, got %s", val.Kind())
+	}
+
+	// Create a map to store unique values
+	uniqueValues := make(map[uuid.UUID]struct{})
+
+	// Iterate through each element in the slice
+	for i := 0; i < val.Len(); i++ {
+		item := val.Index(i)
+
+		// Ensure the item is a struct
+		if item.Kind() != reflect.Struct {
+			return nil, fmt.Errorf("expected a struct, got %s", item.Kind())
+		}
+
+		// Get the field by name
+		fieldVal := item.FieldByName(fieldName)
+		if !fieldVal.IsValid() {
+			return nil, fmt.Errorf("field %s not found in struct", fieldName)
+		}
+
+		// Ensure the field is of the expected type (a slice of strings)
+		if fieldVal.Kind() != reflect.Slice {
+			return nil, fmt.Errorf("expected field %s to be a slice, got %s", fieldName, fieldVal.Kind())
+		}
+
+		// Iterate through the slice and add unique values
+		for j := 0; j < fieldVal.Len(); j++ {
+			role := fieldVal.Index(j).Interface().(uuid.UUID)
+			uniqueValues[role] = struct{}{}
+		}
+	}
+
+	// Collect the unique values into a slice
+	var result []uuid.UUID
+	for value := range uniqueValues {
+		result = append(result, value)
+	}
+
+	return result, nil
+}
+
+func UUIDsToStrings(uuids []uuid.UUID) []string {
+	strings := make([]string, len(uuids))
+	for i, u := range uuids {
+		strings[i] = u.String()
+	}
+	return strings
 }

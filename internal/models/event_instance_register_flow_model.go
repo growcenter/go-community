@@ -17,6 +17,7 @@ const (
 const (
 	RegisterFlowPersonal = "personal-qr"
 	RegisterFlowEvent    = "event-qr"
+	RegisterFlowRegister = "register-qr"
 	RegisterFlowBoth     = "both-qr"
 	RegisterFlowNone     = "none"
 )

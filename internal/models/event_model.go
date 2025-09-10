@@ -14,30 +14,100 @@ var (
 )
 
 type Event struct {
-	ID                 int
-	Code               string
-	Title              string
-	Topics             pq.StringArray `gorm:"type:text[]"`
-	Description        string
-	TermsAndConditions string
-	AllowedFor         string
-	AllowedUsers       pq.StringArray `gorm:"type:text[]"`
-	AllowedRoles       pq.StringArray `gorm:"type:text[]"`
-	AllowedCampuses    pq.StringArray `gorm:"type:text[]"`
-	IsRecurring        bool
-	Recurrence         string
-	EventStartAt       time.Time `gorm:"type:timestamptz;not null"`
-	EventEndAt         time.Time `gorm:"type:timestamptz;not null"`
-	RegisterStartAt    time.Time
-	RegisterEndAt      time.Time
-	LocationType       string
-	LocationName       string
-	ImageLinks         pq.StringArray `gorm:"type:text[]"`
-	Status             string
-	CreatedAt          time.Time
-	UpdatedAt          time.Time
-	DeletedAt          sql.NullTime
+	ID                    int
+	Code                  string
+	Title                 string
+	Topics                pq.StringArray `gorm:"type:text[]"`
+	Description           string
+	TermsAndConditions    string
+	ImageLinks            pq.StringArray `gorm:"type:text[]"`
+	RedirectLink          string
+	CreatedBy             string
+	LocationType          string
+	LocationOfflineVenue  string
+	LocationOnlineLink    string
+	Visibility            string
+	AllowedCommunityIds   pq.StringArray `gorm:"type:text[]"`
+	AllowedUserTypes      pq.StringArray `gorm:"type:text[]"`
+	AllowedRoles          pq.StringArray `gorm:"type:text[]"`
+	AllowedCampuses       pq.StringArray `gorm:"type:text[]"`
+	OrganizerCommunityIds pq.StringArray `gorm:"type:text[]"`
+	Recurrence            string
+	StartAt               time.Time `gorm:"type:timestamptz;not null"`
+	EndAt                 time.Time `gorm:"type:timestamptz;not null"`
+	PostDetails           JSONB     `gorm:"type:jsonb;default:'{}'"`
+	Status                string
+	CreatedAt             time.Time
+	UpdatedAt             time.Time
+	DeletedAt             sql.NullTime
 }
+
+type (
+	CreateEventRequest struct {
+		Title              string                       `json:"name" validate:"required" example:"Homebase"`
+		Topics             []string                     `json:"topics"`
+		Description        string                       `json:"description" example:"This event blabla"`
+		TermsAndConditions string                       `json:"termsAndConditions" example:"This event blabla"`
+		ImageLinks         []string                     `json:"imageLinks" validate:"omitempty,url"`
+		RedirectLink       string                       `json:"redirectLink"`
+		IsPublish          bool                         `json:"isPublish" validate:"required"`
+		Location           EventLocationRequest         `json:"location" validate:"required,dive"`
+		AccessConfig       EventAccessConfigRequest     `json:"accessConfig" validate:"required,dive"`
+		TimeConfig         EventTimeConfigRequest       `json:"timeConfig" validate:"required,dive"`
+		Questions          []BulkCreateFormQuestionItem `json:"questions" validate:"omitempty,dive"`
+		Instances          []CreateInstanceRequest      `json:"instances" validate:"dive,required"`
+	}
+	EventLocationRequest struct {
+		Type         string `json:"type" validate:"required,oneof=offline online" example:"offline"`
+		OfflineVenue string `json:"offlineVenue" validate:"omitempty,required_without=OnlineLink" example:"PIOT 6 Lt. 6"`
+		OnlineLink   string `json:"onlineLink" validate:"required_without=OfflineVenue,url" example:"https://www.youtube.com/watch?v=1234567890"`
+	}
+	EventAccessConfigRequest struct {
+		Visibility   string   `json:"visibility" validate:"required,oneof=public private" example:"public"`
+		CommunityIds []string `json:"communityIds" validate:"omitempty,dive,communityId" example:"community-1"`
+		UserTypes    []string `json:"userTypes" validate:"omitempty" example:"volunteer"`
+		Roles        []string `json:"roles" validate:"omitempty" example:"event-view-volunteer, event-edit-volunteer"`
+		Campuses     []string `json:"campuses" validate:"omitempty,dive,min=3" example:"BKS"`
+	}
+	EventTimeConfigRequest struct {
+		Recurrence string `json:"recurrence" example:"monthly"`
+		StartAt    string `json:"startAt" validate:"required" example:"2024-12-10T09:02:42Z"`
+		EndAt      string `json:"endAt" validate:"required" example:"2024-12-10T09:02:42Z"`
+	}
+	CreateEventResponse struct {
+		Type               string                    `json:"type" example:"event"`
+		Code               string                    `json:"code" example:"bhfe382"`
+		Title              string                    `json:"title" example:"Homebase"`
+		Topics             []string                  `json:"topics"`
+		Description        string                    `json:"description" example:"This event blabla"`
+		TermsAndConditions string                    `json:"termsAndConditions" example:"This event blabla"`
+		ImageLinks         []string                  `json:"imageLinks"`
+		RedirectLink       string                    `json:"redirectLink"`
+		AccessConfig       EventAccessConfigResponse `json:"accessConfig"`
+		TimeConfig         EventTimeConfigResponse   `json:"timeConfig"`
+		Location           EventLocationResponse     `json:"location"`
+		Status             string                    `json:"status" example:"available"`
+		Instances          []CreateInstanceResponse  `json:"instances"`
+		Questions          []FormQuestionResponse    `json:"questions,omitempty"`
+	}
+	EventLocationResponse struct {
+		Type         string `json:"type" example:"offline"`
+		OfflineVenue string `json:"offlineVenue" example:"PIOT 6 Lt. 6"`
+		OnlineLink   string `json:"onlineLink" example:"https://www.youtube.com/watch?v=1234567890"`
+	}
+	EventAccessConfigResponse struct {
+		Visibility   string   `json:"visibility"  example:"public"`
+		CommunityIds []string `json:"communityIds" example:"community-1"`
+		UserTypes    []string `json:"userTypes" example:"volunteer"`
+		Roles        []string `json:"roles" example:"event-view-volunteer, event-edit-volunteer"`
+		Campuses     []string `json:"campuses" example:"BKS"`
+	}
+	EventTimeConfigResponse struct {
+		Recurrence string `json:"recurrence" example:"monthly"`
+		StartAt    string `json:"startAt" example:"2024-12-10T09:02:42Z"`
+		EndAt      string `json:"endAt" example:"2024-12-10T09:02:42Z"`
+	}
+)
 
 func (e *CreateEventResponse) ToResponse() *CreateEventResponse {
 	return &CreateEventResponse{
@@ -47,66 +117,13 @@ func (e *CreateEventResponse) ToResponse() *CreateEventResponse {
 		Topics:             e.Topics,
 		Description:        e.Description,
 		TermsAndConditions: e.TermsAndConditions,
-		AllowedFor:         e.AllowedFor,
-		AllowedUsers:       e.AllowedUsers,
-		AllowedRoles:       e.AllowedRoles,
-		AllowedCampuses:    e.AllowedCampuses,
-		IsRecurring:        e.IsRecurring,
-		Recurrence:         e.Recurrence,
-		EventStartAt:       e.EventStartAt,
-		EventEndAt:         e.EventEndAt,
-		RegisterStartAt:    e.RegisterStartAt,
-		RegisterEndAt:      e.RegisterEndAt,
-		LocationType:       e.LocationType,
-		LocationName:       e.LocationName,
+		AccessConfig:       e.AccessConfig,
+		TimeConfig:         e.TimeConfig,
+		Location:           e.Location,
 		Status:             e.Status,
 		Instances:          e.Instances,
 	}
 }
-
-type (
-	CreateEventRequest struct {
-		Title              string                  `json:"name" validate:"required"`
-		Topics             []string                `json:"topics"`
-		Description        string                  `json:"description"`
-		TermsAndConditions string                  `json:"termsAndConditions"`
-		AllowedFor         string                  `json:"allowedFor" validate:"required,oneof=public private"`
-		AllowedUsers       []string                `json:"allowedUsers" validate:"required"`
-		AllowedRoles       []string                `json:"allowedRoles" validate:"required"`
-		AllowedCampuses    []string                `json:"allowedCampuses" validate:"required,dive,min=3"`
-		IsRecurring        bool                    `json:"isRecurring"`
-		Recurrence         string                  `json:"recurrence"`
-		EventStartAt       string                  `json:"eventStartAt"`
-		EventEndAt         string                  `json:"eventEndAt"`
-		RegisterStartAt    string                  `json:"registerStartAt"`
-		RegisterEndAt      string                  `json:"registerEndAt"`
-		LocationType       string                  `json:"locationType" validate:"required,oneof=online onsite hybrid"`
-		LocationName       string                  `json:"locationName" validate:"required"`
-		Instances          []CreateInstanceRequest `json:"instances" validate:"dive,required"`
-	}
-	CreateEventResponse struct {
-		Type               string                   `json:"type" example:"event"`
-		Code               string                   `json:"code" example:"bhfe382"`
-		Title              string                   `json:"title" example:"Homebase"`
-		Topics             []string                 `json:"topics"`
-		Description        string                   `json:"description" example:"This event blabla"`
-		TermsAndConditions string                   `json:"termsAndConditions" example:"This event blabla"`
-		AllowedFor         string                   `json:"allowedFor" example:"public"`
-		AllowedUsers       []string                 `json:"allowedUsers,omitempty"`
-		AllowedRoles       []string                 `json:"allowedRoles,omitempty"`
-		AllowedCampuses    []string                 `json:"allowedCampuses,omitempty"`
-		IsRecurring        bool                     `json:"isRecurring" example:"true"`
-		Recurrence         string                   `json:"recurrence,omitempty" example:"monthly"`
-		EventStartAt       time.Time                `json:"eventStartAt,omitempty" example:""`
-		EventEndAt         time.Time                `json:"eventEndAt,omitempty" example:""`
-		RegisterStartAt    time.Time                `json:"registerStartAt,omitempty" example:""`
-		RegisterEndAt      time.Time                `json:"registerEndAt,omitempty" example:""`
-		LocationType       string                   `json:"locationType" example:"offline"`
-		LocationName       string                   `json:"locationName" example:"PIOT 6 Lt. 6"`
-		Status             string                   `json:"status,omitempty" example:"available"`
-		Instances          []CreateInstanceResponse `json:"instances" validate:"dive,required"`
-	}
-)
 
 func (e *GetAllEventsResponse) ToResponse() GetAllEventsResponse {
 	return GetAllEventsResponse{
