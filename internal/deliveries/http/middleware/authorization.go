@@ -2,13 +2,14 @@ package middleware
 
 import (
 	"encoding/base64"
-	"github.com/google/uuid"
 	"go-community/internal/common"
 	"go-community/internal/config"
 	"go-community/internal/deliveries/http/common/response"
 	"go-community/internal/models"
 	"go-community/internal/usecases"
 	"time"
+
+	"github.com/google/uuid"
 
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/labstack/echo/v4"
@@ -107,12 +108,32 @@ func UserMiddleware(config *config.Configuration, usecase *usecases.Usecases, al
 	}
 }
 
-func RefreshMiddleware(config *config.Configuration) echo.MiddlewareFunc {
+func RefreshMiddleware(config *config.Configuration, usecase *usecases.Usecases) echo.MiddlewareFunc {
 	return func(next echo.HandlerFunc) echo.HandlerFunc {
 		return func(ctx echo.Context) error {
-			header, err := ctx.Cookie("refresh_token")
-			if err == nil && header.Value != "" {
-				token, err := jwt.ParseWithClaims(header.Value, &jwtClaim{}, func(token *jwt.Token) (sec interface{}, err error) {
+			customRefreshHeader, err := usecase.FeatureFlag.IsFeatureEnabled(ctx.Request().Context(), "event_be_customrefreshheader", "")
+			if err != nil {
+				return response.Error(ctx, err)
+			}
+
+			var refreshToken string
+			if customRefreshHeader {
+				refreshToken = ctx.Request().Header.Get("X-Refresh-Token")
+
+				if refreshToken == "" {
+					return response.Error(ctx, models.ErrorEmptyToken)
+				}
+			} else {
+				cookie, err := ctx.Cookie("refresh_token")
+				if err != nil {
+					return response.Error(ctx, models.ErrorEmptyToken)
+				}
+
+				refreshToken = cookie.Value
+			}
+
+			if err == nil && refreshToken != "" {
+				token, err := jwt.ParseWithClaims(refreshToken, &jwtClaim{}, func(token *jwt.Token) (sec interface{}, err error) {
 					if kid, ok := token.Header["kid"].(string); ok {
 						keyid, err := base64.RawURLEncoding.DecodeString(kid)
 						if err != nil {

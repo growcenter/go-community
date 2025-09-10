@@ -15,7 +15,7 @@ func (m *Middleware) corsMiddleware(config *config.Configuration) echo.Middlewar
 	return middleware.CORSWithConfig(middleware.CORSConfig{
 		AllowOrigins:     []string{config.Frontend.Host},
 		AllowMethods:     []string{http.MethodDelete, http.MethodGet, http.MethodOptions, http.MethodPatch, http.MethodPost, http.MethodPut, http.MethodPatch},
-		AllowHeaders:     []string{echo.HeaderOrigin, echo.HeaderContentType, echo.HeaderAccept, echo.HeaderAuthorization, "X-API-Key", "X-Api-Key"},
+		AllowHeaders:     []string{echo.HeaderOrigin, echo.HeaderContentType, echo.HeaderAccept, echo.HeaderAuthorization, "X-API-Key", "X-Api-Key", "X-Refresh-Token"},
 		AllowCredentials: true,
 	})
 }

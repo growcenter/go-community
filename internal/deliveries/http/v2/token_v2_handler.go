@@ -24,7 +24,7 @@ func NewTokenHandler(api *echo.Group, a *authorization.Auth, c *config.Configura
 	handler := &TokenHandler{conf: c, auth: a, usecase: u}
 
 	endpoint := api.Group("/tokens")
-	endpoint.Use(middleware.RefreshMiddleware(c))
+	endpoint.Use(middleware.RefreshMiddleware(c, u))
 	endpoint.GET("", handler.Refresh)
 	endpoint.POST("", handler.RefreshPost)
 }
@@ -60,7 +60,7 @@ func (th *TokenHandler) Refresh(ctx echo.Context) error {
 			return response.Error(ctx, models.ErrorUserNotFound)
 		}
 
-		tokens, err := th.auth.GenerateTokens(user.CommunityId, user.Roles, user.UserTypes)
+		tokens, err := th.auth.GenerateTokens(user.CommunityId, user.UserTypes, user.Roles)
 		if err != nil {
 			response.Error(ctx, err)
 		}
@@ -82,16 +82,16 @@ func (th *TokenHandler) Refresh(ctx echo.Context) error {
 // @Failure 422 {object} models.ErrorResponse{errors=models.ErrorValidateResponse} "Validation error. This can happen if there is an error validation while create account"
 // @Router /v2/tokens [post]
 func (th *TokenHandler) RefreshPost(ctx echo.Context) error {
-	id := ctx.Get("id").(string)
-	if common.IsValidUUID(id) {
-		tokens, err := th.auth.GenerateTokens(id, constants.TYPE_GUEST, constants.ROLE_GUEST)
+	header := ctx.Request().Header.Get("X-Refresh-Token")
+	if header == "" {
+		tokens, err := th.auth.GenerateTokens(ctx.Get("id").(string), constants.TYPE_GUEST, constants.ROLE_GUEST)
 		if err != nil {
 			response.Error(ctx, err)
 		}
 
 		return response.SuccessList(ctx, http.StatusCreated, 2, tokens.ToGenerateTokens())
 	} else {
-		user, err := th.usecase.User.GetRBAC(ctx.Request().Context(), id)
+		user, err := th.usecase.User.GetRBAC(ctx.Request().Context(), ctx.Get("id").(string))
 		if err != nil {
 			return response.Error(ctx, err)
 		}
@@ -100,7 +100,7 @@ func (th *TokenHandler) RefreshPost(ctx echo.Context) error {
 			return response.Error(ctx, models.ErrorUserNotFound)
 		}
 
-		tokens, err := th.auth.GenerateTokens(user.CommunityId, user.Roles, user.UserTypes)
+		tokens, err := th.auth.GenerateTokens(user.CommunityId, user.UserTypes, user.Roles)
 		if err != nil {
 			response.Error(ctx, err)
 		}
