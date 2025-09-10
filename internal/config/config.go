@@ -78,3 +78,11 @@ func New(ctx context.Context) (*Configuration, error) {
 
 	return &config, nil
 }
+
+func (c *Configuration) IsDevelopment() bool {
+	return strings.ToLower(c.Application.Environment) == "dev" || strings.ToLower(c.Application.Environment) == "development"
+}
+
+func (c *Configuration) IsProduction() bool {
+	return strings.ToLower(c.Application.Environment) == "prod" || strings.ToLower(c.Application.Environment) == "production"
+}

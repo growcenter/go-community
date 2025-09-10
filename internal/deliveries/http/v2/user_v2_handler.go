@@ -1,7 +1,6 @@
 package v2
 
 import (
-	"github.com/labstack/echo/v4"
 	"go-community/internal/config"
 	"go-community/internal/deliveries/http/common/response"
 	"go-community/internal/deliveries/http/middleware"
@@ -12,6 +11,8 @@ import (
 	"net/http"
 	"strings"
 	"time"
+
+	"github.com/labstack/echo/v4"
 )
 
 type UserHandler struct {
@@ -143,9 +144,10 @@ func (uh *UserHandler) Login(ctx echo.Context) error {
 		Name:     "refresh_token",
 		Value:    tokens.RefreshToken,
 		Expires:  tokens.RefreshExpiry,
-		HttpOnly: true,                    // Prevent client-side JavaScript access
-		Secure:   true,                    // Only send over HTTPS
-		SameSite: http.SameSiteStrictMode, // Prevent CSRF
+		HttpOnly: true,
+		Secure:   uh.conf.IsProduction(),
+		SameSite: http.SameSiteLaxMode,
+		Path:     "/",
 	})
 
 	res := models.LoginUserResponse{Type: models.TYPE_USER, CommunityId: user.CommunityID, Name: user.Name, PhoneNumber: user.PhoneNumber, Email: user.Email, CampusCode: user.CampusCode, PlaceOfBirth: user.PlaceOfBirth, DateOfBirth: user.DateOfBirth, Address: user.Address, Gender: user.Gender, DepartmentCode: user.Department, CoolID: user.CoolID, KKJNumber: user.KKJNumber, JemaatId: user.JemaatID, IsKOM100: user.IsKom100, IsBaptized: user.IsBaptized, MaritalStatus: user.MaritalStatus, Status: user.Status, Token: tokens.ToGenerateTokens(), UserTypes: user.UserTypes, Roles: user.Roles}
