@@ -119,6 +119,10 @@ func RefreshMiddleware(config *config.Configuration, usecase *usecases.Usecases)
 			var refreshToken string
 			if customRefreshHeader {
 				refreshToken = ctx.Request().Header.Get("X-Refresh-Token")
+
+				if refreshToken == "" {
+					return response.Error(ctx, models.ErrorEmptyToken)
+				}
 			} else {
 				cookie, err := ctx.Cookie("refresh_token")
 				if err != nil {
