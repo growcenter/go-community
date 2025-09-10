@@ -13,8 +13,9 @@ func (m *Middleware) corsMiddleware(config *config.Configuration) echo.Middlewar
 	// origin := fmt.Sprintf("https://%s", config.Application.Host)
 
 	return middleware.CORSWithConfig(middleware.CORSConfig{
-		AllowOrigins: []string{"*"},
-		AllowMethods: []string{http.MethodDelete, http.MethodGet, http.MethodOptions, http.MethodPatch, http.MethodPost, http.MethodPut, http.MethodPatch},
-		AllowHeaders: []string{echo.HeaderOrigin, echo.HeaderContentType, echo.HeaderAccept, echo.HeaderAuthorization, "X-API-Key", "X-Api-Key"},
+		AllowOrigins:     []string{config.Frontend.Host},
+		AllowMethods:     []string{http.MethodDelete, http.MethodGet, http.MethodOptions, http.MethodPatch, http.MethodPost, http.MethodPut, http.MethodPatch},
+		AllowHeaders:     []string{echo.HeaderOrigin, echo.HeaderContentType, echo.HeaderAccept, echo.HeaderAuthorization, "X-API-Key", "X-Api-Key"},
+		AllowCredentials: true,
 	})
 }
