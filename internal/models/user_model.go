@@ -2,8 +2,9 @@ package models
 
 import (
 	"database/sql"
-	"github.com/lib/pq"
 	"time"
+
+	"github.com/lib/pq"
 )
 
 var TYPE_USER = "user"
@@ -832,7 +833,8 @@ type (
 )
 
 type GetRBACByCommunityIdDBOutput struct {
-	CommunityId string
-	UserTypes   pq.StringArray `gorm:"type:text[]"`
-	Roles       pq.StringArray `gorm:"type:text[]"`
+	CommunityId   string
+	UserTypes     pq.StringArray `gorm:"type:text[]"`
+	Roles         pq.StringArray `gorm:"type:text[]"`
+	CombinedRoles pq.StringArray `gorm:"type:text[]"`
 }

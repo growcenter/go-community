@@ -31,8 +31,24 @@ var (
 
 	queryGetManyNameByCommunityId = "SELECT	 community_id, name FROM users WHERE community_id = ANY(?)"
 
-	queryGetRBACByCommunityId = `SELECT community_id, roles, user_types
-	FROM users WHERE community_id = ? LIMIT 1`
+	queryGetRBACByCommunityId = `SELECT
+        u.community_id,
+        u.roles,
+        u.user_types,
+        -- 3. Aggregate the individual roles into one clean array
+        ARRAY_AGG(role) FILTER (WHERE role IS NOT NULL) AS combined_roles
+		FROM
+			users u
+		CROSS JOIN LATERAL
+			UNNEST(u.user_types) AS t(user_type)
+		LEFT JOIN
+			user_types ut ON ut.type = t.user_type
+		LEFT JOIN LATERAL
+			UNNEST(ut.roles) AS role ON true
+		WHERE
+			u.community_id = ?
+		GROUP BY
+			u.community_id, u.roles, u.user_types;`
 
 	queryGetUserNameByCommunityId = `SELECT name, community_id
 	FROM users WHERE community_id = ? LIMIT 1`
