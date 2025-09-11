@@ -11,9 +11,10 @@ import (
 	"go-community/internal/pkg/generator"
 	"go-community/internal/pkg/hash"
 	"go-community/internal/repositories/pgsql"
-	"gorm.io/gorm"
 	"strings"
 	"time"
+
+	"gorm.io/gorm"
 )
 
 type UserUsecase interface {
@@ -1380,6 +1381,10 @@ func (uu *userUsecase) GetRBAC(ctx context.Context, communityId string) (user *m
 	if user.CommunityId == "" {
 		return nil, models.ErrorDataNotFound
 	}
+
+	roles := common.CombineMapStrings(user.CombinedRoles, user.Roles)
+	uniqueRoles := common.UniqueArray(roles)
+	user.Roles = uniqueRoles
 
 	return user, nil
 }
