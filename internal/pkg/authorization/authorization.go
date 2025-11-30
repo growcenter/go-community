@@ -60,9 +60,10 @@ type Claim struct {
 	AuthorizedParty string   `json:"azp"`
 	UserTypes       []string `json:"userTypes"`
 	Roles           []string `json:"roles"`
+	CampusCode      string   `json:"campusCode"`
 }
 
-func (a *Auth) GenerateAccessToken(id string, userTypes []string, role []string) (string, error) {
+func (a *Auth) GenerateAccessToken(id string, userTypes []string, role []string, campusCode string) (string, error) {
 	now := common.Now()
 	expired := now.Add(time.Duration(a.bearerDuration) * time.Minute)
 	keyId := base64.URLEncoding.WithPadding(base64.NoPadding).EncodeToString([]byte(a.bearerKey))
@@ -78,6 +79,7 @@ func (a *Auth) GenerateAccessToken(id string, userTypes []string, role []string)
 		Type:            "access",
 		UserTypes:       userTypes,
 		Roles:           role,
+		CampusCode:      campusCode,
 	}
 
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
@@ -116,8 +118,13 @@ func (a *Auth) GenerateRefreshToken(id string) (string, error) {
 	return tokenString, nil
 }
 
-func (a *Auth) GenerateTokens(id string, userTypes []string, role []string) (*models.UserToken, error) {
-	access, err := a.GenerateAccessToken(id, userTypes, role)
+func (a *Auth) GenerateTokens(id string, userTypes []string, role []string, campusCode *string) (*models.UserToken, error) {
+	var campus string
+	if campusCode != nil {
+		campus = *campusCode
+	}
+
+	access, err := a.GenerateAccessToken(id, userTypes, role, campus)
 	if err != nil {
 		return nil, err
 	}

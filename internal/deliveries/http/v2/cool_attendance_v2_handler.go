@@ -63,7 +63,7 @@ func (cah *CoolAttendanceHandler) CreateMeeting(ctx echo.Context) error {
 		return response.Error(ctx, err)
 	}
 
-	return response.SuccessV2(ctx, http.StatusCreated, "Meeting successfully created.", new.ToResponse())
+	return response.SuccessV2(ctx, http.StatusCreated, new.ToResponse(), "Meeting successfully created.")
 }
 
 func (cah *CoolAttendanceHandler) CreateAttendance(ctx echo.Context) error {
@@ -81,7 +81,7 @@ func (cah *CoolAttendanceHandler) CreateAttendance(ctx echo.Context) error {
 		return response.Error(ctx, err)
 	}
 
-	return response.SuccessV2(ctx, http.StatusCreated, "Attendance successfully created.", new.ToResponse())
+	return response.SuccessV2(ctx, http.StatusCreated, new.ToResponse(), "Attendance successfully created.")
 }
 
 func (cah *CoolAttendanceHandler) GetMeetings(ctx echo.Context) error {
@@ -139,7 +139,7 @@ func (cah *CoolAttendanceHandler) GetMeetingAttendances(ctx echo.Context) error 
 		return response.Error(ctx, err)
 	}
 
-	return response.SuccessV2(ctx, http.StatusOK, "", attendances)
+	return response.SuccessV2(ctx, http.StatusOK, attendances)
 }
 
 func (cah *CoolAttendanceHandler) GetSummaryByCoolCode(ctx echo.Context) error {

@@ -43,3 +43,12 @@ type (
 		Code string `json:"code"`
 	}
 )
+
+type (
+	FormDBOutput struct {
+		Code        uuid.UUID `json:"code"`
+		Name        string    `json:"name"`
+		Description string    `json:"description"`
+		Status      string    `json:"status"`
+	}
+)

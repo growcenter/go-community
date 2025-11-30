@@ -10,65 +10,72 @@ import (
 var TYPE_EVENT_INSTANCE = "eventInstance"
 
 type EventInstance struct {
-	ID                       int
-	Code                     string
-	EventCode                string
-	Title                    string
-	Description              string
-	ValidateParentIdentifier bool
-	ParentIdentifierInput    pq.StringArray `gorm:"type:text[]"`
-	ValidateChildIdentifier  bool
-	ChildIdentifierInput     pq.StringArray `gorm:"type:text[]"`
-	EnforceCommunityId       bool
-	EnforceUniqueness        bool
-	Methods                  pq.StringArray `gorm:"type:text[]"`
-	Flow                     string
-	StartAt                  time.Time
-	EndAt                    time.Time
-	RegisterStartAt          time.Time
-	RegisterEndAt            time.Time
-	VerifyStartAt            time.Time
-	VerifyEndAt              time.Time
-	Timezone                 string
-	LocationType             string
-	LocationOfflineVenue     string
-	LocationOnlineLink       string
-	QuotaPerUser             int
-	Capacity                 int
-	PostDetails              JSONB `gorm:"type:jsonb;default:'{}'"`
-	Status                   string
-	CreatedAt                time.Time
-	UpdatedAt                time.Time
-	DeletedAt                sql.NullTime
+	ID                     int
+	Code                   string
+	EventCode              string
+	Title                  string
+	Description            string
+	ParentIdentifierFields JSONB `gorm:"type:jsonb"`
+	ChildIdentifierFields  JSONB `gorm:"type:jsonb"`
+	// EnforceCommunityId, if true, ensures that a single user account (via community_id) can only create one registration transaction for this instance.
+	EnforceCommunityId      bool
+	EnforceSelfRegistration bool
+	// EnforceUniqueness, if true, ensures that each individual attendee (identified by email/phone) can only be registered once for this instance, even across different registration transactions.
+	EnforceUniqueness    bool
+	Methods              pq.StringArray `gorm:"type:text[]"`
+	Flow                 string
+	StartAt              time.Time
+	EndAt                time.Time
+	RegisterStartAt      time.Time
+	RegisterEndAt        time.Time
+	VerifyStartAt        time.Time
+	VerifyEndAt          time.Time
+	Timezone             string
+	LocationType         string
+	LocationOfflineVenue string
+	LocationOnlineLink   string
+	LocationDetail       string
+	LocationVisibility   string
+	QuotaPerUser         int
+	Capacity             int
+	PostDetails          JSONB `gorm:"type:jsonb"`
+	Status               string
+	CreatedAt            time.Time
+	UpdatedAt            time.Time
+	DeletedAt            sql.NullTime
 }
 
 type (
 	CreateInstanceRequest struct {
-		EventCode          string                     `json:"eventCode" validate:"required"`
-		IsFollowEvent      bool                       `json:"isFollowEvent"`
-		IsPublish          bool                       `json:"isPublish"`
-		Title              string                     `json:"title" validate:"required"`
-		Description        string                     `json:"description"`
-		RegistrationConfig InstanceRegistrationConfig `json:"registrationConfig" validate:"required,dive"`
-		TimeConfig         InstanceTimeConfig         `json:"timeConfig" validate:"required,dive"`
-		IdentifierConfig   InstanceIdentifierConfig   `json:"identifierConfig" validate:"required,dive"`
-		Location           EventLocationRequest       `json:"location" validate:"required,dive"`
-		IsUpdateEventTime  bool                       `json:"isUpdateEventTime"`
-		Questions          []CreateFormRequest        `json:"questions" validate:"omitempty,dive"`
+		EventCode          string                       `json:"eventCode"`
+		IsFollowEvent      bool                         `json:"isFollowEvent"`
+		IsPublish          bool                         `json:"isPublish"`
+		Title              string                       `json:"title" validate:"required"`
+		Description        string                       `json:"description"`
+		RegistrationConfig InstanceRegistrationConfig   `json:"registrationConfig" validate:"required"`
+		TimeConfig         InstanceTimeConfig           `json:"timeConfig" validate:"required"`
+		IdentifierConfig   InstanceIdentifierConfig     `json:"identifierConfig" validate:"omitempty,dive"`
+		Location           EventLocationRequest         `json:"location" validate:"required"`
+		IsUpdateEventTime  bool                         `json:"isUpdateEventTime"`
+		Questions          []BulkCreateFormQuestionItem `json:"questions" validate:"omitempty,dive"`
 	}
 	InstanceRegistrationConfig struct {
-		Capacity           int      `json:"capacity" validate:"required,numeric,min=1"`
-		QuotaPerUser       int      `json:"quotaPerUser" validate:"required,numeric,min=1"`
-		EnforceCommunityId bool     `json:"enforceCommunityId"`
-		EnforceUniqueness  bool     `json:"enforceUniqueness"`
-		Methods            []string `json:"methods" validate:"omitempty,dive,oneof=personal-qr event-qr registration-qr" example:"personal-qr"`
-		Flow               string   `json:"flow" validate:"required,oneof=direct staged free" example:"direct"`
+		Capacity                int      `json:"capacity" validate:"required,numeric,min=1"`
+		QuotaPerUser            int      `json:"quotaPerUser" validate:"required,numeric,min=1"`
+		EnforceCommunityId      bool     `json:"enforceCommunityId"`
+		EnforceUniqueness       bool     `json:"enforceUniqueness"`
+		EnforceSelfRegistration bool     `json:"enforceSelfRegistration"`
+		Methods                 []string `json:"methods" validate:"omitempty,dive,oneof=personal-qr event-qr registration-qr" example:"personal-qr"`
+		Flow                    string   `json:"flow" validate:"required,oneof=direct staged free" example:"direct"`
 	}
 	InstanceIdentifierConfig struct {
-		ValidateParentIdentifier bool     `json:"validateParentIdentifier"`
-		ParentIdentifierInput    []string `json:"parentIdentifier" validate:"required_if=ValidateParentIdentifier true,dive,oneof=email phone" example:"email"`
-		ValidateChildIdentifier  bool     `json:"validateChildIdentifier"`
-		ChildIdentifierInput     []string `json:"childIdentifier" validate:"required_if=ValidateChildIdentifier true,dive,oneof=email phone" example:"email"`
+		ParentIdentifierFields []IdentifierField `json:"parentIdentifierFields" validate:"omitempty,dive"`
+		ChildIdentifierFields  []IdentifierField `json:"childIdentifierFields" validate:"omitempty,dive"`
+	}
+	// IdentifierField defines the structure for a single identifier, including its type and whether it is mandatory.
+	IdentifierField struct {
+		Type        string `json:"type" validate:"oneof=email phone"`
+		IsMandatory bool   `json:"isMandatory"`
 	}
 	InstanceTimeConfig struct {
 		StartAt         string `json:"startAt" validate:"required"`
@@ -89,6 +96,7 @@ type (
 		TimeConfig         InstanceTimeConfigResponse         `json:"timeConfig"`
 		Location           EventLocationResponse              `json:"location"`
 		RegistrationConfig InstanceRegistrationConfigResponse `json:"registrationConfig"`
+		Questions          []FormQuestionResponse             `json:"questions"`
 		Status             string                             `json:"status,omitempty" example:"active"`
 	}
 	InstanceTimeConfigResponse struct {
@@ -101,19 +109,17 @@ type (
 		Timezone        string `json:"timezone" example:"Asia/Jakarta"`
 	}
 	InstanceRegistrationConfigResponse struct {
-		IdentifierInput    []string `json:"identifier" example:"email"`
-		Capacity           int      `json:"capacity" example:"100"`
-		QuotaPerUser       int      `json:"quotaPerUser" example:"1"`
-		EnforceCommunityId bool     `json:"enforceCommunityId" example:"false"`
-		EnforceUniqueness  bool     `json:"enforceUniqueness" example:"false"`
-		Methods            []string `json:"methods" example:"personal-qr"`
-		Flow               string   `json:"flow" example:"direct"`
+		Capacity                int      `json:"capacity" example:"100"`
+		QuotaPerUser            int      `json:"quotaPerUser" example:"1"`
+		EnforceCommunityId      bool     `json:"enforceCommunityId" example:"false"`
+		EnforceUniqueness       bool     `json:"enforceUniqueness" example:"false"`
+		EnforceSelfRegistration bool     `json:"enforceSelfRegistration" example:"false"`
+		Methods                 []string `json:"methods" example:"personal-qr"`
+		Flow                    string   `json:"flow" example:"direct"`
 	}
 	InstanceIdentifierConfigResponse struct {
-		ValidateParentIdentifier bool     `json:"validateParentIdentifier"`
-		ParentIdentifierInput    []string `json:"parentIdentifier" example:"email"`
-		ValidateChildIdentifier  bool     `json:"validateChildIdentifier"`
-		ChildIdentifierInput     []string `json:"childIdentifier" example:"email"`
+		ParentIdentifierFields []IdentifierField `json:"parentIdentifierFields,omitempty"`
+		ChildIdentifierFields  []IdentifierField `json:"childIdentifierFields,omitempty"`
 	}
 )
 

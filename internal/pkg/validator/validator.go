@@ -3,6 +3,7 @@ package validator
 import (
 	"errors"
 	"go-community/internal/common"
+	"go-community/internal/constants"
 	"go-community/internal/models"
 	"reflect"
 	"regexp"
@@ -34,6 +35,7 @@ func init() {
 	registeryyyymmddNoExceedTodayFormat()
 	registerTypeIdFormat()
 	registerDateRange()
+	registerQuestionType()
 }
 
 func Validate(request interface{}) error {
@@ -347,5 +349,14 @@ func registerDateRange() {
 		}
 
 		return false
+	})
+}
+
+func registerQuestionType() {
+	valid.RegisterValidation("questionType", func(fl v10.FieldLevel) bool {
+		value := fl.Field().String()
+		// Check if the field's value exists as a key in the map of valid types.
+		_, ok := constants.MapQuestionType[value]
+		return ok
 	})
 }

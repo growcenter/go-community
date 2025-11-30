@@ -38,6 +38,8 @@ type UserRepository interface {
 	GetManyRBAC(ctx context.Context, communityIds []string) (output []models.GetRBACByCommunityIdDBOutput, err error)
 	GetUserNamesByMultipleCommunityId(ctx context.Context, communityIds []string) (output []models.GetNameOnUserDBOutput, err error)
 	GetManyNamesByCommunityId(ctx context.Context, communityIds []string) (output []models.GetNameOnUserDBOutput, err error)
+	GetIdentifierByCommunityId(ctx context.Context, communityId string) (output models.GetIdentifierByCommunityIdDBOutput, err error)
+	GetIdentifierByCommunityIds(ctx context.Context, communityIds []string) (output []models.GetIdentifierByCommunityIdDBOutput, err error)
 }
 
 type userRepository struct {
@@ -418,4 +420,30 @@ func (ur *userRepository) GetManyNamesByCommunityId(ctx context.Context, communi
 	}
 
 	return users, nil
+}
+
+func (ur *userRepository) GetIdentifierByCommunityId(ctx context.Context, communityId string) (output models.GetIdentifierByCommunityIdDBOutput, err error) {
+	defer func() {
+		LogRepository(ctx, err)
+	}()
+
+	err = ur.db.Raw(queryGetIdentifierByCommunityId, communityId).Scan(&output).Error
+	if err != nil {
+		return models.GetIdentifierByCommunityIdDBOutput{}, err
+	}
+
+	return output, nil
+}
+
+func (ur *userRepository) GetIdentifierByCommunityIds(ctx context.Context, communityIds []string) (output []models.GetIdentifierByCommunityIdDBOutput, err error) {
+	defer func() {
+		LogRepository(ctx, err)
+	}()
+
+	err = ur.db.Raw(queryGetIdentifierByCommunityIds, pq.Array(communityIds)).Scan(&output).Error
+	if err != nil {
+		return nil, err
+	}
+
+	return output, nil
 }

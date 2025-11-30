@@ -91,7 +91,7 @@ func (ch *ConfigHandler) GetLocationsByCampusCode(ctx echo.Context) error {
 		return response.Error(ctx, err)
 	}
 
-	return response.SuccessV2(ctx, http.StatusOK, "", locations)
+	return response.SuccessV2(ctx, http.StatusOK, locations)
 }
 
 func (ch *ConfigHandler) GetCitiesByCampusCode(ctx echo.Context) error {
@@ -100,7 +100,7 @@ func (ch *ConfigHandler) GetCitiesByCampusCode(ctx echo.Context) error {
 		return response.Error(ctx, err)
 	}
 
-	return response.SuccessV2(ctx, http.StatusOK, "", locations)
+	return response.SuccessV2(ctx, http.StatusOK, locations)
 }
 
 func (ch *ConfigHandler) GetDistrictsByCityCode(ctx echo.Context) error {
@@ -109,5 +109,5 @@ func (ch *ConfigHandler) GetDistrictsByCityCode(ctx echo.Context) error {
 		return response.Error(ctx, err)
 	}
 
-	return response.SuccessV2(ctx, http.StatusOK, "", locations)
+	return response.SuccessV2(ctx, http.StatusOK, locations)
 }

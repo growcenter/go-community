@@ -1,6 +1,7 @@
 package response
 
 import (
+	"fmt"
 	"go-community/internal/common"
 	"go-community/internal/models"
 	"go-community/internal/pkg/errorgen"
@@ -138,7 +139,7 @@ func SuccessDownload(ctx echo.Context, code int, contentType string, fileName st
 	return ctx.Blob(http.StatusOK, contentType, data)
 }
 
-func SuccessV2(ctx echo.Context, code int, message string, data interface{}) error {
+func SuccessV2(ctx echo.Context, code int, data interface{}, message ...string) error {
 	requestID, _ := ctx.Get("X-Request-Id").(string)
 	if requestID == "" {
 		requestID = uuid.New().String()
@@ -149,14 +150,20 @@ func SuccessV2(ctx echo.Context, code int, message string, data interface{}) err
 		timestamp = common.Now().Format(time.RFC3339)
 	}
 
-	if message == "" {
-		message = "Request has been successfully processed."
+	var finalMessage string
+	switch len(message) {
+	case 0:
+		finalMessage = "Request has been successfully processed."
+	case 1:
+		finalMessage = message[0]
+	default:
+		finalMessage = fmt.Sprintf(message[0], common.SlicesToInterfaces(message[1:])...)
 	}
 
 	return ctx.JSON(http.StatusOK, models.Response{
 		Code:    code,
 		Status:  "OK",
-		Message: message,
+		Message: finalMessage,
 		Data:    data,
 		Metadata: models.Metadata{
 			RequestId: requestID,

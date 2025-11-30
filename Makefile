@@ -9,16 +9,19 @@ docker-stop:
 .PHONY: run
 run: generate-docs run_api
 
-run_api: tidy
+run_api: tidy test
 	export ENV="DEV" && go run ./cmd/api/main.go
 
 run_local:
 	swag init -g cmd/api/main.go
-	export ENV="DEV" && go run cmd/api/main.go | jq -R 'fromjson? | .' | less
+	export ENV="DEV" && go run cmd/api/main.go
 
 tidy:
 	go mod tidy
 	go mod download
+
+test:
+	go test -v ./...
 
 generate-docs:
 	swag init -g cmd/api/main.go

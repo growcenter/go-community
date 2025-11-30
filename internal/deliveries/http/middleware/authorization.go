@@ -2,13 +2,14 @@ package middleware
 
 import (
 	"encoding/base64"
-	"github.com/google/uuid"
 	"go-community/internal/common"
 	"go-community/internal/config"
 	"go-community/internal/deliveries/http/common/response"
 	"go-community/internal/models"
 	"go-community/internal/usecases"
 	"time"
+
+	"github.com/google/uuid"
 
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/labstack/echo/v4"
@@ -18,6 +19,7 @@ type jwtClaim struct {
 	UserTypes       []string `json:"userTypes"`
 	Roles           []string `json:"roles"`
 	Type            string   `json:"typ"`
+	CampusCode      string   `json:"campusCode"`
 	AuthorizedParty string   `json:"azp"`
 	jwt.RegisteredClaims
 }
@@ -79,6 +81,7 @@ func UserMiddleware(config *config.Configuration, usecase *usecases.Usecases, al
 						ctx.Set("id", claims.Subject)
 						ctx.Set("userTypes", claims.UserTypes)
 						ctx.Set("roles", claims.Roles)
+						ctx.Set("campusCode", claims.CampusCode)
 						return next(ctx)
 					}
 				}
@@ -90,6 +93,7 @@ func UserMiddleware(config *config.Configuration, usecase *usecases.Usecases, al
 							ctx.Set("id", claims.Subject)
 							ctx.Set("userTypes", claims.UserTypes)
 							ctx.Set("roles", claims.Roles)
+							ctx.Set("campusCode", claims.CampusCode)
 							return next(ctx)
 						}
 					}
@@ -101,6 +105,7 @@ func UserMiddleware(config *config.Configuration, usecase *usecases.Usecases, al
 			ctx.Set("id", claims.Subject)
 			ctx.Set("userTypes", claims.UserTypes)
 			ctx.Set("roles", claims.Roles)
+			ctx.Set("campusCode", claims.CampusCode)
 
 			return next(ctx)
 		}

@@ -80,6 +80,7 @@ func New(config *config.Configuration) *Contract {
 }
 
 func (c *Contract) Start(port int) error {
+	c.echo.HideBanner = true
 	return c.echo.Start(":" + strconv.Itoa(port))
 }
 

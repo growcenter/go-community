@@ -62,6 +62,15 @@ func FormatDatetimeToStringInLocalTime(date time.Time, formatLayout string) stri
 	return date.In(GetLocation()).Format(formatLayout)
 }
 
+func FormatDatetimeToStringWithTimezone(date time.Time, formatLayout string, keys ...string) string {
+	if len(keys) == 0 {
+		return date.In(Now().Location()).Format(formatLayout)
+	} else {
+		loc, _ := time.LoadLocation(keys[0])
+		return date.In(loc).Format(formatLayout)
+	}
+}
+
 func ParseStringDateToDateWithTimeNow(layout, date string, location *time.Location) (time.Time, error) {
 	timeParam, err := ParseStringToDatetime(layout, date, location)
 	if err != nil {
@@ -116,17 +125,26 @@ func ParseDuration(str string) (time.Duration, error) {
 }
 
 func ParseMultipleTime(stringTimes []string, timezone string, format string) (timeTimes []time.Time, err error) {
+	// Load the location only once outside the loop for efficiency.
 	loc, err := time.LoadLocation(timezone)
 	if err != nil {
 		return nil, err
 	}
 
 	for _, t := range stringTimes {
-		time, err := time.ParseInLocation(format, t, loc)
+		// First, try parsing with the standard time.Parse.
+		// This correctly handles timezone information if it's present in the string (e.g., "Z" or "-07:00").
+		parsedTime, err := time.Parse(format, t)
 		if err != nil {
-			return nil, err
+			// If parsing fails, it might be because the string has no timezone.
+			// In that case, interpret it using the provided timezone.
+			parsedTime, err = time.ParseInLocation(format, t, loc)
+			if err != nil {
+				// If it still fails, the time string format is likely incorrect.
+				return nil, err
+			}
 		}
-		timeTimes = append(timeTimes, time)
+		timeTimes = append(timeTimes, parsedTime)
 	}
 
 	return timeTimes, nil

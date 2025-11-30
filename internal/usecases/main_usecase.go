@@ -41,41 +41,61 @@ type Usecases struct {
 	FormQuestion            formQuestionUsecase
 	FormAnswer              formAnswerUsecase
 	FormAssociation         formAssociationUsecase
+	AccessRelationship      AccessRelationshipUsecase
 }
 
 func New(d Dependencies) *Usecases {
-	formQuestionUsecase := *NewFormQuestionUsecase(*d.Repository)
-	formUsecase := *NewFormUsecase(*d.Repository, &formQuestionUsecase)
+	healthUsecase := *NewHealthUsecase(d.Repository.Health)
+	campusUsecase := *NewCampusUsecase(d.Repository.Campus)
+	coolCategoryUsecase := *NewCoolCategoryUsecase(d.Repository.CoolCategory)
+	locationUsecase := *NewLocationUsecase(d.Repository.Location, d.Repository.Campus)
+	userUsecase := *NewUserUsecase(*d.Repository, *d.Config, *d.Authorization, d.Salt)
+	eventCommunityRequestUsecase := *NewEventCommunityRequestUsecase(d.Repository.EventCommunityRequest, d.Repository.User)
+	roleUsecase := *NewRoleUsecase(d.Repository.Role)
+	userTypeUsecase := *NewUserTypeUsecase(*d.Repository)
+	featureFlagUsecase := *NewFeatureFlagUsecase(*d.Repository)
 	formAnswerUsecase := *NewFormAnswerUsecase(*d.Repository, *d.Config)
 	formAssociationUsecase := NewFormAssociationUsecase(*d.Repository)
-	featureFlagUsecase := *NewFeatureFlagUsecase(*d.Repository)
-	eventInstanceUsecase := *NewEventInstanceUsecase(*d.Config, *d.Authorization, *d.Repository)
+	eventAttendanceUsecase := *NewEventAttendanceUsecase(*d.Config, *d.Repository)
+	formQuestionUsecase := *NewFormQuestionUsecase(*d.Repository)
 	coolAttendanceUsecase := *NewCoolAttendanceUsecase(*d.Repository)
 	configDBUsecase := *NewConfigDBUsecase(*d.Repository, *d.Config)
+	eventRegistrationRecordUsecase := *NewEventRegistrationRecordUsecase(*d.Repository, *d.Config)
+	accessRelationshipUsecase := NewAccessRelationshipUsecase(d.Repository.AccessRelationship)
+
+	formUsecase := *NewFormUsecase(*d.Repository, &formQuestionUsecase)
+	eventInstanceUsecase := *NewEventInstanceUsecase(*d.Config, *d.Authorization, *d.Repository, &formUsecase)
+	eventUsecase := *NewEventUsecase(*d.Config, *d.Authorization, *d.Repository, &featureFlagUsecase, &eventInstanceUsecase, &formUsecase)
+	eventStatusUsecase := *NewEventStatusUsecase(*d.Repository)
+	eventRegistrationUsecase := *NewEventRegistrationUsecase(*d.Config, *d.Repository, &eventStatusUsecase, &formAnswerUsecase, &formAssociationUsecase, &formQuestionUsecase)
+	coolUsecase := *NewCoolUsecase(*d.Repository, *d.Config, &featureFlagUsecase, *d.Indonesia)
+	coolNewJoinerUsecase := *NewCoolNewJoinerUsecase(*d.Repository, d.Config, configDBUsecase)
+	coolMeetingUsecase := *NewCoolMeetingUsecase(*d.Repository, *d.Config, &coolAttendanceUsecase)
 
 	return &Usecases{
-		Health:                  *NewHealthUsecase(d.Repository.Health),
-		Campus:                  *NewCampusUsecase(d.Repository.Campus),
-		CoolCategory:            *NewCoolCategoryUsecase(d.Repository.CoolCategory),
-		Location:                *NewLocationUsecase(d.Repository.Location, d.Repository.Campus),
-		User:                    *NewUserUsecase(*d.Repository, *d.Config, *d.Authorization, d.Salt),
-		EventCommunityRequest:   *NewEventCommunityRequestUsecase(d.Repository.EventCommunityRequest, d.Repository.User),
-		Role:                    *NewRoleUsecase(d.Repository.Role),
-		UserType:                *NewUserTypeUsecase(*d.Repository),
-		Event:                   *NewEventUsecase(*d.Config, *d.Authorization, *d.Repository, &featureFlagUsecase, &eventInstanceUsecase, &formUsecase),
-		EventRegistration:       *NewEventRegistrationUsecase(*d.Config, *d.Repository, &formAnswerUsecase, &formAssociationUsecase),
-		EventAttendance:         *NewEventAttendanceUsecase(*d.Config, *d.Repository),
-		EventRegistrationRecord: *NewEventRegistrationRecordUsecase(*d.Repository, *d.Config),
+		Health:                  healthUsecase,
+		Campus:                  campusUsecase,
+		CoolCategory:            coolCategoryUsecase,
+		Location:                locationUsecase,
+		User:                    userUsecase,
+		EventCommunityRequest:   eventCommunityRequestUsecase,
+		Role:                    roleUsecase,
+		UserType:                userTypeUsecase,
+		Event:                   eventUsecase,
+		EventRegistration:       eventRegistrationUsecase,
+		EventAttendance:         eventAttendanceUsecase,
+		EventRegistrationRecord: eventRegistrationRecordUsecase,
 		EventInstance:           eventInstanceUsecase,
 		FeatureFlag:             featureFlagUsecase,
 		Config:                  configDBUsecase,
-		Cool:                    *NewCoolUsecase(*d.Repository, *d.Config, &featureFlagUsecase, *d.Indonesia),
-		CoolNewJoiner:           *NewCoolNewJoinerUsecase(*d.Repository, d.Config, configDBUsecase),
-		CoolMeeting:             *NewCoolMeetingUsecase(*d.Repository, *d.Config, &coolAttendanceUsecase),
+		Cool:                    coolUsecase,
+		CoolNewJoiner:           coolNewJoinerUsecase,
+		CoolMeeting:             coolMeetingUsecase,
 		CoolAttendance:          coolAttendanceUsecase,
 		Form:                    formUsecase,
 		FormQuestion:            formQuestionUsecase,
 		FormAnswer:              formAnswerUsecase,
 		FormAssociation:         formAssociationUsecase,
+		AccessRelationship:      accessRelationshipUsecase,
 	}
 }

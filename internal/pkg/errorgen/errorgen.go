@@ -27,10 +27,15 @@ type HTTPError struct {
 }
 
 func (e *HTTPError) Error() string {
+	// Prioritize the specific message in the response, as it's more contextual.
+	if e.Response.Message != "" {
+		return e.Response.Message
+	}
+	// Fallback to the original wrapped error if the response message is empty.
 	if e.Err != nil {
 		return e.Err.Error()
 	}
-	return e.Response.Message
+	return "unknown http error"
 }
 
 type ErrorMapping struct {
@@ -41,37 +46,39 @@ type ErrorMapping struct {
 // ==== Error Mapping Configuration ====
 
 var errorMappings = map[error]ErrorMapping{
-	ErrUserNotFound:  {Code: http.StatusNotFound, Status: "DATA_NOT_FOUND"},
-	ErrInvalidInput:  {Code: http.StatusBadRequest, Status: "BAD_REQUEST"},
-	ErrUnauthorized:  {Code: http.StatusUnauthorized, Status: "UNAUTHORIZED"},
-	ErrForbidden:     {Code: http.StatusForbidden, Status: "FORBIDDEN"},
-	ErrEmailExists:   {Code: http.StatusConflict, Status: "CONFLICT"},
-	ErrTokenExpired:  {Code: http.StatusUnauthorized, Status: "TOKEN_EXPIRED"},
-	DataNotFound:     {Code: http.StatusNotFound, Status: "DATA_NOT_FOUND"},
-	InvalidInput:     {Code: http.StatusBadRequest, Status: "INVALID_INPUT"},
-	AlreadyExist:     {Code: http.StatusConflict, Status: "ALREADY_EXISTS"},
-	InvalidData:      {Code: http.StatusBadRequest, Status: "INVALID_DATA"},
-	ForbiddenRole:    {Code: http.StatusForbidden, Status: "FORBIDDEN_ROLE"},
-	ErrMissingFields: {Code: http.StatusBadRequest, Status: "MISSING_FIELDS"},
-	ErrInvalidDate:   {Code: http.StatusBadRequest, Status: "INVALID_DATE"},
+	ErrUserNotFound:                       {Code: http.StatusNotFound, Status: "DATA_NOT_FOUND"},
+	ErrInvalidInput:                       {Code: http.StatusBadRequest, Status: "BAD_REQUEST"},
+	ErrUnauthorized:                       {Code: http.StatusUnauthorized, Status: "UNAUTHORIZED"},
+	ErrForbidden:                          {Code: http.StatusForbidden, Status: "FORBIDDEN"},
+	ErrEmailExists:                        {Code: http.StatusConflict, Status: "CONFLICT"},
+	ErrTokenExpired:                       {Code: http.StatusUnauthorized, Status: "TOKEN_EXPIRED"},
+	DataNotFound:                          {Code: http.StatusNotFound, Status: "DATA_NOT_FOUND"},
+	InvalidInput:                          {Code: http.StatusBadRequest, Status: "INVALID_INPUT"},
+	AlreadyExist:                          {Code: http.StatusConflict, Status: "ALREADY_EXISTS"},
+	InvalidData:                           {Code: http.StatusBadRequest, Status: "INVALID_DATA"},
+	ForbiddenRole:                         {Code: http.StatusForbidden, Status: "FORBIDDEN_ROLE"},
+	ErrMissingFields:                      {Code: http.StatusBadRequest, Status: "MISSING_FIELDS"},
+	ErrInvalidDate:                        {Code: http.StatusBadRequest, Status: "INVALID_DATE"},
+	ErrHaveToUseRegistrationQrForQuestion: {Code: http.StatusBadRequest, Status: "INVALID_INPUT"},
 }
 
 // ==== Predefined Errors ====
 
 var (
-	ErrUserNotFound  = errors.New("user not found")
-	ErrInvalidInput  = errors.New("invalid input")
-	ErrUnauthorized  = errors.New("unauthorized")
-	ErrForbidden     = errors.New("forbidden")
-	ErrEmailExists   = errors.New("email already exists")
-	ErrTokenExpired  = errors.New("token expired")
-	AlreadyExist     = errors.New("the resource that a client tried to create already exists")
-	DataNotFound     = errors.New("a specified resource is not found")
-	InvalidInput     = errors.New("invalid request input")
-	InvalidData      = errors.New("invalid data")
-	ForbiddenRole    = errors.New("you are not allowed to access this feature")
-	ErrMissingFields = errors.New("missing fields")
-	ErrInvalidDate   = errors.New("start time cannot be later than end time")
+	ErrUserNotFound                       = errors.New("user not found")
+	ErrInvalidInput                       = errors.New("invalid input")
+	ErrUnauthorized                       = errors.New("unauthorized")
+	ErrForbidden                          = errors.New("forbidden")
+	ErrEmailExists                        = errors.New("email already exists")
+	ErrTokenExpired                       = errors.New("token expired")
+	AlreadyExist                          = errors.New("the resource that a client tried to create already exists")
+	DataNotFound                          = errors.New("a specified resource is not found")
+	InvalidInput                          = errors.New("invalid request input")
+	InvalidData                           = errors.New("invalid data")
+	ForbiddenRole                         = errors.New("you are not allowed to access this feature")
+	ErrMissingFields                      = errors.New("missing fields")
+	ErrInvalidDate                        = errors.New("start time cannot be later than end time")
+	ErrHaveToUseRegistrationQrForQuestion = errors.New("cannot add question when your event is using personal or event qr, and also cannot add question when method is direct")
 )
 
 // ==== Error Constructor ====

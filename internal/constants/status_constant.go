@@ -77,11 +77,3 @@ const (
 	ATTENDEE_ROLE_GUEST    AttendeeRole = "GUEST"
 	ATTENDEE_ROLE_EXTERNAL AttendeeRole = "EXTERNAL"
 )
-
-type EventStatus string
-
-const (
-	EVENT_STATUS_ACTIVE   EventStatus = "active"
-	EVENT_STATUS_DRAFT    EventStatus = "draft"
-	EVENT_STATUS_INACTIVE EventStatus = "inactive"
-)

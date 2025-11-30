@@ -16,3 +16,6 @@ config.*
 
 # Idea
 .idea
+
+GEMINI.md
+qodana.yaml

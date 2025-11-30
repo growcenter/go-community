@@ -12,6 +12,7 @@ type FormQuestionRepository interface {
 	BulkCreate(ctx context.Context, formQuestions *[]models.FormQuestion) error
 	GetByFormCode(ctx context.Context, formCode string) (formQuestions []models.FormQuestion, err error)
 	GetByFormCodes(ctx context.Context, formCodes []string) (formQuestions []models.FormQuestion, err error)
+	GetByAssociationEntity(ctx context.Context, entities []models.FormQuestionEntityFilter) (formQuestions []models.FormQuestion, err error)
 }
 
 type formQuestionRepository struct {
@@ -39,5 +40,11 @@ func (fqr *formQuestionRepository) GetByFormCode(ctx context.Context, formCode s
 
 func (fqr *formQuestionRepository) GetByFormCodes(ctx context.Context, formCodes []string) (formQuestions []models.FormQuestion, err error) {
 	err = fqr.db.WithContext(ctx).Where("form_code IN ?", formCodes).Find(&formQuestions).Error
+	return formQuestions, err
+}
+
+func (fqr *formQuestionRepository) GetByAssociationEntity(ctx context.Context, entities []models.FormQuestionEntityFilter) (formQuestions []models.FormQuestion, err error) {
+	query, args := BuildGetFormQuestionsByEntitiesQuery(entities)
+	err = fqr.db.WithContext(ctx).Raw(query, args...).Scan(&formQuestions).Error
 	return formQuestions, err
 }

@@ -12,6 +12,7 @@ import (
 type TransactionRepository interface {
 	Transaction(fc func(dtx *gorm.DB) error) error
 	Atomic(ctx context.Context, fc func(ctx context.Context, r *PostgreRepositories) error) error
+	IsTransactionActive() bool
 }
 
 type transactionRepository struct {
@@ -82,4 +83,8 @@ func (tr *transactionRepository) Atomic(ctx context.Context, fc func(ctx context
 	}
 
 	return err
+}
+
+func (tr *transactionRepository) IsTransactionActive() bool {
+	return tr.db != nil && tr.db.Statement != nil && tr.db.Statement.ConnPool != nil && tr.db.Statement.ConnPool != tr.db.ConnPool
 }

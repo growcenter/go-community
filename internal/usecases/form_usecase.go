@@ -4,6 +4,7 @@ import (
 	"context"
 	"go-community/internal/constants"
 	"go-community/internal/models"
+	"go-community/internal/pkg/errorgen"
 	"go-community/internal/repositories/pgsql"
 
 	"github.com/google/uuid"
@@ -11,6 +12,7 @@ import (
 
 type FormUsecase interface {
 	Create(ctx context.Context, request *models.CreateFormRequest) (response *models.CreateFormResponse, err error)
+	// GetQuestions(ctx context.Context, kind string, request *models.FormQuestion, instance interface{}) (response []models.FormQuestionResponse, err error)
 }
 
 type formUsecase struct {
@@ -43,20 +45,29 @@ func (fu *formUsecase) Create(ctx context.Context, request *models.CreateFormReq
 		EntityType: request.Entity.Type,
 	}
 
-	if err := fu.r.Form.Create(ctx, &form); err != nil {
-		return nil, err
-	}
+	var quesRes []models.FormQuestionResponse
+	err = fu.r.Transaction.Atomic(ctx, func(ctx context.Context, r *pgsql.PostgreRepositories) error {
+		if err = r.Form.Create(ctx, &form); err != nil {
+			return errorgen.Error(err)
+		}
 
-	if err := fu.r.FormAssociation.Create(ctx, &formAssociation); err != nil {
-		return nil, err
-	}
+		if err = r.FormAssociation.Create(ctx, &formAssociation); err != nil {
+			return errorgen.Error(err)
+		}
 
-	quesRes, err := fu.q.BulkCreate(ctx, &models.BulkCreateFormQuestionRequest{
-		FormID:    form.Code.String(),
-		Questions: request.Questions,
+		quesRes, err = fu.q.BulkCreate(ctx, &form, &models.BulkCreateFormQuestionRequest{
+			FormID:    form.Code.String(),
+			Questions: request.Questions,
+		})
+		if err != nil {
+			return errorgen.Error(err)
+		}
+
+		return nil
 	})
+
 	if err != nil {
-		return nil, err
+		return nil, errorgen.Error(err)
 	}
 
 	return &models.CreateFormResponse{

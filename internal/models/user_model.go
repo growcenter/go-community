@@ -850,9 +850,27 @@ type (
 	}
 )
 
-type GetRBACByCommunityIdDBOutput struct {
-	CommunityId string
-	UserTypes   pq.StringArray `gorm:"type:text[]"`
-	Roles       pq.StringArray `gorm:"type:text[]"`
-	CoolCode    string
-}
+type (
+	GetRBACByCommunityIdDBOutput struct {
+		CommunityId string
+		UserTypes   pq.StringArray `gorm:"type:text[]"`
+		Roles       pq.StringArray `gorm:"type:text[]"`
+		CoolCode    string
+		CampusCode  string
+	}
+
+	GetIdentifierByCommunityIdDBOutput struct {
+		CommunityId string
+		Identifier  string
+		Email       string
+		PhoneNumber string
+		Name        string
+	}
+
+	UserIdentifierResponse struct {
+		CommunityId string `json:"communityId"`
+		Name        string `json:"name"`
+		Email       string `json:"email"`
+		PhoneNumber string `json:"phoneNumber"`
+	}
+)

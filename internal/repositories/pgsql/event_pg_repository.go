@@ -2,8 +2,8 @@ package pgsql
 
 import (
 	"context"
-	"github.com/lib/pq"
 	"go-community/internal/models"
+
 	"gorm.io/gorm"
 )
 
@@ -12,9 +12,12 @@ type EventRepository interface {
 	GetByCode(ctx context.Context, code string) (campus models.Event, err error)
 	GetEventAndInstanceByCodes(ctx context.Context, eventCode string, instanceCode string) (output *models.GetEventAndInstanceByCodesDBOutput, err error)
 	GetAll(ctx context.Context) (campus []models.Event, err error)
-	GetAllByRolesAndUserTypes(ctx context.Context, roles []string, uTypes []string, isTypeNotGeneral bool, status string) (output []models.GetAllEventsDBOutput, err error)
+	GetAllEvents(ctx context.Context, params models.GetAllEventsParams) (events []models.GetAllEventsDBOutput, err error)
 	CheckByCode(ctx context.Context, code string) (dataExist bool, err error)
-	GetOneByCode(ctx context.Context, code string) (output *models.GetEventByCodeDBOutput, err error)
+	CheckBySlug(ctx context.Context, slug string) (dataExist bool, err error)
+	CheckByCodeOrSlug(ctx context.Context, code string, slug string) (dataExist bool, err error)
+	// GetOneByCode(ctx context.Context, code string) (output *models.GetEventByCodeDBOutput, err error)
+	GetOneByCodeOrSlug(ctx context.Context, code string, slug string) (output *models.GetEventWithInstancesDBOutput, err error)
 	GetRegistered(ctx context.Context, communityIdOrigin string) (output []models.GetAllRegisteredUserDBOutput, err error)
 	GetTitles(ctx context.Context) (output []models.GetEventTitlesDBOutput, err error)
 	GetSummary(ctx context.Context, code string) (output *models.GetEventSummaryDBOutput, err error)
@@ -35,9 +38,7 @@ func (er *eventRepository) Create(ctx context.Context, event *models.Event) (err
 		LogRepository(ctx, err)
 	}()
 
-	return er.trx.Transaction(func(dtx *gorm.DB) error {
-		return er.db.Create(&event).Error
-	})
+	return er.db.Create(&event).Error
 }
 
 func (er *eventRepository) GetByCode(ctx context.Context, code string) (campus models.Event, err error) {
@@ -88,27 +89,66 @@ func (er *eventRepository) CheckByCode(ctx context.Context, code string) (dataEx
 	return dataExist, nil
 }
 
-func (er *eventRepository) GetAllByRolesAndUserTypes(ctx context.Context, roles []string, uTypes []string, isTypeNotGeneral bool, status string) (output []models.GetAllEventsDBOutput, err error) {
+func (er *eventRepository) CheckBySlug(ctx context.Context, slug string) (dataExist bool, err error) {
 	defer func() {
 		LogRepository(ctx, err)
 	}()
 
-	query := BuildQueryGetAllEvents(isTypeNotGeneral)
-	err = er.db.Raw(query, pq.Array(roles), pq.Array(uTypes), status).Scan(&output).Error
+	err = er.db.Raw(queryCheckEventBySlug, slug).Scan(&dataExist).Error
+	if err != nil {
+		return false, err
+	}
+
+	return dataExist, nil
+}
+
+func (er *eventRepository) CheckByCodeOrSlug(ctx context.Context, code string, slug string) (dataExist bool, err error) {
+	defer func() {
+		LogRepository(ctx, err)
+	}()
+
+	err = er.db.Raw(queryCheckEventByCodeOrSlug, code, slug).Scan(&dataExist).Error
+	if err != nil {
+		return false, err
+	}
+
+	return dataExist, nil
+}
+
+func (er *eventRepository) GetAllEvents(ctx context.Context, params models.GetAllEventsParams) (events []models.GetAllEventsDBOutput, err error) {
+	defer func() {
+		LogRepository(ctx, err)
+	}()
+
+	query, args := buildGetAllEventsQuery(params)
+	err = er.db.Raw(query, args...).Scan(&events).Error
+	if err != nil {
+		return nil, err
+	}
+
+	return events, nil
+}
+
+func (er *eventRepository) GetOneByCode(ctx context.Context, code string) (output *models.GetEventWithInstancesDBOutput, err error) {
+	defer func() {
+		LogRepository(ctx, err)
+	}()
+
+	err = er.db.Raw(queryGetEventWithInstancesByCode, code).Scan(&output).Error
 	if err != nil {
 		return nil, err
 	}
 
 	return output, nil
-
 }
 
-func (er *eventRepository) GetOneByCode(ctx context.Context, code string) (output *models.GetEventByCodeDBOutput, err error) {
+func (er *eventRepository) GetOneByCodeOrSlug(ctx context.Context, code string, slug string) (output *models.GetEventWithInstancesDBOutput, err error) {
 	defer func() {
 		LogRepository(ctx, err)
 	}()
 
-	err = er.db.Raw(queryGetEventInstancesByEventCode, code).Scan(&output).Error
+	query, param := BuildQueryGetEventWithInstancesByCodeOrSlug(code, slug)
+	err = er.db.Raw(query, param).Scan(&output).Error
 	if err != nil {
 		return nil, err
 	}

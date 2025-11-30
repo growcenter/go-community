@@ -1,8 +1,10 @@
 package models
 
 import (
-	"github.com/labstack/echo/v4"
+	"fmt"
 	"time"
+
+	"github.com/labstack/echo/v4"
 )
 
 var (
@@ -74,30 +76,41 @@ type UserTokenResponse struct {
 }
 
 type TokenValues struct {
-	Id        string   `json:"id"`
-	UserTypes []string `json:"userTypes"`
-	Roles     []string `json:"roles"`
+	Id         string   `json:"id"`
+	UserTypes  []string `json:"userTypes"`
+	Roles      []string `json:"roles"`
+	CampusCode string   `json:"campusCode"`
 }
 
 func GetValueFromToken(ctx echo.Context) (TokenValues, error) {
 	id, ok := ctx.Get("id").(string)
 	if !ok {
+		fmt.Println("error get id from token", ctx.Get("id"))
 		return TokenValues{}, echo.ErrInternalServerError
 	}
 
 	userTypes, ok := ctx.Get("userTypes").([]string)
 	if !ok {
+		fmt.Println("error get userTypes from token", ctx.Get("userTypes"))
 		return TokenValues{}, echo.ErrInternalServerError
 	}
 
 	roles, ok := ctx.Get("roles").([]string)
 	if !ok {
+		fmt.Println("error get roles from token", ctx.Get("roles"))
+		return TokenValues{}, echo.ErrInternalServerError
+	}
+
+	campusCode, ok := ctx.Get("campusCode").(string)
+	if !ok {
+		fmt.Println("error get campusCode from token", ctx.Get("campusCode"))
 		return TokenValues{}, echo.ErrInternalServerError
 	}
 
 	return TokenValues{
-		Id:        id,
-		UserTypes: userTypes,
-		Roles:     roles,
+		Id:         id,
+		UserTypes:  userTypes,
+		Roles:      roles,
+		CampusCode: campusCode,
 	}, nil
 }

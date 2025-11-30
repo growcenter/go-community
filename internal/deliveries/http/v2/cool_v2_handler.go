@@ -98,7 +98,7 @@ func (clh *CoolHandler) CreateNewJoiner(ctx echo.Context) error {
 		return response.Error(ctx, err)
 	}
 
-	return response.SuccessV2(ctx, http.StatusCreated, "", cool)
+	return response.SuccessV2(ctx, http.StatusCreated, cool)
 }
 
 func (clh *CoolHandler) GetAllNewJoiner(ctx echo.Context) error {
@@ -144,7 +144,7 @@ func (clh *CoolHandler) UpdateNewJoiner(ctx echo.Context) error {
 		return response.Error(ctx, err)
 	}
 
-	return response.SuccessV2(ctx, http.StatusOK, "", cool)
+	return response.SuccessV2(ctx, http.StatusOK, cool)
 }
 
 func (clh *CoolHandler) CreateCool(ctx echo.Context) error {
@@ -162,7 +162,7 @@ func (clh *CoolHandler) CreateCool(ctx echo.Context) error {
 		return response.Error(ctx, err)
 	}
 
-	return response.SuccessV2(ctx, http.StatusCreated, "", new.ToResponse())
+	return response.SuccessV2(ctx, http.StatusCreated, new.ToResponse())
 }
 
 func (clh *CoolHandler) GetAll(ctx echo.Context) error {
@@ -184,8 +184,6 @@ func (clh *CoolHandler) GetAll(ctx echo.Context) error {
 	}
 
 	return response.SuccessListV2(ctx, http.StatusOK, "", data)
-
-	return nil // unreachable
 }
 
 func (clh *CoolHandler) GetCoolPersonal(ctx echo.Context) error {
@@ -194,7 +192,7 @@ func (clh *CoolHandler) GetCoolPersonal(ctx echo.Context) error {
 		return response.Error(ctx, err)
 	}
 
-	return response.SuccessV2(ctx, http.StatusOK, "", cool)
+	return response.SuccessV2(ctx, http.StatusOK, cool)
 }
 
 func (clh *CoolHandler) GetCoolMemberByCode(ctx echo.Context) error {
@@ -236,7 +234,7 @@ func (clh *CoolHandler) AddMemberByCode(ctx echo.Context) error {
 		return response.ErrorV2(ctx, err)
 	}
 
-	return response.SuccessV2(ctx, http.StatusCreated, "", members)
+	return response.SuccessV2(ctx, http.StatusCreated, members)
 }
 
 func (clh *CoolHandler) DeleteMemberByCode(ctx echo.Context) error {
@@ -253,7 +251,7 @@ func (clh *CoolHandler) DeleteMemberByCode(ctx echo.Context) error {
 		return response.ErrorV2(ctx, err)
 	}
 
-	return response.SuccessV2(ctx, http.StatusOK, "User's current COOL information has been deleted", nil)
+	return response.SuccessV2(ctx, http.StatusOK, nil, "User's current COOL information has been deleted")
 }
 
 func (clh *CoolHandler) UpdateMemberByCode(ctx echo.Context) error {
@@ -276,7 +274,7 @@ func (clh *CoolHandler) UpdateMemberByCode(ctx echo.Context) error {
 		return response.ErrorV2(ctx, err)
 	}
 
-	return response.SuccessV2(ctx, http.StatusOK, "User's current COOL information has been updated", coolData)
+	return response.SuccessV2(ctx, http.StatusOK, coolData, "User's current COOL information has been updated")
 }
 
 func (clh *CoolHandler) GetCoolByCode(ctx echo.Context) error {
@@ -285,5 +283,5 @@ func (clh *CoolHandler) GetCoolByCode(ctx echo.Context) error {
 		return response.Error(ctx, err)
 	}
 
-	return response.SuccessV2(ctx, http.StatusOK, "", cool)
+	return response.SuccessV2(ctx, http.StatusOK, cool)
 }

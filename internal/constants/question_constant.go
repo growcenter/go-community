@@ -19,3 +19,21 @@ const (
 	QuestionTypeLegalId    QuestionType = "legalId"
 	QuestionTypeInstagram  QuestionType = "instagram"
 )
+
+var MapQuestionType = map[string]QuestionType{
+	"shortText":      QuestionTypeShortText,
+	"longText":       QuestionTypeLongText,
+	"singleChoice":   QuestionTypeSingle,
+	"multipleChoice": QuestionTypeMultiple,
+	"date":           QuestionTypeDate,
+	"time":           QuestionTypeTime,
+	"email":          QuestionTypeEmail,
+	"phone":          QuestionTypePhone,
+	"emailPhone":     QuestionTypeEmailPhone,
+	"number":         QuestionTypeNumber,
+	"campus":         QuestionTypeCampus,
+	"department":     QuestionTypeDepartment,
+	"cool":           QuestionTypeCool,
+	"legalId":        QuestionTypeLegalId,
+	"instagram":      QuestionTypeInstagram,
+}

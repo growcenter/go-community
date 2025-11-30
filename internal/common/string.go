@@ -175,6 +175,90 @@ func RemoveSliceIfExact(input []string, toRemove []string) []string {
 	return result
 }
 
+// AreStringFieldsUnique checks if string values are unique across specified fields in a slice of structs.
+// It returns false if a duplicate is found or if the input is not a slice of structs.
+func AreStringFieldsUnique(slice interface{}, fieldNames ...string) bool {
+	val := reflect.ValueOf(slice)
+	if val.Kind() != reflect.Slice {
+		// Invalid input, so not unique in a sense.
+		return false
+	}
+
+	// Create a map of sets to track seen values for each field.
+	seenValues := make(map[string]map[string]struct{})
+	for _, fieldName := range fieldNames {
+		seenValues[fieldName] = make(map[string]struct{})
+	}
+
+	for i := 0; i < val.Len(); i++ {
+		item := val.Index(i)
+		if item.Kind() != reflect.Struct {
+			return false // Slice items are not structs.
+		}
+
+		for _, fieldName := range fieldNames {
+			field := item.FieldByName(fieldName)
+			if !field.IsValid() || field.Kind() != reflect.String {
+				continue // Skip if field doesn't exist or is not a string.
+			}
+
+			value := field.String()
+			if value != "" {
+				if _, exists := seenValues[fieldName][value]; exists {
+					return false // Duplicate found.
+				}
+				seenValues[fieldName][value] = struct{}{}
+			}
+		}
+	}
+	return true // All values are unique.
+}
+
+// CheckUniqueStringFields checks for duplicate non-empty string values across multiple fields in a slice of structs.
+// It uses reflection to be generic and flexible.
+//
+// Parameters:
+//   - slice: The slice of structs to check (passed as an interface{}).
+//   - fieldNames: A variadic list of string field names to check for uniqueness.
+//
+// Returns:
+//   - An error if a duplicate value is found in any of the specified fields, or if reflection fails.
+func CheckUniqueStringFields(slice interface{}, fieldNames ...string) error {
+	val := reflect.ValueOf(slice)
+	if val.Kind() != reflect.Slice {
+		return fmt.Errorf("expected a slice, but got %s", val.Kind())
+	}
+
+	// Create a map of sets to track seen values for each field.
+	seenValues := make(map[string]map[string]struct{})
+	for _, fieldName := range fieldNames {
+		seenValues[fieldName] = make(map[string]struct{})
+	}
+
+	for i := 0; i < val.Len(); i++ {
+		item := val.Index(i)
+		if item.Kind() != reflect.Struct {
+			return fmt.Errorf("expected slice items to be structs, but got %s", item.Kind())
+		}
+
+		for _, fieldName := range fieldNames {
+			field := item.FieldByName(fieldName)
+			if !field.IsValid() || field.Kind() != reflect.String {
+				continue // Skip if field doesn't exist or is not a string.
+			}
+
+			value := field.String()
+			if value != "" {
+				if _, exists := seenValues[fieldName][value]; exists {
+					return fmt.Errorf("duplicate value found for field '%s': %s", fieldName, value)
+				}
+				seenValues[fieldName][value] = struct{}{}
+			}
+		}
+	}
+	return nil
+}
+
 // removeIfContains removes strings that contain any of the blocked substrings
 func RemoveSliceIfContains(input []string, toRemove []string) []string {
 	var result []string

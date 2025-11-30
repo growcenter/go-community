@@ -40,6 +40,10 @@ var (
 	ErrorEventCanOnlyRegisterOnce    = errors.New("your account already registered for this event")
 	ErrorAlreadyRegistered           = errors.New("your main or other register data already registered for this event")
 	ErrorIdentifierCommunityIdEmpty  = errors.New("at least should filled either identifier or community id")
+	ErrorMissingParentAttendee       = errors.New("request must contain one primary attendee marked as isParent:true")
+	ErrorMultipleParentAttendees     = errors.New("request cannot contain more than one primary attendee marked as isParent:true")
+	ErrorDuplicateAttendeeInRequest  = errors.New("request contains duplicate attendees with the same email or phone number")
+	ErrorSelfRegistration            = errors.New("this event is for self-registration only")
 	ErrorQRForMoreThanOneRegister    = errors.New("your personal QR cannot be used for more than one registration")
 	ErrorCannotUsePersonalQR         = errors.New("you cannot register this event by your personal qr. To register, please register manually")
 	ErrorAlreadyVerified             = errors.New("your registration is already verified")
@@ -340,6 +344,30 @@ func ErrorMapping(err error) Response {
 		return Response{
 			Code:    http.StatusConflict,
 			Status:  "ALREADY_REGISTERED",
+			Message: err.Error(),
+		}
+	case ErrorMissingParentAttendee:
+		return Response{
+			Code:    http.StatusBadRequest,
+			Status:  "INVALID_INPUT",
+			Message: err.Error(),
+		}
+	case ErrorMultipleParentAttendees:
+		return Response{
+			Code:    http.StatusBadRequest,
+			Status:  "INVALID_INPUT",
+			Message: err.Error(),
+		}
+	case ErrorDuplicateAttendeeInRequest:
+		return Response{
+			Code:    http.StatusBadRequest,
+			Status:  "INVALID_INPUT",
+			Message: err.Error(),
+		}
+	case ErrorSelfRegistration:
+		return Response{
+			Code:    http.StatusForbidden,
+			Status:  "FORBIDDEN_REGISTRATION",
 			Message: err.Error(),
 		}
 	case ErrorCannotUsePersonalQR:

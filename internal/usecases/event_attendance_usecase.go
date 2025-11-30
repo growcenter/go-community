@@ -8,7 +8,7 @@ import (
 )
 
 type EventAttendanceUsecase interface {
-	Create(ctx context.Context, request models.CreateEventAttendanceRequest) (*models.Attendee, error)
+	Create(ctx context.Context, request models.CreateEventAttendanceRequest) (*models.EventAttendance, error)
 }
 
 type eventAttendanceUsecase struct {

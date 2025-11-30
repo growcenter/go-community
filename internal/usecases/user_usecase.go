@@ -277,7 +277,7 @@ func (uu *userUsecase) Login(ctx context.Context, request *models.LoginUserReque
 
 	userRoles := common.CombineMapStrings(rolesInUserType, user.Roles)
 	user.Roles = userRoles
-	tokens, err = uu.a.GenerateTokens(user.CommunityID, user.UserTypes, userRoles)
+	tokens, err = uu.a.GenerateTokens(user.CommunityID, user.UserTypes, userRoles, &user.CampusCode)
 	if err != nil {
 		return nil, nil, err
 	}

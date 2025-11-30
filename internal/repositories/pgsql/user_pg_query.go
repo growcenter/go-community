@@ -31,10 +31,10 @@ var (
 
 	queryGetManyNameByCommunityId = "SELECT	 community_id, name FROM users WHERE community_id = ANY(?)"
 
-	queryGetRBACByCommunityId = `SELECT community_id, roles, user_types, cool_code
+	queryGetRBACByCommunityId = `SELECT community_id, roles, user_types, cool_code, campus_code
 	FROM users WHERE community_id = ? LIMIT 1`
 
-	queryGetManyUserRBACByCommunityId = `SELECT community_id, roles, user_types, cool_code
+	queryGetManyUserRBACByCommunityId = `SELECT community_id, roles, user_types, cool_code, campus_code
 	FROM users WHERE community_id = ? LIMIT 1`
 
 	queryGetUserNameByCommunityId = `SELECT name, community_id
@@ -138,6 +138,12 @@ var (
 		FROM users
 		WHERE community_id = ANY(?)
 	`
+
+	queryGetIdentifierByCommunityId = `SELECT community_id, email, phone_number, name
+	FROM users WHERE community_id = ? LIMIT 1`
+
+	queryGetIdentifierByCommunityIds = `SELECT community_id, email, phone_number, name
+	FROM users WHERE community_id = ANY(?)`
 )
 
 func ConditionExistOrNot(email string, phoneNumber string) (condition string, args []interface{}) {

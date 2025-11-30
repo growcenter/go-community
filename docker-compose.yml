@@ -7,7 +7,7 @@ services:
       context: .
       dockerfile: Dockerfile
       tags:
-      - grow-community-backend:latest
+        - grow-community-backend:latest
     environment:
       - ENV=prod
     volumes:

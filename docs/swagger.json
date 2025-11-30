@@ -146,6 +146,193 @@
                 }
             }
         },
+        "/api/v2/events/registers": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    },
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "This endpoint handles the registration of one or more attendees to a specific event instance. It supports different registration methods like QR code scanning or direct registration. The endpoint validates event status, instance availability, user permissions for private events, and registration quotas before creating the registration records.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "events"
+                ],
+                "summary": "Register User to Event",
+                "parameters": [
+                    {
+                        "description": "The registration request payload, containing event/instance codes, registrant details, and a list of attendees with their information and form answers.",
+                        "name": "registrationRequest",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/models.CreateEventRegistrationRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Successfully created the registration. The response includes the registration code and details of all attendees.",
+                        "schema": {
+                            "$ref": "#/definitions/models.CreateEventRegistrationResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request. Possible causes: Mismatched event/instance codes, missing primary attendee, invalid registration method, or registration window is closed/not yet open.",
+                        "schema": {
+                            "$ref": "#/definitions/models.ErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden. The user does not have the required roles or permissions to register for this private event.",
+                        "schema": {
+                            "$ref": "#/definitions/models.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found. The specified event, instance, or user does not exist.",
+                        "schema": {
+                            "$ref": "#/definitions/models.ErrorResponse"
+                        }
+                    },
+                    "409": {
+                        "description": "Conflict. The user has already registered for this event, or one of the attendees is already registered (if uniqueness is enforced).",
+                        "schema": {
+                            "$ref": "#/definitions/models.ErrorResponse"
+                        }
+                    },
+                    "422": {
+                        "description": "Unprocessable Entity. The request body contains validation errors, such as invalid email/phone format or missing required fields.",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/models.ErrorResponse"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "errors": {
+                                            "$ref": "#/definitions/models.ErrorValidateResponse"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "429": {
+                        "description": "Too Many Requests. The user has exceeded the registration quota for this event instance.",
+                        "schema": {
+                            "$ref": "#/definitions/models.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error. An unexpected error occurred on the server.",
+                        "schema": {
+                            "$ref": "#/definitions/models.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v2/internal/events": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth header string true \"Bearer token\"": []
+                    },
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "Create event with the instances/sessions",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "events-internal"
+                ],
+                "summary": "Create Event",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Bearer token",
+                        "name": "Authorization",
+                        "in": "header",
+                        "required": true
+                    },
+                    {
+                        "description": "Event creation request body",
+                        "name": "event",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/models.CreateEventRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Response indicates that the request succeeded and the event has been created.",
+                        "schema": {
+                            "$ref": "#/definitions/models.CreateEventResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request. Can be caused by invalid time ranges, or missing fields for private events.",
+                        "schema": {
+                            "$ref": "#/definitions/models.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found. Can be caused by non-existent roles, users, campuses, etc.",
+                        "schema": {
+                            "$ref": "#/definitions/models.ErrorResponse"
+                        }
+                    },
+                    "409": {
+                        "description": "Conflict. The event slug or a generated code already exists.",
+                        "schema": {
+                            "$ref": "#/definitions/models.ErrorResponse"
+                        }
+                    },
+                    "422": {
+                        "description": "Validation Error. The request body is invalid.",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/models.ErrorResponse"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "errors": {
+                                            "$ref": "#/definitions/models.ErrorValidateResponse"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error. Something went wrong on the server.",
+                        "schema": {
+                            "$ref": "#/definitions/models.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/api/v2/internal/users": {
             "get": {
                 "description": "Get all information needed about user in list",
@@ -571,158 +758,6 @@
                         }
                     }
                 }
-            },
-            "post": {
-                "security": [
-                    {
-                        "BearerAuth": []
-                    }
-                ],
-                "description": "Register user to particular event and instances",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "events"
-                ],
-                "summary": "Register User to Event",
-                "parameters": [
-                    {
-                        "description": "User object that needs to be added",
-                        "name": "user",
-                        "in": "body",
-                        "required": true,
-                        "schema": {
-                            "$ref": "#/definitions/models.CreateEventRegistrationRecordRequest"
-                        }
-                    },
-                    {
-                        "type": "string",
-                        "description": "mandatory header to access endpoint",
-                        "name": "X-API-Key",
-                        "in": "header",
-                        "required": true
-                    }
-                ],
-                "responses": {
-                    "201": {
-                        "description": "Response indicates that the request succeeded and the resources has been fetched and transmitted in the message body",
-                        "schema": {
-                            "allOf": [
-                                {
-                                    "$ref": "#/definitions/models.CreateEventRegistrationRecordResponse"
-                                },
-                                {
-                                    "type": "object",
-                                    "properties": {
-                                        "registrants": {
-                                            "$ref": "#/definitions/models.CreateOtherEventRegistrationRecordRequest"
-                                        }
-                                    }
-                                }
-                            ]
-                        }
-                    },
-                    "400": {
-                        "description": "Bad Request",
-                        "schema": {
-                            "$ref": "#/definitions/models.ErrorResponse"
-                        }
-                    },
-                    "422": {
-                        "description": "Validation error. This can happen if there is an error validation while create account",
-                        "schema": {
-                            "allOf": [
-                                {
-                                    "$ref": "#/definitions/models.ErrorResponse"
-                                },
-                                {
-                                    "type": "object",
-                                    "properties": {
-                                        "errors": {
-                                            "$ref": "#/definitions/models.ErrorValidateResponse"
-                                        }
-                                    }
-                                }
-                            ]
-                        }
-                    }
-                }
-            }
-        },
-        "/v2/events/registers/{id}/status": {
-            "patch": {
-                "description": "Update user registration id to success or failed",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "events"
-                ],
-                "summary": "Update Registration Status",
-                "parameters": [
-                    {
-                        "type": "string",
-                        "description": "registration id",
-                        "name": "id",
-                        "in": "path",
-                        "required": true
-                    },
-                    {
-                        "description": "User object that needs to be added",
-                        "name": "user",
-                        "in": "body",
-                        "required": true,
-                        "schema": {
-                            "$ref": "#/definitions/models.UpdateRegistrationStatusRequest"
-                        }
-                    },
-                    {
-                        "type": "string",
-                        "description": "mandatory header to access endpoint",
-                        "name": "X-API-Key",
-                        "in": "header",
-                        "required": true
-                    }
-                ],
-                "responses": {
-                    "201": {
-                        "description": "Response indicates that the request succeeded and the resources has been fetched and transmitted in the message body",
-                        "schema": {
-                            "$ref": "#/definitions/models.UpdateRegistrationStatusResponse"
-                        }
-                    },
-                    "400": {
-                        "description": "Bad Request",
-                        "schema": {
-                            "$ref": "#/definitions/models.ErrorResponse"
-                        }
-                    },
-                    "422": {
-                        "description": "Validation error. This can happen if there is an error validation while create account",
-                        "schema": {
-                            "allOf": [
-                                {
-                                    "$ref": "#/definitions/models.ErrorResponse"
-                                },
-                                {
-                                    "type": "object",
-                                    "properties": {
-                                        "errors": {
-                                            "$ref": "#/definitions/models.ErrorValidateResponse"
-                                        }
-                                    }
-                                }
-                            ]
-                        }
-                    }
-                }
             }
         },
         "/v2/events/{code}": {
@@ -790,154 +825,8 @@
                             "$ref": "#/definitions/models.ErrorResponse"
                         }
                     },
-                    "422": {
-                        "description": "Validation error. This can happen if there is an error validation while create account",
-                        "schema": {
-                            "allOf": [
-                                {
-                                    "$ref": "#/definitions/models.ErrorResponse"
-                                },
-                                {
-                                    "type": "object",
-                                    "properties": {
-                                        "errors": {
-                                            "$ref": "#/definitions/models.ErrorValidateResponse"
-                                        }
-                                    }
-                                }
-                            ]
-                        }
-                    }
-                }
-            }
-        },
-        "/v2/internal/events": {
-            "post": {
-                "security": [
-                    {
-                        "BearerAuth": []
-                    }
-                ],
-                "description": "Create event with the instances/sessions",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "events"
-                ],
-                "summary": "Create Event",
-                "parameters": [
-                    {
-                        "description": "User object that needs to be added",
-                        "name": "user",
-                        "in": "body",
-                        "required": true,
-                        "schema": {
-                            "$ref": "#/definitions/models.CreateEventRequest"
-                        }
-                    },
-                    {
-                        "type": "string",
-                        "description": "mandatory header to access endpoint",
-                        "name": "X-API-Key",
-                        "in": "header",
-                        "required": true
-                    }
-                ],
-                "responses": {
-                    "201": {
-                        "description": "Response indicates that the request succeeded and the resources has been fetched and transmitted in the message body",
-                        "schema": {
-                            "allOf": [
-                                {
-                                    "$ref": "#/definitions/models.CreateEventResponse"
-                                },
-                                {
-                                    "type": "object",
-                                    "properties": {
-                                        "instances": {
-                                            "$ref": "#/definitions/models.CreateInstanceResponse"
-                                        }
-                                    }
-                                }
-                            ]
-                        }
-                    },
-                    "400": {
-                        "description": "Bad Request",
-                        "schema": {
-                            "$ref": "#/definitions/models.ErrorResponse"
-                        }
-                    },
-                    "422": {
-                        "description": "Validation error. This can happen if there is an error validation while create account",
-                        "schema": {
-                            "allOf": [
-                                {
-                                    "$ref": "#/definitions/models.ErrorResponse"
-                                },
-                                {
-                                    "type": "object",
-                                    "properties": {
-                                        "errors": {
-                                            "$ref": "#/definitions/models.ErrorValidateResponse"
-                                        }
-                                    }
-                                }
-                            ]
-                        }
-                    }
-                }
-            }
-        },
-        "/v2/internal/events/instances": {
-            "post": {
-                "security": [
-                    {
-                        "BearerAuth": []
-                    }
-                ],
-                "description": "Create instance from existing Event",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "events"
-                ],
-                "summary": "Create Instance",
-                "parameters": [
-                    {
-                        "description": "User object that needs to be added",
-                        "name": "user",
-                        "in": "body",
-                        "required": true,
-                        "schema": {
-                            "$ref": "#/definitions/models.CreateInstanceExistingEventRequest"
-                        }
-                    },
-                    {
-                        "type": "string",
-                        "description": "mandatory header to access endpoint",
-                        "name": "X-API-Key",
-                        "in": "header",
-                        "required": true
-                    }
-                ],
-                "responses": {
-                    "201": {
-                        "description": "Response indicates that the request succeeded and the resources has been fetched and transmitted in the message body",
-                        "schema": {
-                            "$ref": "#/definitions/models.CreateInstanceResponse"
-                        }
-                    },
-                    "400": {
-                        "description": "Bad Request",
+                    "404": {
+                        "description": "Not Found. Can be caused by non-existent event code.",
                         "schema": {
                             "$ref": "#/definitions/models.ErrorResponse"
                         }
@@ -1865,71 +1754,6 @@
                 }
             }
         },
-        "/v2/users/volunteer": {
-            "post": {
-                "description": "Create user for volunteer",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "users"
-                ],
-                "summary": "Create Volunteer User",
-                "parameters": [
-                    {
-                        "description": "User object that needs to be added",
-                        "name": "user",
-                        "in": "body",
-                        "required": true,
-                        "schema": {
-                            "$ref": "#/definitions/models.CreateVolunteerRequest"
-                        }
-                    },
-                    {
-                        "type": "string",
-                        "description": "mandatory header to access endpoint",
-                        "name": "X-API-Key",
-                        "in": "header",
-                        "required": true
-                    }
-                ],
-                "responses": {
-                    "201": {
-                        "description": "Response indicates that the request succeeded and the resources has been fetched and transmitted in the message body",
-                        "schema": {
-                            "$ref": "#/definitions/models.CreateVolunteerResponse"
-                        }
-                    },
-                    "400": {
-                        "description": "Bad Request",
-                        "schema": {
-                            "$ref": "#/definitions/models.ErrorResponse"
-                        }
-                    },
-                    "422": {
-                        "description": "Validation error. This can happen if there is an error validation while create account",
-                        "schema": {
-                            "allOf": [
-                                {
-                                    "$ref": "#/definitions/models.ErrorResponse"
-                                },
-                                {
-                                    "type": "object",
-                                    "properties": {
-                                        "errors": {
-                                            "$ref": "#/definitions/models.ErrorValidateResponse"
-                                        }
-                                    }
-                                }
-                            ]
-                        }
-                    }
-                }
-            }
-        },
         "/v2/users/{communityId}": {
             "get": {
                 "description": "Get all information needed about user by community id",
@@ -2215,6 +2039,168 @@
         }
     },
     "definitions": {
+        "constants.QuestionType": {
+            "type": "string",
+            "enum": [
+                "shortText",
+                "longText",
+                "singleChoice",
+                "multipleChoice",
+                "date",
+                "time",
+                "email",
+                "phone",
+                "emailPhone",
+                "number",
+                "campus",
+                "department",
+                "cool",
+                "legalId",
+                "instagram"
+            ],
+            "x-enum-varnames": [
+                "QuestionTypeShortText",
+                "QuestionTypeLongText",
+                "QuestionTypeSingle",
+                "QuestionTypeMultiple",
+                "QuestionTypeDate",
+                "QuestionTypeTime",
+                "QuestionTypeEmail",
+                "QuestionTypePhone",
+                "QuestionTypeEmailPhone",
+                "QuestionTypeNumber",
+                "QuestionTypeCampus",
+                "QuestionTypeDepartment",
+                "QuestionTypeCool",
+                "QuestionTypeLegalId",
+                "QuestionTypeInstagram"
+            ]
+        },
+        "models.AnswerItem": {
+            "type": "object",
+            "required": [
+                "answer",
+                "questionCode"
+            ],
+            "properties": {
+                "answer": {
+                    "type": "string"
+                },
+                "questionCode": {
+                    "type": "string"
+                }
+            }
+        },
+        "models.AnswerResponse": {
+            "type": "object",
+            "properties": {
+                "answer": {
+                    "type": "string"
+                },
+                "code": {
+                    "type": "string"
+                },
+                "formCode": {
+                    "type": "string"
+                },
+                "identifier": {
+                    "type": "string"
+                },
+                "identifierType": {
+                    "type": "string"
+                },
+                "isCorrect": {
+                    "type": "boolean"
+                },
+                "questionCode": {
+                    "type": "string"
+                },
+                "submittedAt": {
+                    "type": "string"
+                },
+                "type": {
+                    "type": "string"
+                }
+            }
+        },
+        "models.AttendeeRequest": {
+            "type": "object",
+            "required": [
+                "name"
+            ],
+            "properties": {
+                "communityId": {
+                    "type": "string"
+                },
+                "email": {
+                    "type": "string"
+                },
+                "form": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/models.AnswerItem"
+                    }
+                },
+                "isParent": {
+                    "type": "boolean"
+                },
+                "legalId": {
+                    "type": "string",
+                    "maxLength": 16,
+                    "minLength": 16
+                },
+                "name": {
+                    "type": "string"
+                },
+                "phoneNumber": {
+                    "type": "string"
+                },
+                "remarks": {
+                    "type": "string"
+                }
+            }
+        },
+        "models.BulkCreateFormQuestionItem": {
+            "type": "object",
+            "required": [
+                "applyFor",
+                "mandatoryFor",
+                "text",
+                "type"
+            ],
+            "properties": {
+                "applyFor": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "correctAnswer": {
+                    "type": "string"
+                },
+                "displayOrder": {
+                    "type": "integer"
+                },
+                "mandatoryFor": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "options": {
+                    "$ref": "#/definitions/models.QuestionOptions"
+                },
+                "rules": {
+                    "$ref": "#/definitions/models.QuestionValidationRules"
+                },
+                "text": {
+                    "type": "string"
+                },
+                "type": {
+                    "$ref": "#/definitions/constants.QuestionType"
+                }
+            }
+        },
         "models.CampusesResponse": {
             "type": "object",
             "properties": {
@@ -2267,99 +2253,122 @@
                 }
             }
         },
-        "models.CreateEventRegistrationRecordRequest": {
+        "models.CreateAttendeeResponse": {
             "type": "object",
-            "required": [
-                "eventCode",
-                "instanceCode",
-                "registerAt",
-                "registrants"
-            ],
             "properties": {
+                "code": {
+                    "type": "string"
+                },
                 "communityId": {
                     "type": "string"
                 },
-                "description": {
+                "email": {
                     "type": "string"
                 },
-                "eventCode": {
-                    "type": "string",
-                    "maxLength": 7,
-                    "minLength": 7
-                },
-                "identifier": {
-                    "type": "string"
-                },
-                "instanceCode": {
-                    "type": "string",
-                    "maxLength": 15,
-                    "minLength": 15
-                },
-                "isPersonalQR": {
-                    "description": "IsInheritUser bool                                        `json:\"isInheritUser\" validate:\"required\"`",
-                    "type": "boolean"
-                },
-                "name": {
-                    "type": "string",
-                    "maxLength": 50,
-                    "minLength": 1,
-                    "example": "Professionals"
-                },
-                "registerAt": {
-                    "type": "string"
-                },
-                "registrants": {
+                "forms": {
                     "type": "array",
                     "items": {
-                        "$ref": "#/definitions/models.CreateOtherEventRegistrationRecordRequest"
+                        "$ref": "#/definitions/models.FormQuestionAnswerResponse"
                     }
-                }
-            }
-        },
-        "models.CreateEventRegistrationRecordResponse": {
-            "type": "object",
-            "properties": {
-                "communityId": {
-                    "type": "string"
                 },
-                "description": {
-                    "type": "string"
-                },
-                "eventCode": {
-                    "type": "string"
-                },
-                "eventTitle": {
-                    "type": "string"
-                },
-                "identifier": {
-                    "type": "string"
-                },
-                "instanceCode": {
-                    "type": "string"
-                },
-                "instanceTitle": {
+                "legalId": {
                     "type": "string"
                 },
                 "name": {
                     "type": "string"
                 },
-                "registerAt": {
+                "phoneNumber": {
                     "type": "string"
                 },
-                "registrants": {
-                    "type": "array",
-                    "items": {
-                        "$ref": "#/definitions/models.CreateOtherEventRegistrationRecordResponse"
-                    }
+                "remarks": {
+                    "type": "string"
                 },
-                "registrationId": {
+                "role": {
                     "type": "string"
                 },
                 "status": {
                     "type": "string"
                 },
-                "totalRegistrants": {
+                "type": {
+                    "type": "string"
+                }
+            }
+        },
+        "models.CreateEventRegistrationRequest": {
+            "type": "object",
+            "required": [
+                "attendees",
+                "eventCode",
+                "instanceCode",
+                "method",
+                "registerAt",
+                "registrant"
+            ],
+            "properties": {
+                "attendees": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/models.AttendeeRequest"
+                    }
+                },
+                "eventCode": {
+                    "type": "string",
+                    "maxLength": 7,
+                    "minLength": 7,
+                    "example": "xxxxxxx"
+                },
+                "instanceCode": {
+                    "type": "string",
+                    "maxLength": 15,
+                    "minLength": 15,
+                    "example": "xxxxxxx-yyyyyyy"
+                },
+                "method": {
+                    "type": "string",
+                    "enum": [
+                        "personal-qr",
+                        "event-qr",
+                        "registration-qr"
+                    ],
+                    "example": "personal-qr"
+                },
+                "registerAt": {
+                    "type": "string"
+                },
+                "registrant": {
+                    "$ref": "#/definitions/models.RegistrantRequest"
+                }
+            }
+        },
+        "models.CreateEventRegistrationResponse": {
+            "type": "object",
+            "properties": {
+                "attendees": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/models.CreateAttendeeResponse"
+                    }
+                },
+                "code": {
+                    "type": "string"
+                },
+                "eventCode": {
+                    "type": "string"
+                },
+                "instanceCode": {
+                    "type": "string"
+                },
+                "method": {
+                    "type": "string"
+                },
+                "quantity": {
                     "type": "integer"
+                },
+                "registerAt": {
+                    "type": "string"
+                },
+                "registrant": {
+                    "$ref": "#/definitions/models.RegistrantRequest"
                 },
                 "type": {
                     "type": "string"
@@ -2369,49 +2378,39 @@
         "models.CreateEventRequest": {
             "type": "object",
             "required": [
-                "allowedCampuses",
-                "allowedFor",
-                "allowedRoles",
-                "allowedUsers",
+                "accessConfig",
+                "category",
+                "contactCommunityIds",
                 "instances",
-                "locationName",
-                "locationType",
-                "name"
+                "location",
+                "timeConfig",
+                "title"
             ],
             "properties": {
-                "allowedCampuses": {
+                "accessConfig": {
+                    "$ref": "#/definitions/models.EventAccessConfigRequest"
+                },
+                "category": {
+                    "type": "string"
+                },
+                "contactCommunityIds": {
                     "type": "array",
                     "items": {
                         "type": "string"
-                    }
-                },
-                "allowedFor": {
-                    "type": "string",
-                    "enum": [
-                        "public",
-                        "private"
+                    },
+                    "example": [
+                        "community-1"
                     ]
                 },
-                "allowedRoles": {
-                    "type": "array",
-                    "items": {
-                        "type": "string"
-                    }
-                },
-                "allowedUsers": {
-                    "type": "array",
-                    "items": {
-                        "type": "string"
-                    }
-                },
                 "description": {
-                    "type": "string"
+                    "type": "string",
+                    "example": "This event blabla"
                 },
-                "eventEndAt": {
-                    "type": "string"
-                },
-                "eventStartAt": {
-                    "type": "string"
+                "imageLinks": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
                 },
                 "instances": {
                     "type": "array",
@@ -2419,34 +2418,45 @@
                         "$ref": "#/definitions/models.CreateInstanceRequest"
                     }
                 },
-                "isRecurring": {
+                "isPublish": {
                     "type": "boolean"
                 },
-                "locationName": {
-                    "type": "string"
+                "location": {
+                    "$ref": "#/definitions/models.EventLocationRequest"
                 },
-                "locationType": {
-                    "type": "string",
-                    "enum": [
-                        "online",
-                        "onsite",
-                        "hybrid"
+                "organizerCommunityIds": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    },
+                    "example": [
+                        "community-1"
                     ]
                 },
-                "name": {
+                "questions": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/models.BulkCreateFormQuestionItem"
+                    }
+                },
+                "redirectUrl": {
                     "type": "string"
                 },
-                "recurrence": {
-                    "type": "string"
-                },
-                "registerEndAt": {
-                    "type": "string"
-                },
-                "registerStartAt": {
-                    "type": "string"
+                "slug": {
+                    "description": "The link to redirect to after registration",
+                    "type": "string",
+                    "minLength": 6
                 },
                 "termsAndConditions": {
-                    "type": "string"
+                    "type": "string",
+                    "example": "This event blabla"
+                },
+                "timeConfig": {
+                    "$ref": "#/definitions/models.EventTimeConfigRequest"
+                },
+                "title": {
+                    "type": "string",
+                    "example": "Homebase"
                 },
                 "topics": {
                     "type": "array",
@@ -2458,31 +2468,12 @@
         },
         "models.CreateEventResponse": {
             "type": "object",
-            "required": [
-                "instances"
-            ],
             "properties": {
-                "allowedCampuses": {
-                    "type": "array",
-                    "items": {
-                        "type": "string"
-                    }
+                "accessConfig": {
+                    "$ref": "#/definitions/models.EventAccessConfigResponse"
                 },
-                "allowedFor": {
-                    "type": "string",
-                    "example": "public"
-                },
-                "allowedRoles": {
-                    "type": "array",
-                    "items": {
-                        "type": "string"
-                    }
-                },
-                "allowedUsers": {
-                    "type": "array",
-                    "items": {
-                        "type": "string"
-                    }
+                "category": {
+                    "type": "string"
                 },
                 "code": {
                     "type": "string",
@@ -2492,13 +2483,11 @@
                     "type": "string",
                     "example": "This event blabla"
                 },
-                "eventEndAt": {
-                    "type": "string",
-                    "example": ""
-                },
-                "eventStartAt": {
-                    "type": "string",
-                    "example": ""
+                "imageLinks": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
                 },
                 "instances": {
                     "type": "array",
@@ -2506,29 +2495,20 @@
                         "$ref": "#/definitions/models.CreateInstanceResponse"
                     }
                 },
-                "isRecurring": {
-                    "type": "boolean",
-                    "example": true
+                "location": {
+                    "$ref": "#/definitions/models.EventLocationResponse"
                 },
-                "locationName": {
-                    "type": "string",
-                    "example": "PIOT 6 Lt. 6"
+                "questions": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/models.FormQuestionResponse"
+                    }
                 },
-                "locationType": {
-                    "type": "string",
-                    "example": "offline"
+                "redirectUrl": {
+                    "type": "string"
                 },
-                "recurrence": {
-                    "type": "string",
-                    "example": "monthly"
-                },
-                "registerEndAt": {
-                    "type": "string",
-                    "example": ""
-                },
-                "registerStartAt": {
-                    "type": "string",
-                    "example": ""
+                "slug": {
+                    "type": "string"
                 },
                 "status": {
                     "type": "string",
@@ -2537,6 +2517,9 @@
                 "termsAndConditions": {
                     "type": "string",
                     "example": "This event blabla"
+                },
+                "timeConfig": {
+                    "$ref": "#/definitions/models.EventTimeConfigResponse"
                 },
                 "title": {
                     "type": "string",
@@ -2554,235 +2537,89 @@
                 }
             }
         },
-        "models.CreateInstanceExistingEventRequest": {
+        "models.CreateInstanceRequest": {
             "type": "object",
             "required": [
-                "allowVerifyAt",
-                "disallowVerifyAt",
-                "eventCode",
-                "instanceEndAt",
-                "instanceStartAt",
-                "locationName",
-                "locationType",
-                "registerEndAt",
-                "registerStartAt",
+                "location",
+                "registrationConfig",
+                "timeConfig",
                 "title"
             ],
             "properties": {
-                "allowVerifyAt": {
-                    "type": "string"
-                },
-                "checkType": {
-                    "type": "string",
-                    "enum": [
-                        "check-in",
-                        "check-out",
-                        "both",
-                        "none"
-                    ]
-                },
                 "description": {
-                    "type": "string"
-                },
-                "disallowVerifyAt": {
                     "type": "string"
                 },
                 "eventCode": {
                     "type": "string"
                 },
-                "instanceEndAt": {
-                    "type": "string"
+                "identifierConfig": {
+                    "$ref": "#/definitions/models.InstanceIdentifierConfig"
                 },
-                "instanceStartAt": {
-                    "type": "string"
-                },
-                "isOnePerAccount": {
+                "isFollowEvent": {
                     "type": "boolean"
                 },
-                "isOnePerTicket": {
+                "isPublish": {
                     "type": "boolean"
                 },
                 "isUpdateEventTime": {
                     "type": "boolean"
                 },
-                "locationName": {
-                    "type": "string"
+                "location": {
+                    "$ref": "#/definitions/models.EventLocationRequest"
                 },
-                "locationType": {
-                    "type": "string",
-                    "enum": [
-                        "online",
-                        "onsite",
-                        "hybrid"
-                    ]
+                "questions": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/models.BulkCreateFormQuestionItem"
+                    }
                 },
-                "maxPerTransaction": {
-                    "type": "integer"
+                "registrationConfig": {
+                    "$ref": "#/definitions/models.InstanceRegistrationConfig"
                 },
-                "registerEndAt": {
-                    "type": "string"
-                },
-                "registerFlow": {
-                    "type": "string",
-                    "enum": [
-                        "personal-qr",
-                        "event-qr",
-                        "both-qr",
-                        "none"
-                    ]
-                },
-                "registerStartAt": {
-                    "type": "string"
+                "timeConfig": {
+                    "$ref": "#/definitions/models.InstanceTimeConfig"
                 },
                 "title": {
                     "type": "string"
-                },
-                "totalSeats": {
-                    "type": "integer"
-                }
-            }
-        },
-        "models.CreateInstanceRequest": {
-            "type": "object",
-            "required": [
-                "allowVerifyAt",
-                "disallowVerifyAt",
-                "instanceEndAt",
-                "instanceStartAt",
-                "locationName",
-                "locationType",
-                "registerEndAt",
-                "registerStartAt",
-                "title"
-            ],
-            "properties": {
-                "allowVerifyAt": {
-                    "type": "string"
-                },
-                "checkType": {
-                    "type": "string",
-                    "enum": [
-                        "check-in",
-                        "check-out",
-                        "both",
-                        "none"
-                    ]
-                },
-                "description": {
-                    "type": "string"
-                },
-                "disallowVerifyAt": {
-                    "type": "string"
-                },
-                "instanceEndAt": {
-                    "type": "string"
-                },
-                "instanceStartAt": {
-                    "type": "string"
-                },
-                "isOnePerAccount": {
-                    "type": "boolean"
-                },
-                "isOnePerTicket": {
-                    "type": "boolean"
-                },
-                "locationName": {
-                    "type": "string"
-                },
-                "locationType": {
-                    "type": "string",
-                    "enum": [
-                        "online",
-                        "onsite",
-                        "hybrid"
-                    ]
-                },
-                "maxPerTransaction": {
-                    "type": "integer"
-                },
-                "registerEndAt": {
-                    "type": "string"
-                },
-                "registerFlow": {
-                    "type": "string",
-                    "enum": [
-                        "personal-qr",
-                        "event-qr",
-                        "both-qr",
-                        "none"
-                    ]
-                },
-                "registerStartAt": {
-                    "type": "string"
-                },
-                "title": {
-                    "type": "string"
-                },
-                "totalSeats": {
-                    "type": "integer"
                 }
             }
         },
         "models.CreateInstanceResponse": {
             "type": "object",
             "properties": {
-                "allowVerifyAt": {
-                    "type": "string"
-                },
-                "checkType": {
-                    "type": "string"
-                },
                 "description": {
-                    "type": "string"
-                },
-                "disallowVerifyAt": {
                     "type": "string"
                 },
                 "eventCode": {
                     "type": "string"
                 },
+                "identifierConfig": {
+                    "$ref": "#/definitions/models.InstanceIdentifierConfigResponse"
+                },
                 "instanceCode": {
                     "type": "string"
                 },
-                "instanceEndAt": {
-                    "type": "string"
+                "location": {
+                    "$ref": "#/definitions/models.EventLocationResponse"
                 },
-                "instanceStartAt": {
-                    "type": "string"
+                "questions": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/models.FormQuestionResponse"
+                    }
                 },
-                "isOnePerAccount": {
-                    "type": "boolean"
-                },
-                "isOnePerTicket": {
-                    "type": "boolean"
-                },
-                "locationName": {
-                    "type": "string"
-                },
-                "locationType": {
-                    "type": "string"
-                },
-                "maxPerTransaction": {
-                    "type": "integer"
-                },
-                "registerEndAt": {
-                    "type": "string"
-                },
-                "registerFlow": {
-                    "type": "string"
-                },
-                "registerStartAt": {
-                    "type": "string"
+                "registrationConfig": {
+                    "$ref": "#/definitions/models.InstanceRegistrationConfigResponse"
                 },
                 "status": {
                     "type": "string",
                     "example": "active"
                 },
+                "timeConfig": {
+                    "$ref": "#/definitions/models.InstanceTimeConfigResponse"
+                },
                 "title": {
                     "type": "string"
-                },
-                "totalSeats": {
-                    "type": "integer"
                 },
                 "type": {
                     "type": "string"
@@ -2949,34 +2786,6 @@
                     "type": "string"
                 },
                 "phoneNumber": {
-                    "type": "string"
-                },
-                "type": {
-                    "type": "string"
-                }
-            }
-        },
-        "models.CreateOtherEventRegistrationRecordRequest": {
-            "type": "object",
-            "required": [
-                "name"
-            ],
-            "properties": {
-                "name": {
-                    "type": "string"
-                }
-            }
-        },
-        "models.CreateOtherEventRegistrationRecordResponse": {
-            "type": "object",
-            "properties": {
-                "id": {
-                    "type": "string"
-                },
-                "name": {
-                    "type": "string"
-                },
-                "status": {
                     "type": "string"
                 },
                 "type": {
@@ -3207,177 +3016,6 @@
                 }
             }
         },
-        "models.CreateVolunteerRequest": {
-            "type": "object",
-            "required": [
-                "coolCode",
-                "coolId",
-                "dateOfBirth",
-                "department_code",
-                "isBaptized",
-                "isKom100",
-                "name",
-                "password",
-                "placeOfBirth",
-                "userTypes"
-            ],
-            "properties": {
-                "address": {
-                    "type": "string"
-                },
-                "campusCode": {
-                    "type": "string",
-                    "maxLength": 3,
-                    "minLength": 3,
-                    "example": "001"
-                },
-                "coolCode": {
-                    "type": "string"
-                },
-                "coolId": {
-                    "type": "integer",
-                    "example": 1
-                },
-                "dateOfBirth": {
-                    "type": "string"
-                },
-                "department_code": {
-                    "type": "string",
-                    "example": "MUSIC"
-                },
-                "email": {
-                    "type": "string",
-                    "example": "jeremy@gmail.com"
-                },
-                "gender": {
-                    "type": "string",
-                    "enum": [
-                        "male",
-                        "female"
-                    ]
-                },
-                "isBaptized": {
-                    "type": "boolean"
-                },
-                "isKom100": {
-                    "type": "boolean"
-                },
-                "jemaatId": {
-                    "type": "string"
-                },
-                "kkjNumber": {
-                    "type": "string"
-                },
-                "maritalStatus": {
-                    "type": "string",
-                    "enum": [
-                        "single",
-                        "married",
-                        "others"
-                    ],
-                    "example": "active"
-                },
-                "name": {
-                    "type": "string",
-                    "maxLength": 50,
-                    "minLength": 1,
-                    "example": "Professionals"
-                },
-                "password": {
-                    "type": "string",
-                    "maxLength": 50,
-                    "minLength": 6,
-                    "example": "Professionals"
-                },
-                "phoneNumber": {
-                    "type": "string"
-                },
-                "placeOfBirth": {
-                    "type": "string"
-                },
-                "userTypes": {
-                    "type": "array",
-                    "items": {
-                        "type": "string"
-                    },
-                    "example": [
-                        "volunteer"
-                    ]
-                }
-            }
-        },
-        "models.CreateVolunteerResponse": {
-            "type": "object",
-            "properties": {
-                "address": {
-                    "type": "string"
-                },
-                "campusCode": {
-                    "type": "string"
-                },
-                "communityId": {
-                    "type": "string"
-                },
-                "coolCode": {
-                    "type": "string"
-                },
-                "coolId": {
-                    "type": "integer",
-                    "example": 1
-                },
-                "dateOfBirth": {
-                    "type": "string"
-                },
-                "departmentCode": {
-                    "type": "string"
-                },
-                "email": {
-                    "type": "string"
-                },
-                "gender": {
-                    "type": "string"
-                },
-                "isBaptized": {
-                    "type": "boolean"
-                },
-                "isKom100": {
-                    "type": "boolean"
-                },
-                "jemaatId": {
-                    "type": "string"
-                },
-                "kkjNumber": {
-                    "type": "string"
-                },
-                "maritalStatus": {
-                    "type": "string"
-                },
-                "name": {
-                    "type": "string",
-                    "example": "Profesionals"
-                },
-                "phoneNumber": {
-                    "type": "string"
-                },
-                "placeOfBirth": {
-                    "type": "string"
-                },
-                "status": {
-                    "type": "string",
-                    "example": "active"
-                },
-                "type": {
-                    "type": "string",
-                    "example": "coolCategory"
-                },
-                "userTypes": {
-                    "type": "array",
-                    "items": {
-                        "type": "string"
-                    }
-                }
-            }
-        },
         "models.CursorInfo": {
             "type": "object",
             "properties": {
@@ -3471,72 +3109,324 @@
                 }
             }
         },
-        "models.GetAllEventsResponse": {
+        "models.EventAccessConfigRequest": {
+            "type": "object",
+            "required": [
+                "visibility"
+            ],
+            "properties": {
+                "campuses": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    },
+                    "example": [
+                        "BKS"
+                    ]
+                },
+                "communityIds": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    },
+                    "example": [
+                        "community-1"
+                    ]
+                },
+                "roles": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    },
+                    "example": [
+                        "event-view-volunteer",
+                        " event-edit-volunteer"
+                    ]
+                },
+                "userTypes": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    },
+                    "example": [
+                        "volunteer"
+                    ]
+                },
+                "visibility": {
+                    "type": "string",
+                    "enum": [
+                        "public",
+                        "private"
+                    ],
+                    "example": "public"
+                }
+            }
+        },
+        "models.EventAccessConfigResponse": {
             "type": "object",
             "properties": {
-                "allowedCampuses": {
+                "campuses": {
                     "type": "array",
                     "items": {
                         "type": "string"
-                    }
+                    },
+                    "example": [
+                        "BKS"
+                    ]
                 },
-                "allowedFor": {
+                "communityIds": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    },
+                    "example": [
+                        "community-1"
+                    ]
+                },
+                "roles": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    },
+                    "example": [
+                        "event-view-volunteer",
+                        " event-edit-volunteer"
+                    ]
+                },
+                "userTypes": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    },
+                    "example": [
+                        "volunteer"
+                    ]
+                },
+                "visibility": {
                     "type": "string",
                     "example": "public"
+                }
+            }
+        },
+        "models.EventLocationRequest": {
+            "type": "object",
+            "required": [
+                "type"
+            ],
+            "properties": {
+                "detail": {
+                    "type": "string"
                 },
-                "allowedRoles": {
-                    "type": "array",
-                    "items": {
-                        "type": "string"
-                    }
+                "offlineVenue": {
+                    "type": "string"
                 },
-                "allowedUsers": {
-                    "type": "array",
-                    "items": {
-                        "type": "string"
-                    }
+                "onlineLink": {
+                    "type": "string"
                 },
-                "availabilityStatus": {
+                "type": {
                     "type": "string",
-                    "example": "available"
+                    "enum": [
+                        "offline",
+                        "online",
+                        "hybrid"
+                    ],
+                    "example": "offline"
                 },
-                "code": {
+                "visibility": {
                     "type": "string",
-                    "example": "2024-HOMEBASE"
+                    "enum": [
+                        "before",
+                        "after",
+                        "all"
+                    ],
+                    "example": "public"
+                }
+            }
+        },
+        "models.EventLocationResponse": {
+            "type": "object",
+            "properties": {
+                "detail": {
+                    "type": "string"
                 },
-                "eventEndAt": {
+                "offlineVenue": {
                     "type": "string",
-                    "example": ""
+                    "example": "PIOT 6 Lt. 6"
                 },
-                "eventStartAt": {
+                "onlineLink": {
                     "type": "string",
-                    "example": ""
+                    "example": "https://www.youtube.com/watch?v=1234567890"
                 },
-                "imagesLinks": {
-                    "type": "array",
-                    "items": {
-                        "type": "string"
-                    }
+                "type": {
+                    "type": "string",
+                    "example": "offline"
+                },
+                "visibility": {
+                    "type": "string",
+                    "example": "before"
+                }
+            }
+        },
+        "models.EventTimeConfigRequest": {
+            "type": "object",
+            "required": [
+                "endAt",
+                "startAt",
+                "timezone"
+            ],
+            "properties": {
+                "endAt": {
+                    "type": "string",
+                    "example": "2024-12-10T09:02:42Z"
                 },
                 "isRecurring": {
                     "type": "boolean",
                     "example": true
                 },
-                "locationType": {
+                "recurrence": {
                     "type": "string",
-                    "example": "offline"
+                    "example": "monthly"
+                },
+                "startAt": {
+                    "type": "string",
+                    "example": "2024-12-10T09:02:42Z"
+                },
+                "timezone": {
+                    "type": "string",
+                    "example": "Asia/Jakarta"
+                }
+            }
+        },
+        "models.EventTimeConfigResponse": {
+            "type": "object",
+            "properties": {
+                "endAt": {
+                    "type": "string",
+                    "example": "2024-12-10T09:02:42Z"
+                },
+                "isRecurring": {
+                    "type": "boolean",
+                    "example": true
                 },
                 "recurrence": {
                     "type": "string",
                     "example": "monthly"
                 },
-                "registerEndAt": {
+                "startAt": {
                     "type": "string",
-                    "example": ""
+                    "example": "2024-12-10T09:02:42Z"
                 },
-                "registerStartAt": {
+                "timezone": {
                     "type": "string",
-                    "example": ""
+                    "example": "Asia/Jakarta"
+                }
+            }
+        },
+        "models.FormQuestionAnswerResponse": {
+            "type": "object",
+            "properties": {
+                "answer": {
+                    "$ref": "#/definitions/models.AnswerResponse"
+                },
+                "question": {
+                    "$ref": "#/definitions/models.QuestionsResponse"
+                }
+            }
+        },
+        "models.FormQuestionResponse": {
+            "type": "object",
+            "properties": {
+                "applyFor": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "code": {
+                    "type": "string"
+                },
+                "correctAnswer": {
+                    "type": "string"
+                },
+                "displayOrder": {
+                    "type": "integer"
+                },
+                "formCode": {
+                    "type": "string"
+                },
+                "mandatoryFor": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "options": {
+                    "$ref": "#/definitions/models.QuestionOptions"
+                },
+                "questionType": {
+                    "type": "string"
+                },
+                "rules": {
+                    "$ref": "#/definitions/models.QuestionValidationRules"
+                },
+                "text": {
+                    "type": "string"
+                },
+                "type": {
+                    "type": "string"
+                }
+            }
+        },
+        "models.GetAllEventsResponse": {
+            "type": "object",
+            "properties": {
+                "accessConfig": {
+                    "$ref": "#/definitions/models.EventAccessConfigResponse"
+                },
+                "category": {
+                    "type": "string"
+                },
+                "code": {
+                    "type": "string",
+                    "example": "bhfe382"
+                },
+                "createdBy": {
+                    "type": "string",
+                    "example": "1234567890"
+                },
+                "createdByName": {
+                    "type": "string",
+                    "example": "John Doe"
+                },
+                "description": {
+                    "type": "string",
+                    "example": "This event blabla"
+                },
+                "imageLinks": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "location": {
+                    "$ref": "#/definitions/models.EventLocationResponse"
+                },
+                "redirectUrl": {
+                    "type": "string"
+                },
+                "slug": {
+                    "type": "string"
+                },
+                "status": {
+                    "type": "string",
+                    "example": "available"
+                },
+                "termsAndConditions": {
+                    "type": "string",
+                    "example": "This event blabla"
+                },
+                "timeConfig": {
+                    "$ref": "#/definitions/models.EventTimeConfigResponse"
                 },
                 "title": {
                     "type": "string",
@@ -3548,13 +3438,9 @@
                         "type": "string"
                     }
                 },
-                "totalRemainingSeats": {
-                    "type": "integer",
-                    "example": 2
-                },
                 "type": {
                     "type": "string",
-                    "example": "Event"
+                    "example": "event"
                 }
             }
         },
@@ -3700,47 +3586,31 @@
         "models.GetEventByCodeResponse": {
             "type": "object",
             "properties": {
-                "allowedCampuses": {
-                    "type": "array",
-                    "items": {
-                        "type": "string"
-                    }
+                "accessConfig": {
+                    "$ref": "#/definitions/models.EventAccessConfigResponse"
                 },
-                "allowedFor": {
-                    "type": "string",
-                    "example": "public"
-                },
-                "allowedRoles": {
-                    "type": "array",
-                    "items": {
-                        "type": "string"
-                    }
-                },
-                "allowedUsers": {
-                    "type": "array",
-                    "items": {
-                        "type": "string"
-                    }
-                },
-                "availabilityStatus": {
-                    "type": "string",
-                    "example": "available"
+                "category": {
+                    "type": "string"
                 },
                 "code": {
                     "type": "string",
                     "example": "bhfe382"
                 },
+                "contacts": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/models.UserIdentifierResponse"
+                    }
+                },
+                "createdBy": {
+                    "type": "string"
+                },
+                "createdByName": {
+                    "type": "string"
+                },
                 "description": {
                     "type": "string",
                     "example": "This event blabla"
-                },
-                "eventEndAt": {
-                    "type": "string",
-                    "example": ""
-                },
-                "eventStartAt": {
-                    "type": "string",
-                    "example": ""
                 },
                 "imageLinks": {
                     "type": "array",
@@ -3754,33 +3624,31 @@
                         "$ref": "#/definitions/models.GetInstancesByEventCodeResponse"
                     }
                 },
-                "isRecurring": {
-                    "type": "boolean",
-                    "example": true
+                "location": {
+                    "$ref": "#/definitions/models.EventLocationResponse"
                 },
-                "locationName": {
-                    "type": "string",
-                    "example": "PIOT 6 Lt. 6"
+                "organizers": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/models.UserIdentifierResponse"
+                    }
                 },
-                "locationType": {
-                    "type": "string",
-                    "example": "offline"
+                "redirectUrl": {
+                    "type": "string"
                 },
-                "recurrence": {
-                    "type": "string",
-                    "example": "monthly"
+                "slug": {
+                    "type": "string"
                 },
-                "registerEndAt": {
+                "status": {
                     "type": "string",
-                    "example": ""
-                },
-                "registerStartAt": {
-                    "type": "string",
-                    "example": ""
+                    "example": "available"
                 },
                 "termsAndConditions": {
                     "type": "string",
                     "example": "This event blabla"
+                },
+                "timeConfig": {
+                    "$ref": "#/definitions/models.EventTimeConfigResponse"
                 },
                 "title": {
                     "type": "string",
@@ -3942,24 +3810,9 @@
         "models.GetInstancesByEventCodeResponse": {
             "type": "object",
             "properties": {
-                "LocationName": {
-                    "type": "string",
-                    "example": "PIOT 6 Lt. 6"
-                },
-                "allowVerifyAt": {
-                    "type": "string",
-                    "example": ""
-                },
                 "availabilityStatus": {
                     "type": "string",
                     "example": "available"
-                },
-                "bookedSeats": {
-                    "type": "integer",
-                    "example": 0
-                },
-                "checkType": {
-                    "type": "string"
                 },
                 "code": {
                     "type": "string",
@@ -3969,53 +3822,25 @@
                     "type": "string",
                     "example": "Homebase"
                 },
-                "disallowVerifyAt": {
+                "eventCode": {
                     "type": "string",
-                    "example": ""
+                    "example": "2024-HOMEBASE"
                 },
-                "instanceEndAt": {
-                    "type": "string",
-                    "example": ""
+                "identifierConfig": {
+                    "$ref": "#/definitions/models.InstanceIdentifierConfigResponse"
                 },
-                "instanceStartAt": {
-                    "type": "string",
-                    "example": ""
+                "location": {
+                    "$ref": "#/definitions/models.EventLocationResponse"
                 },
-                "isOnePerAccount": {
-                    "type": "boolean"
+                "registrationConfig": {
+                    "$ref": "#/definitions/models.InstanceRegistrationConfigResponse"
                 },
-                "isOnePerTicket": {
-                    "type": "boolean"
-                },
-                "locationType": {
-                    "type": "string",
-                    "example": "offline"
-                },
-                "maxPerTransaction": {
-                    "type": "integer"
-                },
-                "registerEndAt": {
-                    "type": "string",
-                    "example": ""
-                },
-                "registerFlow": {
-                    "type": "string"
-                },
-                "registerStartAt": {
-                    "type": "string",
-                    "example": ""
+                "timeConfig": {
+                    "$ref": "#/definitions/models.InstanceTimeConfigResponse"
                 },
                 "title": {
                     "type": "string",
                     "example": "Homebase"
-                },
-                "totalRemainingSeats": {
-                    "type": "integer",
-                    "example": 0
-                },
-                "totalSeats": {
-                    "type": "integer",
-                    "example": 0
                 },
                 "type": {
                     "type": "string",
@@ -4225,6 +4050,206 @@
                 }
             }
         },
+        "models.IdentifierField": {
+            "type": "object",
+            "properties": {
+                "isMandatory": {
+                    "type": "boolean"
+                },
+                "type": {
+                    "type": "string",
+                    "enum": [
+                        "email",
+                        "phone"
+                    ]
+                }
+            }
+        },
+        "models.InstanceIdentifierConfig": {
+            "type": "object",
+            "properties": {
+                "childIdentifierFields": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/models.IdentifierField"
+                    }
+                },
+                "parentIdentifierFields": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/models.IdentifierField"
+                    }
+                }
+            }
+        },
+        "models.InstanceIdentifierConfigResponse": {
+            "type": "object",
+            "properties": {
+                "childIdentifierFields": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/models.IdentifierField"
+                    }
+                },
+                "parentIdentifierFields": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/models.IdentifierField"
+                    }
+                }
+            }
+        },
+        "models.InstanceRegistrationConfig": {
+            "type": "object",
+            "required": [
+                "capacity",
+                "flow",
+                "quotaPerUser"
+            ],
+            "properties": {
+                "capacity": {
+                    "type": "integer",
+                    "minimum": 1
+                },
+                "enforceCommunityId": {
+                    "type": "boolean"
+                },
+                "enforceSelfRegistration": {
+                    "type": "boolean"
+                },
+                "enforceUniqueness": {
+                    "type": "boolean"
+                },
+                "flow": {
+                    "type": "string",
+                    "enum": [
+                        "direct",
+                        "staged",
+                        "free"
+                    ],
+                    "example": "direct"
+                },
+                "methods": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    },
+                    "example": [
+                        "personal-qr"
+                    ]
+                },
+                "quotaPerUser": {
+                    "type": "integer",
+                    "minimum": 1
+                }
+            }
+        },
+        "models.InstanceRegistrationConfigResponse": {
+            "type": "object",
+            "properties": {
+                "capacity": {
+                    "type": "integer",
+                    "example": 100
+                },
+                "enforceCommunityId": {
+                    "type": "boolean",
+                    "example": false
+                },
+                "enforceSelfRegistration": {
+                    "type": "boolean",
+                    "example": false
+                },
+                "enforceUniqueness": {
+                    "type": "boolean",
+                    "example": false
+                },
+                "flow": {
+                    "type": "string",
+                    "example": "direct"
+                },
+                "methods": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    },
+                    "example": [
+                        "personal-qr"
+                    ]
+                },
+                "quotaPerUser": {
+                    "type": "integer",
+                    "example": 1
+                }
+            }
+        },
+        "models.InstanceTimeConfig": {
+            "type": "object",
+            "required": [
+                "endAt",
+                "registerEndAt",
+                "registerStartAt",
+                "startAt",
+                "timezone",
+                "verifyEndAt",
+                "verifyStartAt"
+            ],
+            "properties": {
+                "endAt": {
+                    "type": "string"
+                },
+                "registerEndAt": {
+                    "type": "string"
+                },
+                "registerStartAt": {
+                    "type": "string"
+                },
+                "startAt": {
+                    "type": "string"
+                },
+                "timezone": {
+                    "type": "string"
+                },
+                "verifyEndAt": {
+                    "type": "string"
+                },
+                "verifyStartAt": {
+                    "type": "string"
+                }
+            }
+        },
+        "models.InstanceTimeConfigResponse": {
+            "type": "object",
+            "properties": {
+                "endAt": {
+                    "type": "string",
+                    "example": "2024-12-10T09:02:42Z"
+                },
+                "registerEndAt": {
+                    "type": "string",
+                    "example": "2024-12-10T09:02:42Z"
+                },
+                "registerStartAt": {
+                    "type": "string",
+                    "example": "2024-12-10T09:02:42Z"
+                },
+                "startAt": {
+                    "type": "string",
+                    "example": "2024-12-10T09:02:42Z"
+                },
+                "timezone": {
+                    "type": "string",
+                    "example": "Asia/Jakarta"
+                },
+                "verifyEndAt": {
+                    "type": "string",
+                    "example": "2024-12-10T09:02:42Z"
+                },
+                "verifyStartAt": {
+                    "type": "string",
+                    "example": "2024-12-10T09:02:42Z"
+                }
+            }
+        },
         "models.InstancesForRegisteredRecordsResponse": {
             "type": "object",
             "properties": {
@@ -4411,6 +4436,103 @@
                 "type": {
                     "type": "string",
                     "example": "collection"
+                }
+            }
+        },
+        "models.QuestionOptions": {
+            "type": "object",
+            "properties": {
+                "choices": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                }
+            }
+        },
+        "models.QuestionValidationRules": {
+            "type": "object",
+            "properties": {
+                "maxLength": {
+                    "type": "integer"
+                },
+                "maxSelection": {
+                    "type": "integer"
+                },
+                "maxValue": {
+                    "type": "integer"
+                },
+                "minLength": {
+                    "type": "integer"
+                },
+                "minSelection": {
+                    "type": "integer"
+                },
+                "minValue": {
+                    "type": "integer"
+                },
+                "notAfter": {
+                    "type": "string"
+                },
+                "notBefore": {
+                    "description": "e.g. \"today\", or a specific date \"2025-10-01\"",
+                    "type": "string"
+                },
+                "pattern": {
+                    "type": "string"
+                }
+            }
+        },
+        "models.QuestionsResponse": {
+            "type": "object",
+            "properties": {
+                "code": {
+                    "type": "string"
+                },
+                "entityType": {
+                    "type": "string"
+                },
+                "formCode": {
+                    "type": "string"
+                },
+                "isMandatory": {
+                    "type": "boolean"
+                },
+                "options": {
+                    "$ref": "#/definitions/models.QuestionOptions"
+                },
+                "questionType": {
+                    "type": "string"
+                },
+                "rules": {
+                    "$ref": "#/definitions/models.QuestionValidationRules"
+                },
+                "text": {
+                    "type": "string"
+                },
+                "type": {
+                    "type": "string"
+                }
+            }
+        },
+        "models.RegistrantRequest": {
+            "type": "object",
+            "required": [
+                "communityId",
+                "name"
+            ],
+            "properties": {
+                "communityId": {
+                    "type": "string"
+                },
+                "email": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "phoneNumber": {
+                    "type": "string"
                 }
             }
         },
@@ -4665,74 +4787,6 @@
                     "type": "string"
                 },
                 "type": {
-                    "type": "string"
-                }
-            }
-        },
-        "models.UpdateRegistrationStatusRequest": {
-            "type": "object",
-            "required": [
-                "status",
-                "updatedAt"
-            ],
-            "properties": {
-                "reason": {
-                    "type": "string"
-                },
-                "status": {
-                    "type": "string",
-                    "enum": [
-                        "success",
-                        "cancelled",
-                        "permit"
-                    ],
-                    "example": "success"
-                },
-                "updatedAt": {
-                    "type": "string"
-                }
-            }
-        },
-        "models.UpdateRegistrationStatusResponse": {
-            "type": "object",
-            "properties": {
-                "communityId": {
-                    "type": "string"
-                },
-                "eventCode": {
-                    "type": "string"
-                },
-                "eventTitle": {
-                    "type": "string"
-                },
-                "identifier": {
-                    "type": "string"
-                },
-                "instanceCode": {
-                    "type": "string"
-                },
-                "instanceTitle": {
-                    "type": "string"
-                },
-                "name": {
-                    "type": "string"
-                },
-                "reason": {
-                    "type": "string"
-                },
-                "registrationId": {
-                    "type": "string"
-                },
-                "status": {
-                    "type": "string"
-                },
-                "type": {
-                    "type": "string"
-                },
-                "updatedBy": {
-                    "type": "string"
-                },
-                "verifiedAt": {
                     "type": "string"
                 }
             }
@@ -5062,6 +5116,23 @@
                     "items": {
                         "type": "string"
                     }
+                }
+            }
+        },
+        "models.UserIdentifierResponse": {
+            "type": "object",
+            "properties": {
+                "communityId": {
+                    "type": "string"
+                },
+                "email": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "phoneNumber": {
+                    "type": "string"
                 }
             }
         },

@@ -6,28 +6,35 @@ import (
 	"errors"
 )
 
-// JSONB implements the json.Marshaler and sql.Scanner interfaces
-// to allow for flexible JSON data to be stored in a JSONB column.
-type JSONB map[string]interface{}
+// JSONB stores raw JSON bytes and can represent any JSON value (object, array, etc.).
+type JSONB json.RawMessage
 
-// Value returns the JSON-encoded representation of the map.
+// Value returns the raw bytes to be stored in the database.
 func (j JSONB) Value() (driver.Value, error) {
-	if len(j) == 0 {
-		// store as empty object instead of null
-		return "{}", nil
+	if j == nil {
+		return nil, nil
 	}
-	return json.Marshal(j)
+	return []byte(j), nil
 }
 
-// Scan decodes a JSON-encoded value into the map.
+// Scan reads the raw bytes from the database.
 func (j *JSONB) Scan(value interface{}) error {
 	if value == nil {
-		*j = JSONB{}
+		*j = nil
 		return nil
 	}
 	b, ok := value.([]byte)
 	if !ok {
 		return errors.New("type assertion to []byte failed")
 	}
-	return json.Unmarshal(b, &j)
+	*j = JSONB(b)
+	return nil
+}
+
+// Unmarshal allows you to decode the raw JSON into a specific Go struct.
+func (j JSONB) Unmarshal(v interface{}) error {
+	if j == nil {
+		return nil
+	}
+	return json.Unmarshal(j, v)
 }

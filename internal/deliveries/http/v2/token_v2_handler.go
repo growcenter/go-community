@@ -1,7 +1,6 @@
 package v2
 
 import (
-	"github.com/labstack/echo/v4"
 	"go-community/internal/common"
 	"go-community/internal/config"
 	"go-community/internal/constants"
@@ -11,6 +10,8 @@ import (
 	"go-community/internal/pkg/authorization"
 	"go-community/internal/usecases"
 	"net/http"
+
+	"github.com/labstack/echo/v4"
 )
 
 type TokenHandler struct {
@@ -42,7 +43,7 @@ func NewTokenHandler(api *echo.Group, a *authorization.Auth, c *config.Configura
 func (th *TokenHandler) Refresh(ctx echo.Context) error {
 	id := ctx.Get("id").(string)
 	if common.IsValidUUID(id) {
-		tokens, err := th.auth.GenerateTokens(id, constants.TYPE_GUEST, constants.ROLE_GUEST)
+		tokens, err := th.auth.GenerateTokens(id, constants.TYPE_GUEST, constants.ROLE_GUEST, nil)
 		if err != nil {
 			response.Error(ctx, err)
 		}
@@ -58,7 +59,7 @@ func (th *TokenHandler) Refresh(ctx echo.Context) error {
 			return response.Error(ctx, models.ErrorUserNotFound)
 		}
 
-		tokens, err := th.auth.GenerateTokens(user.CommunityId, user.Roles, user.UserTypes)
+		tokens, err := th.auth.GenerateTokens(user.CommunityId, user.Roles, user.UserTypes, &user.CampusCode)
 		if err != nil {
 			response.Error(ctx, err)
 		}

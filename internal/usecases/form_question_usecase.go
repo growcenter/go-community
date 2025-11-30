@@ -7,14 +7,17 @@ import (
 	"fmt"
 	"go-community/internal/constants"
 	"go-community/internal/models"
+	"go-community/internal/pkg/errorgen"
 	"go-community/internal/repositories/pgsql"
+	"sort"
 
 	"github.com/google/uuid"
 	"gorm.io/gorm"
 )
 
 type FormQuestionUsecase interface {
-	BulkCreate(ctx context.Context, request *models.BulkCreateFormQuestionRequest) (responses []models.FormQuestionResponse, err error)
+	BulkCreate(ctx context.Context, forms *models.Form, request *models.BulkCreateFormQuestionRequest) (responses []models.FormQuestionResponse, err error)
+	// GetByAssociationEntity(ctx context.Context, entities []models.FormQuestionEntityFilter) (formQuestions []models.FormQuestion, err error)
 }
 
 type formQuestionUsecase struct {
@@ -27,7 +30,7 @@ func NewFormQuestionUsecase(r pgsql.PostgreRepositories) *formQuestionUsecase {
 	}
 }
 
-func (fqu *formQuestionUsecase) BulkCreate(ctx context.Context, request *models.BulkCreateFormQuestionRequest) (responses []models.FormQuestionResponse, err error) {
+func (fqu *formQuestionUsecase) BulkCreate(ctx context.Context, forms *models.Form, request *models.BulkCreateFormQuestionRequest) (responses []models.FormQuestionResponse, err error) {
 	defer func() {
 		LogService(ctx, err)
 	}()
@@ -37,31 +40,70 @@ func (fqu *formQuestionUsecase) BulkCreate(ctx context.Context, request *models.
 		return nil, models.ErrorInvalidInput
 	}
 
-	_, err = fqu.r.Form.GetByCode(ctx, formCode)
-	if err != nil {
-		if errors.Is(err, gorm.ErrRecordNotFound) {
-			return nil, models.ErrorDataNotFound
+	if forms == nil {
+		_, err = fqu.r.Form.GetByCode(ctx, formCode)
+		if err != nil {
+			if errors.Is(err, gorm.ErrRecordNotFound) {
+				return nil, errorgen.Error(errorgen.DataNotFound)
+			}
+			return nil, err
 		}
-		return nil, err
+	}
+
+	// Sort questions by display order to validate for duplicates and gaps.
+	sort.Slice(request.Questions, func(i, j int) bool {
+		return request.Questions[i].DisplayOrder < request.Questions[j].DisplayOrder
+	})
+
+	// Validate the display order sequence.
+	if len(request.Questions) > 0 {
+		// Check if the sequence starts from 1.
+		if request.Questions[0].DisplayOrder != 1 {
+			return nil, errorgen.Error(errorgen.InvalidInput, "display order must start from 1")
+		}
+		// Check for duplicates and gaps.
+		for i := 1; i < len(request.Questions); i++ {
+			if request.Questions[i].DisplayOrder != request.Questions[i-1].DisplayOrder+1 {
+				return nil, errorgen.Error(errorgen.InvalidInput, "display order must be sequential and without duplicates or gaps.")
+			}
+		}
 	}
 
 	var questions []models.FormQuestion
 	for _, q := range request.Questions {
+
 		// Validation based on QuestionType
 		switch q.QuestionType {
 		case constants.QuestionTypeSingle, constants.QuestionTypeMultiple:
 			if q.Options == nil || len(q.Options.Choices) == 0 {
-				return nil, fmt.Errorf("options are required for question type %s", q.QuestionType)
+				errMessage := fmt.Sprintf("options are required for question type %s", q.QuestionType)
+				return nil, errorgen.Error(err, errMessage)
 			}
 		case constants.QuestionTypeShortText, constants.QuestionTypeLongText, constants.QuestionTypeEmail, constants.QuestionTypePhone, constants.QuestionTypeNumber, constants.QuestionTypeDate, constants.QuestionTypeTime:
 			if q.Options != nil {
-				return nil, fmt.Errorf("options are not allowed for question type %s", q.QuestionType)
+				errMessage := fmt.Sprintf("options are not allowed for question type %s", q.QuestionType)
+				return nil, errorgen.Error(err, errMessage)
+			}
+		}
+
+		// Ensure that a question cannot be mandatory for a group it doesn't apply to.
+		// Every value in 'mandatoryFor' must also be present in 'applyFor'.
+		for _, mandatoryTarget := range q.MandatoryFor {
+			isApplicable := false
+			for _, applyTarget := range q.ApplyFor {
+				if mandatoryTarget == applyTarget {
+					isApplicable = true
+					break
+				}
+			}
+			if !isApplicable {
+				return nil, errorgen.Error(err, "invalid configuration: question is mandatory for '%s' but does not apply to them", mandatoryTarget)
 			}
 		}
 
 		// Validate the rules themselves
 		if q.Rules != nil {
-			if err := validateQuestionRules(q.QuestionType, q.Rules); err != nil {
+			if err := fqu.validateQuestionRules(constants.QuestionType(q.QuestionType), q.Rules); err != nil {
 				return nil, err
 			}
 		}
@@ -97,7 +139,7 @@ func (fqu *formQuestionUsecase) BulkCreate(ctx context.Context, request *models.
 	return responses, nil
 }
 
-func validateQuestionRules(questionType constants.QuestionType, rules *models.QuestionValidationRules) error {
+func (fqu *formQuestionUsecase) validateQuestionRules(questionType constants.QuestionType, rules *models.QuestionValidationRules) error {
 	if rules.MinLength != nil && rules.MaxLength != nil {
 		if *rules.MinLength > *rules.MaxLength {
 			return fmt.Errorf("minLength cannot be greater than maxLength")

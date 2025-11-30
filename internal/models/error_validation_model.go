@@ -65,7 +65,13 @@ func ErrorValidationMapping(validationError validator.FieldError) string {
 	case validationError.Tag() == "nameIdentifierCommunityIdField":
 		return fmt.Sprintf("%s cannot be empty", validationError.Field())
 	case validationError.Tag() == "emailOrPhoneField":
-		return fmt.Sprintf("Email or Phone Number cannot be empty")
+		return "Email or Phone Number cannot be empty"
+	case validationError.Tag() == "required_without" && validationError.Field() == "onlineLink":
+		return fmt.Sprintf("%s is required when %s is not inputted", validationError.Field(), "onsiteVenue")
+	case validationError.Tag() == "required_without" && validationError.Field() == "onsiteVenue":
+		return fmt.Sprintf("%s is required when %s is not inputted", validationError.Field(), "onlineLink")
+	case validationError.Tag() == "required_if":
+		return fmt.Sprintf("%s is required when %s is %s", validationError.Field(), validationError.Param(), validationError.Value())
 	default:
 		return fmt.Sprintf("invalid input on field %s: %s", validationError.Field(), validationError.Tag())
 	}

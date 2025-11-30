@@ -1,4 +1,122 @@
 definitions:
+  constants.QuestionType:
+    enum:
+    - shortText
+    - longText
+    - singleChoice
+    - multipleChoice
+    - date
+    - time
+    - email
+    - phone
+    - emailPhone
+    - number
+    - campus
+    - department
+    - cool
+    - legalId
+    - instagram
+    type: string
+    x-enum-varnames:
+    - QuestionTypeShortText
+    - QuestionTypeLongText
+    - QuestionTypeSingle
+    - QuestionTypeMultiple
+    - QuestionTypeDate
+    - QuestionTypeTime
+    - QuestionTypeEmail
+    - QuestionTypePhone
+    - QuestionTypeEmailPhone
+    - QuestionTypeNumber
+    - QuestionTypeCampus
+    - QuestionTypeDepartment
+    - QuestionTypeCool
+    - QuestionTypeLegalId
+    - QuestionTypeInstagram
+  models.AnswerItem:
+    properties:
+      answer:
+        type: string
+      questionCode:
+        type: string
+    required:
+    - answer
+    - questionCode
+    type: object
+  models.AnswerResponse:
+    properties:
+      answer:
+        type: string
+      code:
+        type: string
+      formCode:
+        type: string
+      identifier:
+        type: string
+      identifierType:
+        type: string
+      isCorrect:
+        type: boolean
+      questionCode:
+        type: string
+      submittedAt:
+        type: string
+      type:
+        type: string
+    type: object
+  models.AttendeeRequest:
+    properties:
+      communityId:
+        type: string
+      email:
+        type: string
+      form:
+        items:
+          $ref: '#/definitions/models.AnswerItem'
+        type: array
+      isParent:
+        type: boolean
+      legalId:
+        maxLength: 16
+        minLength: 16
+        type: string
+      name:
+        type: string
+      phoneNumber:
+        type: string
+      remarks:
+        type: string
+    required:
+    - name
+    type: object
+  models.BulkCreateFormQuestionItem:
+    properties:
+      applyFor:
+        items:
+          type: string
+        type: array
+      correctAnswer:
+        type: string
+      displayOrder:
+        type: integer
+      mandatoryFor:
+        items:
+          type: string
+        type: array
+      options:
+        $ref: '#/definitions/models.QuestionOptions'
+      rules:
+        $ref: '#/definitions/models.QuestionValidationRules'
+      text:
+        type: string
+      type:
+        $ref: '#/definitions/constants.QuestionType'
+    required:
+    - applyFor
+    - mandatoryFor
+    - text
+    - type
+    type: object
   models.CampusesResponse:
     properties:
       campusCode:
@@ -34,189 +152,184 @@ definitions:
           $ref: '#/definitions/models.CreateNewJoinerAttendanceRequest'
         type: array
     type: object
-  models.CreateEventRegistrationRecordRequest:
+  models.CreateAttendeeResponse:
     properties:
+      code:
+        type: string
       communityId:
         type: string
-      description:
+      email:
         type: string
-      eventCode:
-        maxLength: 7
-        minLength: 7
-        type: string
-      identifier:
-        type: string
-      instanceCode:
-        maxLength: 15
-        minLength: 15
-        type: string
-      isPersonalQR:
-        description: IsInheritUser bool                                        `json:"isInheritUser"
-          validate:"required"`
-        type: boolean
-      name:
-        example: Professionals
-        maxLength: 50
-        minLength: 1
-        type: string
-      registerAt:
-        type: string
-      registrants:
+      forms:
         items:
-          $ref: '#/definitions/models.CreateOtherEventRegistrationRecordRequest'
+          $ref: '#/definitions/models.FormQuestionAnswerResponse'
         type: array
-    required:
-    - eventCode
-    - instanceCode
-    - registerAt
-    - registrants
-    type: object
-  models.CreateEventRegistrationRecordResponse:
-    properties:
-      communityId:
-        type: string
-      description:
-        type: string
-      eventCode:
-        type: string
-      eventTitle:
-        type: string
-      identifier:
-        type: string
-      instanceCode:
-        type: string
-      instanceTitle:
+      legalId:
         type: string
       name:
         type: string
-      registerAt:
+      phoneNumber:
         type: string
-      registrants:
-        items:
-          $ref: '#/definitions/models.CreateOtherEventRegistrationRecordResponse'
-        type: array
-      registrationId:
+      remarks:
+        type: string
+      role:
         type: string
       status:
         type: string
-      totalRegistrants:
+      type:
+        type: string
+    type: object
+  models.CreateEventRegistrationRequest:
+    properties:
+      attendees:
+        items:
+          $ref: '#/definitions/models.AttendeeRequest'
+        type: array
+      eventCode:
+        example: xxxxxxx
+        maxLength: 7
+        minLength: 7
+        type: string
+      instanceCode:
+        example: xxxxxxx-yyyyyyy
+        maxLength: 15
+        minLength: 15
+        type: string
+      method:
+        enum:
+        - personal-qr
+        - event-qr
+        - registration-qr
+        example: personal-qr
+        type: string
+      registerAt:
+        type: string
+      registrant:
+        $ref: '#/definitions/models.RegistrantRequest'
+    required:
+    - attendees
+    - eventCode
+    - instanceCode
+    - method
+    - registerAt
+    - registrant
+    type: object
+  models.CreateEventRegistrationResponse:
+    properties:
+      attendees:
+        items:
+          $ref: '#/definitions/models.CreateAttendeeResponse'
+        type: array
+      code:
+        type: string
+      eventCode:
+        type: string
+      instanceCode:
+        type: string
+      method:
+        type: string
+      quantity:
         type: integer
+      registerAt:
+        type: string
+      registrant:
+        $ref: '#/definitions/models.RegistrantRequest'
       type:
         type: string
     type: object
   models.CreateEventRequest:
     properties:
-      allowedCampuses:
-        items:
-          type: string
-        type: array
-      allowedFor:
-        enum:
-        - public
-        - private
+      accessConfig:
+        $ref: '#/definitions/models.EventAccessConfigRequest'
+      category:
         type: string
-      allowedRoles:
-        items:
-          type: string
-        type: array
-      allowedUsers:
+      contactCommunityIds:
+        example:
+        - community-1
         items:
           type: string
         type: array
       description:
+        example: This event blabla
         type: string
-      eventEndAt:
-        type: string
-      eventStartAt:
-        type: string
+      imageLinks:
+        items:
+          type: string
+        type: array
       instances:
         items:
           $ref: '#/definitions/models.CreateInstanceRequest'
         type: array
-      isRecurring:
+      isPublish:
         type: boolean
-      locationName:
+      location:
+        $ref: '#/definitions/models.EventLocationRequest'
+      organizerCommunityIds:
+        example:
+        - community-1
+        items:
+          type: string
+        type: array
+      questions:
+        items:
+          $ref: '#/definitions/models.BulkCreateFormQuestionItem'
+        type: array
+      redirectUrl:
         type: string
-      locationType:
-        enum:
-        - online
-        - onsite
-        - hybrid
-        type: string
-      name:
-        type: string
-      recurrence:
-        type: string
-      registerEndAt:
-        type: string
-      registerStartAt:
+      slug:
+        description: The link to redirect to after registration
+        minLength: 6
         type: string
       termsAndConditions:
+        example: This event blabla
+        type: string
+      timeConfig:
+        $ref: '#/definitions/models.EventTimeConfigRequest'
+      title:
+        example: Homebase
         type: string
       topics:
         items:
           type: string
         type: array
     required:
-    - allowedCampuses
-    - allowedFor
-    - allowedRoles
-    - allowedUsers
+    - accessConfig
+    - category
+    - contactCommunityIds
     - instances
-    - locationName
-    - locationType
-    - name
+    - location
+    - timeConfig
+    - title
     type: object
   models.CreateEventResponse:
     properties:
-      allowedCampuses:
-        items:
-          type: string
-        type: array
-      allowedFor:
-        example: public
+      accessConfig:
+        $ref: '#/definitions/models.EventAccessConfigResponse'
+      category:
         type: string
-      allowedRoles:
-        items:
-          type: string
-        type: array
-      allowedUsers:
-        items:
-          type: string
-        type: array
       code:
         example: bhfe382
         type: string
       description:
         example: This event blabla
         type: string
-      eventEndAt:
-        example: ""
-        type: string
-      eventStartAt:
-        example: ""
-        type: string
+      imageLinks:
+        items:
+          type: string
+        type: array
       instances:
         items:
           $ref: '#/definitions/models.CreateInstanceResponse'
         type: array
-      isRecurring:
-        example: true
-        type: boolean
-      locationName:
-        example: PIOT 6 Lt. 6
+      location:
+        $ref: '#/definitions/models.EventLocationResponse'
+      questions:
+        items:
+          $ref: '#/definitions/models.FormQuestionResponse'
+        type: array
+      redirectUrl:
         type: string
-      locationType:
-        example: offline
-        type: string
-      recurrence:
-        example: monthly
-        type: string
-      registerEndAt:
-        example: ""
-        type: string
-      registerStartAt:
-        example: ""
+      slug:
         type: string
       status:
         example: available
@@ -224,6 +337,8 @@ definitions:
       termsAndConditions:
         example: This event blabla
         type: string
+      timeConfig:
+        $ref: '#/definitions/models.EventTimeConfigResponse'
       title:
         example: Homebase
         type: string
@@ -234,173 +349,64 @@ definitions:
       type:
         example: event
         type: string
-    required:
-    - instances
-    type: object
-  models.CreateInstanceExistingEventRequest:
-    properties:
-      allowVerifyAt:
-        type: string
-      checkType:
-        enum:
-        - check-in
-        - check-out
-        - both
-        - none
-        type: string
-      description:
-        type: string
-      disallowVerifyAt:
-        type: string
-      eventCode:
-        type: string
-      instanceEndAt:
-        type: string
-      instanceStartAt:
-        type: string
-      isOnePerAccount:
-        type: boolean
-      isOnePerTicket:
-        type: boolean
-      isUpdateEventTime:
-        type: boolean
-      locationName:
-        type: string
-      locationType:
-        enum:
-        - online
-        - onsite
-        - hybrid
-        type: string
-      maxPerTransaction:
-        type: integer
-      registerEndAt:
-        type: string
-      registerFlow:
-        enum:
-        - personal-qr
-        - event-qr
-        - both-qr
-        - none
-        type: string
-      registerStartAt:
-        type: string
-      title:
-        type: string
-      totalSeats:
-        type: integer
-    required:
-    - allowVerifyAt
-    - disallowVerifyAt
-    - eventCode
-    - instanceEndAt
-    - instanceStartAt
-    - locationName
-    - locationType
-    - registerEndAt
-    - registerStartAt
-    - title
     type: object
   models.CreateInstanceRequest:
     properties:
-      allowVerifyAt:
-        type: string
-      checkType:
-        enum:
-        - check-in
-        - check-out
-        - both
-        - none
-        type: string
       description:
         type: string
-      disallowVerifyAt:
+      eventCode:
         type: string
-      instanceEndAt:
-        type: string
-      instanceStartAt:
-        type: string
-      isOnePerAccount:
+      identifierConfig:
+        $ref: '#/definitions/models.InstanceIdentifierConfig'
+      isFollowEvent:
         type: boolean
-      isOnePerTicket:
+      isPublish:
         type: boolean
-      locationName:
-        type: string
-      locationType:
-        enum:
-        - online
-        - onsite
-        - hybrid
-        type: string
-      maxPerTransaction:
-        type: integer
-      registerEndAt:
-        type: string
-      registerFlow:
-        enum:
-        - personal-qr
-        - event-qr
-        - both-qr
-        - none
-        type: string
-      registerStartAt:
-        type: string
+      isUpdateEventTime:
+        type: boolean
+      location:
+        $ref: '#/definitions/models.EventLocationRequest'
+      questions:
+        items:
+          $ref: '#/definitions/models.BulkCreateFormQuestionItem'
+        type: array
+      registrationConfig:
+        $ref: '#/definitions/models.InstanceRegistrationConfig'
+      timeConfig:
+        $ref: '#/definitions/models.InstanceTimeConfig'
       title:
         type: string
-      totalSeats:
-        type: integer
     required:
-    - allowVerifyAt
-    - disallowVerifyAt
-    - instanceEndAt
-    - instanceStartAt
-    - locationName
-    - locationType
-    - registerEndAt
-    - registerStartAt
+    - location
+    - registrationConfig
+    - timeConfig
     - title
     type: object
   models.CreateInstanceResponse:
     properties:
-      allowVerifyAt:
-        type: string
-      checkType:
-        type: string
       description:
-        type: string
-      disallowVerifyAt:
         type: string
       eventCode:
         type: string
+      identifierConfig:
+        $ref: '#/definitions/models.InstanceIdentifierConfigResponse'
       instanceCode:
         type: string
-      instanceEndAt:
-        type: string
-      instanceStartAt:
-        type: string
-      isOnePerAccount:
-        type: boolean
-      isOnePerTicket:
-        type: boolean
-      locationName:
-        type: string
-      locationType:
-        type: string
-      maxPerTransaction:
-        type: integer
-      registerEndAt:
-        type: string
-      registerFlow:
-        type: string
-      registerStartAt:
-        type: string
+      location:
+        $ref: '#/definitions/models.EventLocationResponse'
+      questions:
+        items:
+          $ref: '#/definitions/models.FormQuestionResponse'
+        type: array
+      registrationConfig:
+        $ref: '#/definitions/models.InstanceRegistrationConfigResponse'
       status:
         example: active
         type: string
+      timeConfig:
+        $ref: '#/definitions/models.InstanceTimeConfigResponse'
       title:
         type: string
-      totalSeats:
-        type: integer
       type:
         type: string
     type: object
@@ -512,24 +518,6 @@ definitions:
       name:
         type: string
       phoneNumber:
-        type: string
-      type:
-        type: string
-    type: object
-  models.CreateOtherEventRegistrationRecordRequest:
-    properties:
-      name:
-        type: string
-    required:
-    - name
-    type: object
-  models.CreateOtherEventRegistrationRecordResponse:
-    properties:
-      id:
-        type: string
-      name:
-        type: string
-      status:
         type: string
       type:
         type: string
@@ -693,129 +681,6 @@ definitions:
     - roles
     - userType
     type: object
-  models.CreateVolunteerRequest:
-    properties:
-      address:
-        type: string
-      campusCode:
-        example: "001"
-        maxLength: 3
-        minLength: 3
-        type: string
-      coolCode:
-        type: string
-      coolId:
-        example: 1
-        type: integer
-      dateOfBirth:
-        type: string
-      department_code:
-        example: MUSIC
-        type: string
-      email:
-        example: jeremy@gmail.com
-        type: string
-      gender:
-        enum:
-        - male
-        - female
-        type: string
-      isBaptized:
-        type: boolean
-      isKom100:
-        type: boolean
-      jemaatId:
-        type: string
-      kkjNumber:
-        type: string
-      maritalStatus:
-        enum:
-        - single
-        - married
-        - others
-        example: active
-        type: string
-      name:
-        example: Professionals
-        maxLength: 50
-        minLength: 1
-        type: string
-      password:
-        example: Professionals
-        maxLength: 50
-        minLength: 6
-        type: string
-      phoneNumber:
-        type: string
-      placeOfBirth:
-        type: string
-      userTypes:
-        example:
-        - volunteer
-        items:
-          type: string
-        type: array
-    required:
-    - coolCode
-    - coolId
-    - dateOfBirth
-    - department_code
-    - isBaptized
-    - isKom100
-    - name
-    - password
-    - placeOfBirth
-    - userTypes
-    type: object
-  models.CreateVolunteerResponse:
-    properties:
-      address:
-        type: string
-      campusCode:
-        type: string
-      communityId:
-        type: string
-      coolCode:
-        type: string
-      coolId:
-        example: 1
-        type: integer
-      dateOfBirth:
-        type: string
-      departmentCode:
-        type: string
-      email:
-        type: string
-      gender:
-        type: string
-      isBaptized:
-        type: boolean
-      isKom100:
-        type: boolean
-      jemaatId:
-        type: string
-      kkjNumber:
-        type: string
-      maritalStatus:
-        type: string
-      name:
-        example: Profesionals
-        type: string
-      phoneNumber:
-        type: string
-      placeOfBirth:
-        type: string
-      status:
-        example: active
-        type: string
-      type:
-        example: coolCategory
-        type: string
-      userTypes:
-        items:
-          type: string
-        type: array
-    type: object
   models.CursorInfo:
     properties:
       limit:
@@ -879,54 +744,227 @@ definitions:
         example: field is missing
         type: string
     type: object
-  models.GetAllEventsResponse:
+  models.EventAccessConfigRequest:
     properties:
-      allowedCampuses:
+      campuses:
+        example:
+        - BKS
         items:
           type: string
         type: array
-      allowedFor:
+      communityIds:
+        example:
+        - community-1
+        items:
+          type: string
+        type: array
+      roles:
+        example:
+        - event-view-volunteer
+        - ' event-edit-volunteer'
+        items:
+          type: string
+        type: array
+      userTypes:
+        example:
+        - volunteer
+        items:
+          type: string
+        type: array
+      visibility:
+        enum:
+        - public
+        - private
         example: public
         type: string
-      allowedRoles:
+    required:
+    - visibility
+    type: object
+  models.EventAccessConfigResponse:
+    properties:
+      campuses:
+        example:
+        - BKS
         items:
           type: string
         type: array
-      allowedUsers:
+      communityIds:
+        example:
+        - community-1
         items:
           type: string
         type: array
-      availabilityStatus:
-        example: available
-        type: string
-      code:
-        example: 2024-HOMEBASE
-        type: string
-      eventEndAt:
-        example: ""
-        type: string
-      eventStartAt:
-        example: ""
-        type: string
-      imagesLinks:
+      roles:
+        example:
+        - event-view-volunteer
+        - ' event-edit-volunteer'
         items:
           type: string
         type: array
+      userTypes:
+        example:
+        - volunteer
+        items:
+          type: string
+        type: array
+      visibility:
+        example: public
+        type: string
+    type: object
+  models.EventLocationRequest:
+    properties:
+      detail:
+        type: string
+      offlineVenue:
+        type: string
+      onlineLink:
+        type: string
+      type:
+        enum:
+        - offline
+        - online
+        - hybrid
+        example: offline
+        type: string
+      visibility:
+        enum:
+        - before
+        - after
+        - all
+        example: public
+        type: string
+    required:
+    - type
+    type: object
+  models.EventLocationResponse:
+    properties:
+      detail:
+        type: string
+      offlineVenue:
+        example: PIOT 6 Lt. 6
+        type: string
+      onlineLink:
+        example: https://www.youtube.com/watch?v=1234567890
+        type: string
+      type:
+        example: offline
+        type: string
+      visibility:
+        example: before
+        type: string
+    type: object
+  models.EventTimeConfigRequest:
+    properties:
+      endAt:
+        example: "2024-12-10T09:02:42Z"
+        type: string
       isRecurring:
         example: true
         type: boolean
-      locationType:
-        example: offline
-        type: string
       recurrence:
         example: monthly
         type: string
-      registerEndAt:
-        example: ""
+      startAt:
+        example: "2024-12-10T09:02:42Z"
         type: string
-      registerStartAt:
-        example: ""
+      timezone:
+        example: Asia/Jakarta
         type: string
+    required:
+    - endAt
+    - startAt
+    - timezone
+    type: object
+  models.EventTimeConfigResponse:
+    properties:
+      endAt:
+        example: "2024-12-10T09:02:42Z"
+        type: string
+      isRecurring:
+        example: true
+        type: boolean
+      recurrence:
+        example: monthly
+        type: string
+      startAt:
+        example: "2024-12-10T09:02:42Z"
+        type: string
+      timezone:
+        example: Asia/Jakarta
+        type: string
+    type: object
+  models.FormQuestionAnswerResponse:
+    properties:
+      answer:
+        $ref: '#/definitions/models.AnswerResponse'
+      question:
+        $ref: '#/definitions/models.QuestionsResponse'
+    type: object
+  models.FormQuestionResponse:
+    properties:
+      applyFor:
+        items:
+          type: string
+        type: array
+      code:
+        type: string
+      correctAnswer:
+        type: string
+      displayOrder:
+        type: integer
+      formCode:
+        type: string
+      mandatoryFor:
+        items:
+          type: string
+        type: array
+      options:
+        $ref: '#/definitions/models.QuestionOptions'
+      questionType:
+        type: string
+      rules:
+        $ref: '#/definitions/models.QuestionValidationRules'
+      text:
+        type: string
+      type:
+        type: string
+    type: object
+  models.GetAllEventsResponse:
+    properties:
+      accessConfig:
+        $ref: '#/definitions/models.EventAccessConfigResponse'
+      category:
+        type: string
+      code:
+        example: bhfe382
+        type: string
+      createdBy:
+        example: "1234567890"
+        type: string
+      createdByName:
+        example: John Doe
+        type: string
+      description:
+        example: This event blabla
+        type: string
+      imageLinks:
+        items:
+          type: string
+        type: array
+      location:
+        $ref: '#/definitions/models.EventLocationResponse'
+      redirectUrl:
+        type: string
+      slug:
+        type: string
+      status:
+        example: available
+        type: string
+      termsAndConditions:
+        example: This event blabla
+        type: string
+      timeConfig:
+        $ref: '#/definitions/models.EventTimeConfigResponse'
       title:
         example: Homebase
         type: string
@@ -934,11 +972,8 @@ definitions:
         items:
           type: string
         type: array
-      totalRemainingSeats:
-        example: 2
-        type: integer
       type:
-        example: Event
+        example: event
         type: string
     type: object
   models.GetAllRegisteredUserResponse:
@@ -1035,35 +1070,23 @@ definitions:
     type: object
   models.GetEventByCodeResponse:
     properties:
-      allowedCampuses:
-        items:
-          type: string
-        type: array
-      allowedFor:
-        example: public
-        type: string
-      allowedRoles:
-        items:
-          type: string
-        type: array
-      allowedUsers:
-        items:
-          type: string
-        type: array
-      availabilityStatus:
-        example: available
+      accessConfig:
+        $ref: '#/definitions/models.EventAccessConfigResponse'
+      category:
         type: string
       code:
         example: bhfe382
         type: string
+      contacts:
+        items:
+          $ref: '#/definitions/models.UserIdentifierResponse'
+        type: array
+      createdBy:
+        type: string
+      createdByName:
+        type: string
       description:
         example: This event blabla
-        type: string
-      eventEndAt:
-        example: ""
-        type: string
-      eventStartAt:
-        example: ""
         type: string
       imageLinks:
         items:
@@ -1073,27 +1096,24 @@ definitions:
         items:
           $ref: '#/definitions/models.GetInstancesByEventCodeResponse'
         type: array
-      isRecurring:
-        example: true
-        type: boolean
-      locationName:
-        example: PIOT 6 Lt. 6
+      location:
+        $ref: '#/definitions/models.EventLocationResponse'
+      organizers:
+        items:
+          $ref: '#/definitions/models.UserIdentifierResponse'
+        type: array
+      redirectUrl:
         type: string
-      locationType:
-        example: offline
+      slug:
         type: string
-      recurrence:
-        example: monthly
-        type: string
-      registerEndAt:
-        example: ""
-        type: string
-      registerStartAt:
-        example: ""
+      status:
+        example: available
         type: string
       termsAndConditions:
         example: This event blabla
         type: string
+      timeConfig:
+        $ref: '#/definitions/models.EventTimeConfigResponse'
       title:
         example: Homebase
         type: string
@@ -1209,19 +1229,8 @@ definitions:
     type: object
   models.GetInstancesByEventCodeResponse:
     properties:
-      LocationName:
-        example: PIOT 6 Lt. 6
-        type: string
-      allowVerifyAt:
-        example: ""
-        type: string
       availabilityStatus:
         example: available
-        type: string
-      bookedSeats:
-        example: 0
-        type: integer
-      checkType:
         type: string
       code:
         example: 2024-HOMEBASE
@@ -1229,41 +1238,20 @@ definitions:
       description:
         example: Homebase
         type: string
-      disallowVerifyAt:
-        example: ""
+      eventCode:
+        example: 2024-HOMEBASE
         type: string
-      instanceEndAt:
-        example: ""
-        type: string
-      instanceStartAt:
-        example: ""
-        type: string
-      isOnePerAccount:
-        type: boolean
-      isOnePerTicket:
-        type: boolean
-      locationType:
-        example: offline
-        type: string
-      maxPerTransaction:
-        type: integer
-      registerEndAt:
-        example: ""
-        type: string
-      registerFlow:
-        type: string
-      registerStartAt:
-        example: ""
-        type: string
+      identifierConfig:
+        $ref: '#/definitions/models.InstanceIdentifierConfigResponse'
+      location:
+        $ref: '#/definitions/models.EventLocationResponse'
+      registrationConfig:
+        $ref: '#/definitions/models.InstanceRegistrationConfigResponse'
+      timeConfig:
+        $ref: '#/definitions/models.InstanceTimeConfigResponse'
       title:
         example: Homebase
         type: string
-      totalRemainingSeats:
-        example: 0
-        type: integer
-      totalSeats:
-        example: 0
-        type: integer
       type:
         example: eventInstance
         type: string
@@ -1403,6 +1391,146 @@ definitions:
           $ref: '#/definitions/models.UserTypeSummaryResponse'
         type: array
     type: object
+  models.IdentifierField:
+    properties:
+      isMandatory:
+        type: boolean
+      type:
+        enum:
+        - email
+        - phone
+        type: string
+    type: object
+  models.InstanceIdentifierConfig:
+    properties:
+      childIdentifierFields:
+        items:
+          $ref: '#/definitions/models.IdentifierField'
+        type: array
+      parentIdentifierFields:
+        items:
+          $ref: '#/definitions/models.IdentifierField'
+        type: array
+    type: object
+  models.InstanceIdentifierConfigResponse:
+    properties:
+      childIdentifierFields:
+        items:
+          $ref: '#/definitions/models.IdentifierField'
+        type: array
+      parentIdentifierFields:
+        items:
+          $ref: '#/definitions/models.IdentifierField'
+        type: array
+    type: object
+  models.InstanceRegistrationConfig:
+    properties:
+      capacity:
+        minimum: 1
+        type: integer
+      enforceCommunityId:
+        type: boolean
+      enforceSelfRegistration:
+        type: boolean
+      enforceUniqueness:
+        type: boolean
+      flow:
+        enum:
+        - direct
+        - staged
+        - free
+        example: direct
+        type: string
+      methods:
+        example:
+        - personal-qr
+        items:
+          type: string
+        type: array
+      quotaPerUser:
+        minimum: 1
+        type: integer
+    required:
+    - capacity
+    - flow
+    - quotaPerUser
+    type: object
+  models.InstanceRegistrationConfigResponse:
+    properties:
+      capacity:
+        example: 100
+        type: integer
+      enforceCommunityId:
+        example: false
+        type: boolean
+      enforceSelfRegistration:
+        example: false
+        type: boolean
+      enforceUniqueness:
+        example: false
+        type: boolean
+      flow:
+        example: direct
+        type: string
+      methods:
+        example:
+        - personal-qr
+        items:
+          type: string
+        type: array
+      quotaPerUser:
+        example: 1
+        type: integer
+    type: object
+  models.InstanceTimeConfig:
+    properties:
+      endAt:
+        type: string
+      registerEndAt:
+        type: string
+      registerStartAt:
+        type: string
+      startAt:
+        type: string
+      timezone:
+        type: string
+      verifyEndAt:
+        type: string
+      verifyStartAt:
+        type: string
+    required:
+    - endAt
+    - registerEndAt
+    - registerStartAt
+    - startAt
+    - timezone
+    - verifyEndAt
+    - verifyStartAt
+    type: object
+  models.InstanceTimeConfigResponse:
+    properties:
+      endAt:
+        example: "2024-12-10T09:02:42Z"
+        type: string
+      registerEndAt:
+        example: "2024-12-10T09:02:42Z"
+        type: string
+      registerStartAt:
+        example: "2024-12-10T09:02:42Z"
+        type: string
+      startAt:
+        example: "2024-12-10T09:02:42Z"
+        type: string
+      timezone:
+        example: Asia/Jakarta
+        type: string
+      verifyEndAt:
+        example: "2024-12-10T09:02:42Z"
+        type: string
+      verifyStartAt:
+        example: "2024-12-10T09:02:42Z"
+        type: string
+    type: object
   models.InstancesForRegisteredRecordsResponse:
     properties:
       code:
@@ -1531,6 +1659,70 @@ definitions:
       type:
         example: collection
         type: string
+    type: object
+  models.QuestionOptions:
+    properties:
+      choices:
+        items:
+          type: string
+        type: array
+    type: object
+  models.QuestionValidationRules:
+    properties:
+      maxLength:
+        type: integer
+      maxSelection:
+        type: integer
+      maxValue:
+        type: integer
+      minLength:
+        type: integer
+      minSelection:
+        type: integer
+      minValue:
+        type: integer
+      notAfter:
+        type: string
+      notBefore:
+        description: e.g. "today", or a specific date "2025-10-01"
+        type: string
+      pattern:
+        type: string
+    type: object
+  models.QuestionsResponse:
+    properties:
+      code:
+        type: string
+      entityType:
+        type: string
+      formCode:
+        type: string
+      isMandatory:
+        type: boolean
+      options:
+        $ref: '#/definitions/models.QuestionOptions'
+      questionType:
+        type: string
+      rules:
+        $ref: '#/definitions/models.QuestionValidationRules'
+      text:
+        type: string
+      type:
+        type: string
+    type: object
+  models.RegistrantRequest:
+    properties:
+      communityId:
+        type: string
+      email:
+        type: string
+      name:
+        type: string
+      phoneNumber:
+        type: string
+    required:
+    - communityId
+    - name
     type: object
   models.RelationUpdateProfile:
     properties:
@@ -1707,52 +1899,6 @@ definitions:
       status:
         type: string
       type:
-        type: string
-    type: object
-  models.UpdateRegistrationStatusRequest:
-    properties:
-      reason:
-        type: string
-      status:
-        enum:
-        - success
-        - cancelled
-        - permit
-        example: success
-        type: string
-      updatedAt:
-        type: string
-    required:
-    - status
-    - updatedAt
-    type: object
-  models.UpdateRegistrationStatusResponse:
-    properties:
-      communityId:
-        type: string
-      eventCode:
-        type: string
-      eventTitle:
-        type: string
-      identifier:
-        type: string
-      instanceCode:
-        type: string
-      instanceTitle:
-        type: string
-      name:
-        type: string
-      reason:
-        type: string
-      registrationId:
-        type: string
-      status:
-        type: string
-      type:
-        type: string
-      updatedBy:
-        type: string
-      verifiedAt:
         type: string
     type: object
   models.UpdateRolesOrUserTypesRequest:
@@ -1984,6 +2130,17 @@ definitions:
           type: string
         type: array
     type: object
+  models.UserIdentifierResponse:
+    properties:
+      communityId:
+        type: string
+      email:
+        type: string
+      name:
+        type: string
+      phoneNumber:
+        type: string
+    type: object
   models.UserRegisteredRecordsResponse:
     properties:
       communityId:
@@ -2136,6 +2293,137 @@ paths:
       summary: Get Departments from Config
       tags:
       - config
+  /api/v2/events/registers:
+    post:
+      consumes:
+      - application/json
+      description: This endpoint handles the registration of one or more attendees
+        to a specific event instance. It supports different registration methods like
+        QR code scanning or direct registration. The endpoint validates event status,
+        instance availability, user permissions for private events, and registration
+        quotas before creating the registration records.
+      parameters:
+      - description: The registration request payload, containing event/instance codes,
+          registrant details, and a list of attendees with their information and form
+          answers.
+        in: body
+        name: registrationRequest
+        required: true
+        schema:
+          $ref: '#/definitions/models.CreateEventRegistrationRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Successfully created the registration. The response includes
+            the registration code and details of all attendees.
+          schema:
+            $ref: '#/definitions/models.CreateEventRegistrationResponse'
+        "400":
+          description: 'Bad Request. Possible causes: Mismatched event/instance codes,
+            missing primary attendee, invalid registration method, or registration
+            window is closed/not yet open.'
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+        "403":
+          description: Forbidden. The user does not have the required roles or permissions
+            to register for this private event.
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+        "404":
+          description: Not Found. The specified event, instance, or user does not
+            exist.
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+        "409":
+          description: Conflict. The user has already registered for this event, or
+            one of the attendees is already registered (if uniqueness is enforced).
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+        "422":
+          description: Unprocessable Entity. The request body contains validation
+            errors, such as invalid email/phone format or missing required fields.
+          schema:
+            allOf:
+            - $ref: '#/definitions/models.ErrorResponse'
+            - properties:
+                errors:
+                  $ref: '#/definitions/models.ErrorValidateResponse'
+              type: object
+        "429":
+          description: Too Many Requests. The user has exceeded the registration quota
+            for this event instance.
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+        "500":
+          description: Internal Server Error. An unexpected error occurred on the
+            server.
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+      security:
+      - BearerAuth: []
+      - ApiKeyAuth: []
+      summary: Register User to Event
+      tags:
+      - events
+  /api/v2/internal/events:
+    post:
+      consumes:
+      - application/json
+      description: Create event with the instances/sessions
+      parameters:
+      - description: Bearer token
+        in: header
+        name: Authorization
+        required: true
+        type: string
+      - description: Event creation request body
+        in: body
+        name: event
+        required: true
+        schema:
+          $ref: '#/definitions/models.CreateEventRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Response indicates that the request succeeded and the event
+            has been created.
+          schema:
+            $ref: '#/definitions/models.CreateEventResponse'
+        "400":
+          description: Bad Request. Can be caused by invalid time ranges, or missing
+            fields for private events.
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+        "404":
+          description: Not Found. Can be caused by non-existent roles, users, campuses,
+            etc.
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+        "409":
+          description: Conflict. The event slug or a generated code already exists.
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+        "422":
+          description: Validation Error. The request body is invalid.
+          schema:
+            allOf:
+            - $ref: '#/definitions/models.ErrorResponse'
+            - properties:
+                errors:
+                  $ref: '#/definitions/models.ErrorValidateResponse'
+              type: object
+        "500":
+          description: Internal Server Error. Something went wrong on the server.
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+      security:
+      - BearerAuth header string true "Bearer token": []
+      - ApiKeyAuth: []
+      summary: Create Event
+      tags:
+      - events-internal
   /api/v2/internal/users:
     get:
       consumes:
@@ -2394,6 +2682,10 @@ paths:
           description: Bad Request
           schema:
             $ref: '#/definitions/models.ErrorResponse'
+        "404":
+          description: Not Found. Can be caused by non-existent event code.
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
         "422":
           description: Validation error. This can happen if there is an error validation
             while create account
@@ -2454,150 +2746,6 @@ paths:
       summary: Get Events Titles
       tags:
       - events
-    post:
-      consumes:
-      - application/json
-      description: Register user to particular event and instances
-      parameters:
-      - description: User object that needs to be added
-        in: body
-        name: user
-        required: true
-        schema:
-          $ref: '#/definitions/models.CreateEventRegistrationRecordRequest'
-      - description: mandatory header to access endpoint
-        in: header
-        name: X-API-Key
-        required: true
-        type: string
-      produces:
-      - application/json
-      responses:
-        "201":
-          description: Response indicates that the request succeeded and the resources
-            has been fetched and transmitted in the message body
-          schema:
-            allOf:
-            - $ref: '#/definitions/models.CreateEventRegistrationRecordResponse'
-            - properties:
-                registrants:
-                  $ref: '#/definitions/models.CreateOtherEventRegistrationRecordRequest'
-              type: object
-        "400":
-          description: Bad Request
-          schema:
-            $ref: '#/definitions/models.ErrorResponse'
-        "422":
-          description: Validation error. This can happen if there is an error validation
-            while create account
-          schema:
-            allOf:
-            - $ref: '#/definitions/models.ErrorResponse'
-            - properties:
-                errors:
-                  $ref: '#/definitions/models.ErrorValidateResponse'
-              type: object
-      security:
-      - BearerAuth: []
-      summary: Register User to Event
-      tags:
-      - events
-  /v2/events/registers/{id}/status:
-    patch:
-      consumes:
-      - application/json
-      description: Update user registration id to success or failed
-      parameters:
-      - description: registration id
-        in: path
-        name: id
-        required: true
-        type: string
-      - description: User object that needs to be added
-        in: body
-        name: user
-        required: true
-        schema:
-          $ref: '#/definitions/models.UpdateRegistrationStatusRequest'
-      - description: mandatory header to access endpoint
-        in: header
-        name: X-API-Key
-        required: true
-        type: string
-      produces:
-      - application/json
-      responses:
-        "201":
-          description: Response indicates that the request succeeded and the resources
-            has been fetched and transmitted in the message body
-          schema:
-            $ref: '#/definitions/models.UpdateRegistrationStatusResponse'
-        "400":
-          description: Bad Request
-          schema:
-            $ref: '#/definitions/models.ErrorResponse'
-        "422":
-          description: Validation error. This can happen if there is an error validation
-            while create account
-          schema:
-            allOf:
-            - $ref: '#/definitions/models.ErrorResponse'
-            - properties:
-                errors:
-                  $ref: '#/definitions/models.ErrorValidateResponse'
-              type: object
-      summary: Update Registration Status
-      tags:
-      - events
-  /v2/internal/events:
-    post:
-      consumes:
-      - application/json
-      description: Create event with the instances/sessions
-      parameters:
-      - description: User object that needs to be added
-        in: body
-        name: user
-        required: true
-        schema:
-          $ref: '#/definitions/models.CreateEventRequest'
-      - description: mandatory header to access endpoint
-        in: header
-        name: X-API-Key
-        required: true
-        type: string
-      produces:
-      - application/json
-      responses:
-        "201":
-          description: Response indicates that the request succeeded and the resources
-            has been fetched and transmitted in the message body
-          schema:
-            allOf:
-            - $ref: '#/definitions/models.CreateEventResponse'
-            - properties:
-                instances:
-                  $ref: '#/definitions/models.CreateInstanceResponse'
-              type: object
-        "400":
-          description: Bad Request
-          schema:
-            $ref: '#/definitions/models.ErrorResponse'
-        "422":
-          description: Validation error. This can happen if there is an error validation
-            while create account
-          schema:
-            allOf:
-            - $ref: '#/definitions/models.ErrorResponse'
-            - properties:
-                errors:
-                  $ref: '#/definitions/models.ErrorValidateResponse'
-              type: object
-      security:
-      - BearerAuth: []
-      summary: Create Event
-      tags:
-      - events
   /v2/internal/events/{eventCode}/summary:
     get:
       consumes:
@@ -2648,50 +2796,6 @@ paths:
       security:
       - BearerAuth: []
       summary: Get Event and Sessions by Event Code
-      tags:
-      - events
-  /v2/internal/events/instances:
-    post:
-      consumes:
-      - application/json
-      description: Create instance from existing Event
-      parameters:
-      - description: User object that needs to be added
-        in: body
-        name: user
-        required: true
-        schema:
-          $ref: '#/definitions/models.CreateInstanceExistingEventRequest'
-      - description: mandatory header to access endpoint
-        in: header
-        name: X-API-Key
-        required: true
-        type: string
-      produces:
-      - application/json
-      responses:
-        "201":
-          description: Response indicates that the request succeeded and the resources
-            has been fetched and transmitted in the message body
-          schema:
-            $ref: '#/definitions/models.CreateInstanceResponse'
-        "400":
-          description: Bad Request
-          schema:
-            $ref: '#/definitions/models.ErrorResponse'
-        "422":
-          description: Validation error. This can happen if there is an error validation
-            while create account
-          schema:
-            allOf:
-            - $ref: '#/definitions/models.ErrorResponse'
-            - properties:
-                errors:
-                  $ref: '#/definitions/models.ErrorValidateResponse'
-              type: object
-      security:
-      - BearerAuth: []
-      summary: Create Instance
       tags:
       - events
   /v2/internal/users/{communityId}:
@@ -3387,48 +3491,6 @@ paths:
                   $ref: '#/definitions/models.ErrorValidateResponse'
               type: object
       summary: Create User Type
-      tags:
-      - users
-  /v2/users/volunteer:
-    post:
-      consumes:
-      - application/json
-      description: Create user for volunteer
-      parameters:
-      - description: User object that needs to be added
-        in: body
-        name: user
-        required: true
-        schema:
-          $ref: '#/definitions/models.CreateVolunteerRequest'
-      - description: mandatory header to access endpoint
-        in: header
-        name: X-API-Key
-        required: true
-        type: string
-      produces:
-      - application/json
-      responses:
-        "201":
-          description: Response indicates that the request succeeded and the resources
-            has been fetched and transmitted in the message body
-          schema:
-            $ref: '#/definitions/models.CreateVolunteerResponse'
-        "400":
-          description: Bad Request
-          schema:
-            $ref: '#/definitions/models.ErrorResponse'
-        "422":
-          description: Validation error. This can happen if there is an error validation
-            while create account
-          schema:
-            allOf:
-            - $ref: '#/definitions/models.ErrorResponse'
-            - properties:
-                errors:
-                  $ref: '#/definitions/models.ErrorValidateResponse'
-              type: object
-      summary: Create Volunteer User
       tags:
       - users
 swagger: "2.0"

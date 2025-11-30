@@ -9,6 +9,10 @@ import (
 	"gorm.io/gorm"
 )
 
+const (
+	TYPE_FORM_QUESTION = "formQuestion"
+)
+
 // QuestionOptions holds the choices for multiple/single choice questions.
 type QuestionOptions struct {
 	Choices []string `json:"choices"`
@@ -29,15 +33,15 @@ type QuestionValidationRules struct {
 
 // FormQuestion represents an individual question in a registration form.
 type FormQuestion struct {
-	ID            string
+	ID            int
 	Code          string                   `gorm:"type:uuid;not null" json:"question_id"`
 	FormCode      string                   `gorm:"type:uuid;not null" json:"form_id"`
 	Text          string                   `gorm:"type:text;not null" json:"question_text"`
 	Type          string                   `gorm:"type:varchar(255);not null" json:"question_type"`
 	MandatoryFor  pq.StringArray           `gorm:"type:text[]" json:"mandatory_for"`
 	ApplyFor      pq.StringArray           `gorm:"type:text[]" json:"apply_for"`
-	Options       *QuestionOptions         `gorm:"type:jsonb" json:"options"`
-	Rules         *QuestionValidationRules `gorm:"type:jsonb" json:"rules"`
+	Options       *QuestionOptions         `gorm:"type:jsonb;serializer:json" json:"options"`
+	Rules         *QuestionValidationRules `gorm:"type:jsonb;serializer:json" json:"rules"`
 	CorrectAnswer sql.NullString           `gorm:"type:text" json:"correctAnswer,omitempty"`
 	DisplayOrder  int                      `gorm:"not null;default:0" json:"display_order"`
 	CreatedAt     time.Time                `gorm:"not null;default:now()" json:"created_at"`
@@ -48,7 +52,7 @@ type FormQuestion struct {
 type (
 	BulkCreateFormQuestionItem struct {
 		Text          string                   `json:"text" validate:"required"`
-		QuestionType  constants.QuestionType   `json:"type" validate:"required,oneof=short_text long_text single_choice multiple_choice date time email phone number"`
+		QuestionType  constants.QuestionType   `json:"type" validate:"required,questionType"`
 		MandatoryFor  []string                 `json:"mandatoryFor" validate:"required,dive,oneof=parent child"`
 		ApplyFor      []string                 `json:"applyFor" validate:"required,dive,oneof=parent child"`
 		Options       *QuestionOptions         `json:"options"`
@@ -62,10 +66,11 @@ type (
 	}
 
 	FormQuestionResponse struct {
+		Type          string                   `json:"type"`
 		Code          string                   `json:"code"`
 		FormCode      string                   `json:"formCode"`
 		Text          string                   `json:"text"`
-		Type          string                   `json:"type"`
+		QuestionType  string                   `json:"questionType"`
 		MandatoryFor  []string                 `json:"mandatoryFor"`
 		ApplyFor      []string                 `json:"applyFor"`
 		Options       *QuestionOptions         `json:"options"`
@@ -82,10 +87,11 @@ func (fq *FormQuestion) ToResponse() *FormQuestionResponse {
 	}
 
 	return &FormQuestionResponse{
+		Type:          TYPE_FORM_QUESTION,
 		Code:          fq.Code,
 		FormCode:      fq.FormCode,
 		Text:          fq.Text,
-		Type:          fq.Type,
+		QuestionType:  fq.Type,
 		MandatoryFor:  fq.MandatoryFor,
 		ApplyFor:      fq.ApplyFor,
 		Options:       fq.Options,
@@ -94,3 +100,23 @@ func (fq *FormQuestion) ToResponse() *FormQuestionResponse {
 		DisplayOrder:  fq.DisplayOrder,
 	}
 }
+
+// GET QUESTIONS
+type (
+	// EntityFilter is used to specify an entity for filtering form questions.
+	FormQuestionEntityFilter struct {
+		Code string
+		Type string
+	}
+	QuestionsResponse struct {
+		Type         string                   `json:"type"`
+		Code         string                   `json:"code"`
+		FormCode     string                   `json:"formCode"`
+		EntityType   string                   `json:"entityType"`
+		Text         string                   `json:"text"`
+		QuestionType string                   `json:"questionType"`
+		IsMandatory  bool                     `json:"isMandatory"`
+		Options      *QuestionOptions         `json:"options"`
+		Rules        *QuestionValidationRules `json:"rules"`
+	}
+)
