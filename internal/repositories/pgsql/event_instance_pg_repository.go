@@ -2,194 +2,129 @@ package pgsql
 
 import (
 	"context"
-	"github.com/lib/pq"
 	"go-community/internal/models"
+	"go-community/internal/pkg/logger"
 
 	"gorm.io/gorm"
 )
 
 type EventInstanceRepository interface {
 	Create(ctx context.Context, event *models.EventInstance) (err error)
-	BulkCreate(ctx context.Context, events *[]models.EventInstance) (err error)
-	GetByCode(ctx context.Context, code string) (campus models.EventInstance, err error)
-	GetAll(ctx context.Context) (campus []models.EventInstance, err error)
-	CountByCode(ctx context.Context, code string) (count int64, err error)
-	GetManyByEventCode(ctx context.Context, eventCode string, status string) (outputs *[]models.GetInstanceByEventCodeDBOutput, err error)
-	GetOneByCode(ctx context.Context, code string, status string) (output *models.GetInstanceByCodeDBOutput, err error)
-	GetSeatsNamesByCode(ctx context.Context, code string) (output *models.GetSeatsAndNamesByInstanceCodeDBOutput, err error)
-	UpdateBookedSeatsByCode(ctx context.Context, code string, event *models.GetSeatsAndNamesByInstanceCodeDBOutput) (err error)
-	UpdateScannedSeatsByCode(ctx context.Context, code string, event *models.GetSeatsAndNamesByInstanceCodeDBOutput) (err error)
-	UpdateSeatsByCode(ctx context.Context, code string, event *models.GetSeatsAndNamesByInstanceCodeDBOutput) (err error)
-	GetSummary(ctx context.Context, eventCode string) (output []models.GetInstanceSummaryDBOutput, err error)
-	CheckByCode(ctx context.Context, code string) (dataExist bool, err error)
-	CheckMultiple(ctx context.Context, codes []string) (count int64, err error)
+	BulkCreate(ctx context.Context, events []models.EventInstance) error
+	GetByCode(ctx context.Context, code string) (*models.EventInstance, error)
+	CheckByCode(ctx context.Context, code string) (bool, error)
 }
 
 type eventInstanceRepository struct {
-	db  *gorm.DB
-	trx TransactionRepository
+	db *gorm.DB
 }
 
-func NewEventInstanceRepository(db *gorm.DB, trx TransactionRepository) EventInstanceRepository {
-	return &eventInstanceRepository{db: db, trx: trx}
+func NewEventInstanceRepository(db *gorm.DB) EventInstanceRepository {
+	return &eventInstanceRepository{db: db}
 }
 
-func (eir *eventInstanceRepository) Create(ctx context.Context, event *models.EventInstance) (err error) {
-	defer func() {
-		LogRepository(ctx, err)
-	}()
+// Create creates a new event instance
+// Returns error if the event instance could not be created
+func (er *eventInstanceRepository) Create(ctx context.Context, event *models.EventInstance) (err error) {
+	logger.EnrichContext(ctx, "db_operation", "event_instance.create")
+	err = er.db.WithContext(ctx).Create(&event).Error
+	if err != nil {
+		logger.EnrichContextWith(ctx, map[string]any{
+			"db_error":      true,
+			"db_table":      "event_instances",
+			"error_message": err.Error(),
+		})
+	}
+	return err
+}
 
-	return eir.trx.Transaction(func(dtx *gorm.DB) error {
-		return eir.db.Create(&event).Error
+// BulkCreate inserts multiple event instances in a single database operation
+// Uses GORM's CreateInBatches for efficient bulk insertion with automatic batching
+// Returns error if any instance could not be created
+func (er *eventInstanceRepository) BulkCreate(ctx context.Context, events []models.EventInstance) error {
+	if len(events) == 0 {
+		logger.EnrichContext(ctx, "bulk_create_skipped", "no_events")
+		return nil
+	}
+
+	logger.EnrichContextWith(ctx, map[string]any{
+		"db_operation": "event_instance.bulk_create",
+		"record_count": len(events),
 	})
-}
 
-func (eir *eventInstanceRepository) BulkCreate(ctx context.Context, events *[]models.EventInstance) (err error) {
-	defer func() {
-		LogRepository(ctx, err)
-	}()
+	// Use CreateInBatches for better performance with large datasets
+	// Batch size of 100 is a good balance between performance and memory
+	err := er.db.WithContext(ctx).CreateInBatches(events, 100).Error
+	if err != nil {
+		logger.EnrichContextWith(ctx, map[string]any{
+			"db_error":      true,
+			"db_table":      "event_instances",
+			"error_message": err.Error(),
+		})
+		return err
+	}
 
-	return eir.trx.Transaction(func(dtx *gorm.DB) error {
-		return eir.db.Create(&events).Error
+	logger.EnrichContextWith(ctx, map[string]any{
+		"bulk_create_succeeded": true,
+		"records_created":       len(events),
 	})
+
+	return nil
 }
 
-func (eir *eventInstanceRepository) GetByCode(ctx context.Context, code string) (campus models.EventInstance, err error) {
-	defer func() {
-		LogRepository(ctx, err)
-	}()
+// GetByCode retrieves an event instance by its code
+// Returns the event instance if found, or an error if not found or on database error
+func (er *eventInstanceRepository) GetByCode(ctx context.Context, code string) (*models.EventInstance, error) {
+	logger.EnrichContextWith(ctx, map[string]any{
+		"db_operation": "event_instance.get_by_code",
+		"lookup_code":  code,
+	})
 
-	var ei models.EventInstance
-	err = eir.db.Where("code = ?", code).Find(&ei).Error
-
-	return ei, err
-}
-
-func (eir *eventInstanceRepository) GetAll(ctx context.Context) (campus []models.EventInstance, err error) {
-	defer func() {
-		LogRepository(ctx, err)
-	}()
-
-	var e []models.EventInstance
-	err = eir.db.Find(&e).Error
-
-	return e, err
-}
-
-func (eir *eventInstanceRepository) CountByCode(ctx context.Context, code string) (count int64, err error) {
-	defer func() {
-		LogRepository(ctx, err)
-	}()
-
-	err = eir.db.Raw(queryCountEventInstanceByCode, code).Scan(&count).Error
+	var event models.EventInstance
+	err := er.db.WithContext(ctx).Where("code = ?", code).First(&event).Error
 	if err != nil {
-		return 0, err
-	}
-
-	return count, nil
-}
-
-func (eir *eventInstanceRepository) GetManyByEventCode(ctx context.Context, eventCode string, status string) (outputs *[]models.GetInstanceByEventCodeDBOutput, err error) {
-	defer func() {
-		LogRepository(ctx, err)
-	}()
-
-	err = eir.db.Raw(queryGetSessionsByEventCode, eventCode, status).Scan(&outputs).Error
-	if err != nil {
+		logger.EnrichContextWith(ctx, map[string]any{
+			"db_error":             true,
+			"db_table":             "event_instances",
+			"event_instance_found": false,
+			"error_message":        err.Error(),
+		})
 		return nil, err
 	}
 
-	return outputs, nil
+	logger.EnrichContext(ctx, "event_instance_found", true)
+	return &event, nil
 }
 
-func (eir *eventInstanceRepository) GetOneByCode(ctx context.Context, code string, status string) (output *models.GetInstanceByCodeDBOutput, err error) {
-	defer func() {
-		LogRepository(ctx, err)
-	}()
+// CheckByCode checks if an instance code exists in the database
+// Returns true if the code exists, false otherwise
+// This is more efficient than GetByCode for uniqueness checks as it only counts
+func (er *eventInstanceRepository) CheckByCode(ctx context.Context, code string) (bool, error) {
+	logger.EnrichContextWith(ctx, map[string]any{
+		"db_operation": "event_instance.check_by_code",
+		"lookup_code":  code,
+	})
 
-	err = eir.db.Raw(queryGetSessionByCode, code, status).Scan(&output).Error
+	var count int64
+	err := er.db.WithContext(ctx).
+		Model(&models.EventInstance{}).
+		Where("code = ? AND deleted_at IS NULL", code).
+		Count(&count).Error
+
 	if err != nil {
-		return nil, err
-	}
-
-	return output, nil
-}
-
-func (eir *eventInstanceRepository) GetSeatsNamesByCode(ctx context.Context, code string) (output *models.GetSeatsAndNamesByInstanceCodeDBOutput, err error) {
-	defer func() {
-		LogRepository(ctx, err)
-	}()
-
-	err = eir.db.Raw(queryGetSeatsByInstanceCode, code).Scan(&output).Error
-	if err != nil {
-		return nil, err
-	}
-
-	return output, nil
-}
-
-func (eir *eventInstanceRepository) UpdateBookedSeatsByCode(ctx context.Context, code string, event *models.GetSeatsAndNamesByInstanceCodeDBOutput) (err error) {
-	defer func() {
-		LogRepository(ctx, err)
-	}()
-
-	return eir.db.Model(&models.EventInstance{}).Where("code = ?", code).Update("booked_seats", event.BookedSeats).Error
-}
-
-func (eir *eventInstanceRepository) UpdateScannedSeatsByCode(ctx context.Context, code string, event *models.GetSeatsAndNamesByInstanceCodeDBOutput) (err error) {
-	defer func() {
-		LogRepository(ctx, err)
-	}()
-
-	return eir.db.Model(&models.EventInstance{}).Where("code = ?", code).Update("scanned_seats", event.ScannedSeats).Error
-}
-
-func (eir *eventInstanceRepository) UpdateSeatsByCode(ctx context.Context, code string, event *models.GetSeatsAndNamesByInstanceCodeDBOutput) (err error) {
-	defer func() {
-		LogRepository(ctx, err)
-	}()
-
-	return eir.db.Model(&models.EventInstance{}).Where("code = ?", code).Updates(map[string]interface{}{
-		"scanned_seats": event.ScannedSeats,
-		"booked_seats":  event.BookedSeats,
-	}).Error
-}
-
-func (eir *eventInstanceRepository) GetSummary(ctx context.Context, eventCode string) (output []models.GetInstanceSummaryDBOutput, err error) {
-	defer func() {
-		LogRepository(ctx, err)
-	}()
-
-	err = eir.db.Raw(queryGetInstanceSummary, eventCode).Scan(&output).Error
-	if err != nil {
-		return nil, err
-	}
-
-	return output, nil
-}
-
-func (eir *eventInstanceRepository) CheckByCode(ctx context.Context, code string) (dataExist bool, err error) {
-	defer func() {
-		LogRepository(ctx, err)
-	}()
-
-	err = eir.db.Raw(queryCheckEventInstanceByCode, code).Scan(&dataExist).Error
-	if err != nil {
+		logger.EnrichContextWith(ctx, map[string]any{
+			"db_error":      true,
+			"db_table":      "event_instances",
+			"error_message": err.Error(),
+		})
 		return false, err
 	}
 
-	return dataExist, nil
-}
+	exists := count > 0
+	logger.EnrichContextWith(ctx, map[string]any{
+		"code_exists": exists,
+		"count":       count,
+	})
 
-func (eir *eventInstanceRepository) CheckMultiple(ctx context.Context, codes []string) (count int64, err error) {
-	defer func() {
-		LogRepository(ctx, err)
-	}()
-
-	err = eir.db.Raw(queryMultipleCheckEventInstance, pq.Array(codes)).Scan(&count).Error
-	if err != nil {
-		return 0, err
-	}
-
-	return count, nil
+	return exists, nil
 }

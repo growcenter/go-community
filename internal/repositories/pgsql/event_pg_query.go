@@ -1,226 +1,206 @@
 package pgsql
 
 var (
-	queryCheckEventByCode = "SELECT EXISTS (SELECT 1 FROM events WHERE code = ?)"
-	//queryGetAllEventsByRolesAndStatus = `
-	//   SELECT
-	//       e.code AS event_code,
-	//       e.title AS event_title,
-	//       e.topics AS event_topics,
-	//       e.location_type AS event_location_type,
-	//       e.allowed_for AS event_allowed_for,
-	//       e.allowed_roles AS event_allowed_roles,
-	//       e.allowed_users AS event_allowed_users,
-	//       e.allowed_campuses AS event_allowed_campuses,
-	//       e.is_recurring AS event_is_recurring,
-	//       e.recurrence AS event_recurrence,
-	//       e.event_start_at AS event_start_at,
-	//       e.event_end_at AS event_end_at,
-	//       e.register_start_at as event_register_start_at,
-	//       e.register_end_at as event_register_end_at,
-	//       e.status AS event_status,
-	//       COALESCE(SUM(COALESCE(ei.total_seats, 0) - COALESCE(ei.booked_seats, 0)), 0) AS total_remaining_seats,
-	//       COALESCE(ei.total_seats, 0) AS instance_total_seats,
-	//       ARRAY_AGG(ei.is_required) AS instance_is_required
-	//   FROM
-	//       events e
-	//   LEFT JOIN
-	//       event_instances ei ON e.code = ei.event_code
-	//   WHERE
-	//      (e.allowed_roles && ?::text[] OR e.allowed_users && ?::text[])
-	//       AND e.status = ?
-	//   GROUP BY
-	//       e.code, e.title, e.topics, e.location_type, e.allowed_for, e.allowed_roles, e.allowed_users, e.allowed_campuses, e.is_recurring, e.recurrence, e.event_start_at, e.event_end_at, e.register_start_at, e.register_end_at, e.status, ei.is_required, ei.total_seats
-	//`
-
+	// queryGetAllEventsByRolesAndStatusAndRange1Year gets events within current year
 	queryGetAllEventsByRolesAndStatusAndRange1Year = `
-	SELECT
-		e.code AS event_code,
-		e.title AS event_title,
-		e.topics AS event_topics,
-		e.location_type AS event_location_type,
-		e.allowed_for AS event_allowed_for,
-		e.allowed_roles AS event_allowed_roles,
-		e.allowed_users AS event_allowed_users,
-		e.allowed_campuses AS event_allowed_campuses,
-		e.is_recurring AS event_is_recurring,
-		e.recurrence AS event_recurrence,
-		e.event_start_at AS event_start_at,
-		e.event_end_at AS event_end_at,
-		e.register_start_at AS event_register_start_at,
-		e.register_end_at AS event_register_end_at,
-		COALESCE(e.image_links, ARRAY[]::TEXT[]) AS event_image_links, -- Default to empty array
-		e.status AS event_status,
-		COALESCE(SUM(COALESCE(ei.total_seats, 0) - COALESCE(ei.booked_seats, 0)), 0) AS total_remaining_seats,
-		COALESCE(MAX(ei.total_seats), 0) AS instance_total_seats, -- Ensure no duplicates here
-		ARRAY_AGG(
-				ROW(ei.total_seats, ei.booked_seats, ei.register_flow)
-		) AS instances_data -- Combine all instance data into a JSON array
-	FROM
-		events e
-			LEFT JOIN
-		event_instances ei ON e.code = ei.event_code
-	WHERE
-		(
-			(e.allowed_roles && ?::text[] OR e.allowed_users && ?::text[])
-				OR
-			(
-				e.allowed_for = 'public'
-				)
-			)
-	  AND e.status = ?
-	  AND e.event_start_at >= DATE_TRUNC('year', CURRENT_DATE) AND e.event_start_at < DATE_TRUNC('year', CURRENT_DATE) + INTERVAL '1 year'
-	GROUP BY
-		e.code, e.title, e.topics, e.location_type, e.allowed_for, e.allowed_roles, e.allowed_users, e.allowed_campuses, e.is_recurring, e.recurrence, e.event_start_at, e.event_end_at, e.register_start_at, e.register_end_at, e.status, e.image_links
-	ORDER BY
-	    e.event_start_at DESC;
+SELECT
+    e.code AS event_code,
+    e.title AS event_title,
+    e.topics AS event_topics,
+    e.location_type AS event_location_type,
+    e.access_level AS event_access_level,
+    e.allowed_roles AS event_allowed_roles,
+    e.allowed_community_ids AS event_allowed_community_ids,
+    e.allowed_campuses AS event_allowed_campuses,
+    e.recurrence AS event_recurrence,
+    e.start_at AS event_start_at,
+    e.end_at AS event_end_at,
+    COALESCE(e.image_links, ARRAY[]::TEXT[]) AS event_image_links,
+    e.status AS event_status,
+    COALESCE(SUM(COALESCE(ei.total_seats, 0) - COALESCE(ei.booked_seats, 0)), 0) AS total_remaining_seats,
+    COALESCE(MAX(ei.total_seats), 0) AS instance_total_seats,
+    ARRAY_AGG(
+        ROW(ei.total_seats, ei.booked_seats, ei.register_flow)
+    ) AS instances_data
+FROM
+    events e
+    LEFT JOIN event_instances ei ON e.code = ei.event_code
+WHERE
+    e.deleted_at IS NULL
+    AND (
+        (e.allowed_roles && ?::text[] OR e.allowed_community_ids && ?::text[])
+        OR e.access_level = 'public'
+    )
+    AND e.status = ?
+    AND e.start_at >= DATE_TRUNC('year', CURRENT_DATE) 
+    AND e.start_at < DATE_TRUNC('year', CURRENT_DATE) + INTERVAL '1 year'
+GROUP BY
+    e.code, e.title, e.topics, e.location_type, e.access_level, 
+    e.allowed_roles, e.allowed_community_ids, e.allowed_campuses, 
+    e.recurrence, e.start_at, e.end_at, e.status, e.image_links
+ORDER BY
+    e.start_at DESC;
 `
 
+	// queryGetAllEventsByRolesAndStatusAndRangeEventTime gets future events
 	queryGetAllEventsByRolesAndStatusAndRangeEventTime = `
-	SELECT
-		e.code AS event_code,
-		e.title AS event_title,
-		e.topics AS event_topics,
-		e.location_type AS event_location_type,
-		e.allowed_for AS event_allowed_for,
-		e.allowed_roles AS event_allowed_roles,
-		e.allowed_users AS event_allowed_users,
-		e.allowed_campuses AS event_allowed_campuses,
-		e.is_recurring AS event_is_recurring,
-		e.recurrence AS event_recurrence,
-		e.event_start_at AS event_start_at,
-		e.event_end_at AS event_end_at,
-		e.register_start_at AS event_register_start_at,
-		e.register_end_at AS event_register_end_at,
-		COALESCE(e.image_links, ARRAY[]::TEXT[]) AS event_image_links, -- Default to empty array
-		e.status AS event_status,
-		COALESCE(SUM(COALESCE(ei.total_seats, 0) - COALESCE(ei.booked_seats, 0)), 0) AS total_remaining_seats,
-		COALESCE(MAX(ei.total_seats), 0) AS instance_total_seats, -- Ensure no duplicates here
-		ARRAY_AGG(
-				ROW(ei.total_seats, ei.booked_seats, ei.register_flow)
-		) AS instances_data -- Combine all instance data into a JSON array
-	FROM
-		events e
-			LEFT JOIN
-		event_instances ei ON e.code = ei.event_code
-	WHERE
-		(
-			(e.allowed_roles && ?::text[] OR e.allowed_users && ?::text[])
-				OR
-			(
-				e.allowed_for = 'public'
-				)
-			)
-	  AND e.status = ?
-	  AND (CURRENT_DATE < e.event_start_at OR CURRENT_DATE > e.event_end_at)
-	GROUP BY
-		e.code, e.title, e.topics, e.location_type, e.allowed_for, e.allowed_roles, e.allowed_users, e.allowed_campuses, e.is_recurring, e.recurrence, e.event_start_at, e.event_end_at, e.register_start_at, e.register_end_at, e.status, e.image_links
-	ORDER BY
-	    e.event_start_at DESC;
+SELECT
+    e.code AS event_code,
+    e.title AS event_title,
+    e.topics AS event_topics,
+    e.location_type AS event_location_type,
+    e.access_level AS event_access_level,
+    e.allowed_roles AS event_allowed_roles,
+    e.allowed_community_ids AS event_allowed_community_ids,
+    e.allowed_campuses AS event_allowed_campuses,
+    e.recurrence AS event_recurrence,
+    e.start_at AS event_start_at,
+    e.end_at AS event_end_at,
+    COALESCE(e.image_links, ARRAY[]::TEXT[]) AS event_image_links,
+    e.status AS event_status,
+    COALESCE(SUM(COALESCE(ei.total_seats, 0) - COALESCE(ei.booked_seats, 0)), 0) AS total_remaining_seats,
+    COALESCE(MAX(ei.total_seats), 0) AS instance_total_seats,
+    ARRAY_AGG(
+        ROW(ei.total_seats, ei.booked_seats, ei.register_flow)
+    ) AS instances_data
+FROM
+    events e
+    LEFT JOIN event_instances ei ON e.code = ei.event_code
+WHERE
+    e.deleted_at IS NULL
+    AND (
+        (e.allowed_roles && ?::text[] OR e.allowed_community_ids && ?::text[])
+        OR e.access_level = 'public'
+    )
+    AND e.status = ?
+    AND e.start_at > CURRENT_DATE
+GROUP BY
+    e.code, e.title, e.topics, e.location_type, e.access_level, 
+    e.allowed_roles, e.allowed_community_ids, e.allowed_campuses, 
+    e.recurrence, e.start_at, e.end_at, e.status, e.image_links
+ORDER BY
+    e.start_at DESC;
 `
 
+	// queryGetEventInstancesByEventCode gets event details with instances
 	queryGetEventInstancesByEventCode = `
-		SELECT
-			e.code AS event_code,
-			e.title AS event_title,
-			COALESCE(e.topics, ARRAY[]::TEXT[]) AS event_topics, -- Nullable text
-			COALESCE(e.description, '') AS event_description, -- Nullable text
-			COALESCE(e.terms_and_conditions, '') AS event_terms_and_conditions, -- Nullable text
-			e.allowed_for AS event_allowed_for, -- Non-nullable
-			COALESCE(e.allowed_roles, ARRAY[]::TEXT[]) AS event_allowed_roles, -- Default to empty array
-			COALESCE(e.allowed_users, ARRAY[]::TEXT[]) AS event_allowed_users, -- Default to empty array
-			COALESCE(e.allowed_campuses, ARRAY[]::TEXT[]) AS event_allowed_campuses, -- Default to empty array
-			e.is_recurring AS event_is_recurring, -- Nullable boolean
-			COALESCE(e.recurrence, '') AS event_recurrence, -- Nullable text
-			e.event_start_at AS event_start_at, -- Non-nullable
-			e.event_end_at AS event_end_at, -- Non-nullable
-			e.register_start_at AS event_register_start_at, -- Non-nullable
-			e.register_end_at AS event_register_end_at, -- Non-nullable
-			e.location_type AS event_location_type, -- Non-nullable
-			e.location_name AS event_location_name, -- Non-nullable
-			COALESCE(e.image_links, ARRAY[]::TEXT[]) AS event_image_links, -- Default to empty array
-			e.status AS event_status, -- Non-nullable
-			COALESCE(ei.total_seats, 0) AS instance_total_seats,
-			COALESCE(SUM(COALESCE(ei.total_seats, 0) - COALESCE(ei.booked_seats, 0)), 0) AS total_remaining_seats,
-			ARRAY_AGG(
-				ROW(COALESCE(ei.total_seats, 0), COALESCE(ei.booked_seats, 0), ei.register_flow)
-			) AS instances_data  -- Nullable boolean
-		FROM
-			events e
-				LEFT JOIN
-			event_instances ei ON e.code = ei.event_code
-		WHERE
-			e.code = ?
-		  AND e.deleted_at IS NULL
-		GROUP BY
-			e.code, e.title, COALESCE(e.topics, ARRAY[]::TEXT[]), COALESCE(e.description, ''), COALESCE(e.terms_and_conditions, ''), e.allowed_for, COALESCE(e.allowed_roles, ARRAY[]::TEXT[]), COALESCE(e.allowed_users, ARRAY[]::TEXT[]), COALESCE(e.allowed_campuses, ARRAY[]::TEXT[]), e.is_recurring, COALESCE(e.recurrence, ''), e.event_start_at, e.event_end_at, e.register_start_at, e.register_end_at, e.location_type, e.location_name, e.status, ei.total_seats, e.image_links
+SELECT
+    e.code AS event_code,
+    e.title AS event_title,
+    COALESCE(e.topics, ARRAY[]::TEXT[]) AS event_topics,
+    COALESCE(e.description, '') AS event_description,
+    COALESCE(e.terms_and_conditions, '') AS event_terms_and_conditions,
+    e.access_level AS event_access_level,
+    COALESCE(e.allowed_roles, ARRAY[]::TEXT[]) AS event_allowed_roles,
+    COALESCE(e.allowed_community_ids, ARRAY[]::TEXT[]) AS event_allowed_community_ids,
+    COALESCE(e.allowed_campuses, ARRAY[]::TEXT[]) AS event_allowed_campuses,
+    COALESCE(e.recurrence, '') AS event_recurrence,
+    e.start_at AS event_start_at,
+    e.end_at AS event_end_at,
+    e.location_type AS event_location_type,
+    COALESCE(e.physical_address, '') AS event_physical_address,
+    COALESCE(e.virtual_link, '') AS event_virtual_link,
+    COALESCE(e.image_links, ARRAY[]::TEXT[]) AS event_image_links,
+    e.status AS event_status,
+    COALESCE(ei.total_seats, 0) AS instance_total_seats,
+    COALESCE(SUM(COALESCE(ei.total_seats, 0) - COALESCE(ei.booked_seats, 0)), 0) AS total_remaining_seats,
+    ARRAY_AGG(
+        ROW(COALESCE(ei.total_seats, 0), COALESCE(ei.booked_seats, 0), ei.register_flow)
+    ) AS instances_data
+FROM
+    events e
+    LEFT JOIN event_instances ei ON e.code = ei.event_code
+WHERE
+    e.code = ?
+    AND e.deleted_at IS NULL
+GROUP BY
+    e.code, e.title, e.topics, e.description, e.terms_and_conditions, 
+    e.access_level, e.allowed_roles, e.allowed_community_ids, e.allowed_campuses, 
+    e.recurrence, e.start_at, e.end_at, e.location_type, e.physical_address, 
+    e.virtual_link, e.status, ei.total_seats, e.image_links
 `
-	queryGetRegisteredUserByCommunityIdOrigin = `
-	SELECT DISTINCT 
-		e.code AS event_code,
-		e.title AS event_title,
-		e.description AS event_description,
-		e.terms_and_conditions AS event_terms_and_conditions,
-		e.event_start_at AS event_start_at,
-		e.event_end_at AS event_end_at,
-		e.location_type AS event_location_type,
-		e.location_name AS event_location_name,
-		COALESCE(e.image_links, ARRAY[]::TEXT[]) AS event_image_links, -- Default to empty array
-		e.status AS event_status,
-		ei.code AS instance_code,
-		ei.title AS instance_title,
-		ei.description AS instance_description,
-		ei.instance_start_at AS instance_start_at,
-		ei.instance_end_at AS instance_end_at,
-		ei.location_type AS instance_location_type,
-		ei.location_name AS instance_location_name,
-		ei.status AS instance_status,
-		rr.id AS registration_record_id,
-		rr.name AS registration_record_name,
-		coalesce(rr.identifier, '') AS registration_record_identifier,
-		coalesce(rr.community_id, '') AS registration_record_community_id,
-		coalesce(rr.updated_by, '') AS registration_record_updated_by,
-		rr.registered_at AS registration_record_registered_at,
-		rr.verified_at as registration_record_verified_at,
-		rr.status AS registration_record_status
-	FROM
-		events e
-		JOIN
-			event_instances ei ON e.code = ei.event_code
-		JOIN
-			event_registration_records rr ON rr.instance_code = ei.code
-	WHERE
-		rr.community_id_origin = ?
-`
-	queryGetEventTitles = `SELECT code, title FROM events WHERE deleted_at IS NULL`
 
+	// queryGetRegisteredUserByCommunityIdOrigin gets registered events for a user
+	queryGetRegisteredUserByCommunityIdOrigin = `
+SELECT DISTINCT 
+    e.code AS event_code,
+    e.title AS event_title,
+    e.description AS event_description,
+    e.terms_and_conditions AS event_terms_and_conditions,
+    e.start_at AS event_start_at,
+    e.end_at AS event_end_at,
+    e.location_type AS event_location_type,
+    COALESCE(e.physical_address, '') AS event_physical_address,
+    COALESCE(e.virtual_link, '') AS event_virtual_link,
+    COALESCE(e.image_links, ARRAY[]::TEXT[]) AS event_image_links,
+    e.status AS event_status,
+    ei.code AS instance_code,
+    ei.title AS instance_title,
+    ei.description AS instance_description,
+    ei.instance_start_at AS instance_start_at,
+    ei.instance_end_at AS instance_end_at,
+    ei.location_type AS instance_location_type,
+    COALESCE(ei.physical_address, '') AS instance_physical_address,
+    COALESCE(ei.virtual_link, '') AS instance_virtual_link,
+    ei.status AS instance_status,
+    rr.id AS registration_record_id,
+    rr.name AS registration_record_name,
+    COALESCE(rr.identifier, '') AS registration_record_identifier,
+    COALESCE(rr.community_id, '') AS registration_record_community_id,
+    COALESCE(rr.updated_by, '') AS registration_record_updated_by,
+    rr.registered_at AS registration_record_registered_at,
+    rr.verified_at AS registration_record_verified_at,
+    rr.status AS registration_record_status
+FROM
+    events e
+    JOIN event_instances ei ON e.code = ei.event_code
+    JOIN event_registration_records rr ON rr.instance_code = ei.code
+WHERE
+    e.deleted_at IS NULL
+    AND rr.community_id_origin = ?
+`
+
+	// queryGetEventTitles gets all event codes and titles
+	queryGetEventTitles = `
+SELECT 
+    code, 
+    title 
+FROM 
+    events 
+WHERE 
+    deleted_at IS NULL
+ORDER BY 
+    created_at DESC
+`
+
+	// queryGetEventSummary gets event summary with registration stats
 	queryGetEventSummary = `
-		SELECT
-			e.code AS event_code,
-			e.title AS event_title,
-			e.allowed_for AS event_allowed_for, -- Non-nullable
-			COALESCE(e.allowed_roles, ARRAY[]::TEXT[]) AS event_allowed_roles, -- Default to empty array
-			COALESCE(e.allowed_users, ARRAY[]::TEXT[]) AS event_allowed_users, -- Default to empty array
-			COALESCE(e.allowed_campuses, ARRAY[]::TEXT[]) AS event_allowed_campuses, -- Default to empty array
-			COALESCE(SUM(ei.booked_seats), 0) AS total_booked_seats,
-			COALESCE(SUM(ei.scanned_seats), 0) AS total_scanned_seats,
-			e.status AS event_status
-		FROM
-			events e
-		LEFT JOIN
-			event_instances ei ON e.code = ei.event_code
-		WHERE
-			e.code = ?
-		  AND e.deleted_at IS NULL
-		GROUP BY
-			e.code, e.title, e.allowed_for, COALESCE(e.allowed_roles, ARRAY[]::TEXT[]), COALESCE(e.allowed_users, ARRAY[]::TEXT[]), COALESCE(e.allowed_campuses, ARRAY[]::TEXT[]), e.status
+SELECT
+    e.code AS event_code,
+    e.title AS event_title,
+    e.access_level AS event_access_level,
+    COALESCE(e.allowed_roles, ARRAY[]::TEXT[]) AS event_allowed_roles,
+    COALESCE(e.allowed_community_ids, ARRAY[]::TEXT[]) AS event_allowed_community_ids,
+    COALESCE(e.allowed_campuses, ARRAY[]::TEXT[]) AS event_allowed_campuses,
+    COALESCE(SUM(ei.booked_seats), 0) AS total_booked_seats,
+    COALESCE(SUM(ei.scanned_seats), 0) AS total_scanned_seats,
+    e.status AS event_status
+FROM
+    events e
+    LEFT JOIN event_instances ei ON e.code = ei.event_code
+WHERE
+    e.code = ?
+    AND e.deleted_at IS NULL
+GROUP BY
+    e.code, e.title, e.access_level, e.allowed_roles, 
+    e.allowed_community_ids, e.allowed_campuses, e.status
 `
 )
 
+// BuildQueryGetAllEvents returns the appropriate query based on user type
 func BuildQueryGetAllEvents(isNotGeneral bool) string {
 	if isNotGeneral {
 		return queryGetAllEventsByRolesAndStatusAndRange1Year
 	}
-
 	return queryGetAllEventsByRolesAndStatusAndRangeEventTime
 }

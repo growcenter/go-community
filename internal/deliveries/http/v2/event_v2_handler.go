@@ -1,7 +1,6 @@
 package v2
 
 import (
-	"github.com/labstack/echo/v4"
 	"go-community/internal/config"
 	"go-community/internal/deliveries/http/common/response"
 	"go-community/internal/deliveries/http/middleware"
@@ -10,6 +9,8 @@ import (
 	"go-community/internal/pkg/validator"
 	"go-community/internal/usecases"
 	"net/http"
+
+	"github.com/labstack/echo/v4"
 )
 
 type EventHandler struct {
@@ -303,7 +304,7 @@ func (eh *EventHandler) CreateInstance(ctx echo.Context) error {
 		return response.Error(ctx, err)
 	}
 
-	return response.Success(ctx, http.StatusCreated, instance.ToResponse())
+	return response.Success(ctx, http.StatusCreated, models.ToInstanceResponses(instance))
 }
 
 func (eh *EventHandler) GetEventAttendance(ctx echo.Context) error {

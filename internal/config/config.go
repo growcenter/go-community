@@ -18,6 +18,9 @@ type (
 		Auth        Auth              `mapstructure:"auth"`
 		Department  map[string]string `mapstructure:"department"`
 		Campus      map[string]string `mapstructure:"campus"`
+		Hash        Hash              `mapstructure:"hash"`
+		Event       Event             `mapstructure:"event"`
+		Cache       Cache             `mapstructure:"cache"`
 	}
 	Application struct {
 		Name        string        `mapstructure:"name"`
@@ -47,6 +50,9 @@ type (
 		Redirect     string `mapstructure:"redirect"`
 		State        string `mapstructure:"state"`
 	}
+	Hash struct {
+		Salt string `mapstructure:"salt"`
+	}
 	Auth struct {
 		BearerSecret    map[string]string `mapstructure:"bearer_secret"`
 		BearerDuration  int               `mapstructure:"bearer_duration"`
@@ -54,6 +60,14 @@ type (
 		RefreshDuration int               `mapstructure:"refresh_duration"`
 		APIKey          string            `mapstructure:"api_key"`
 		ClientId        map[string]bool   `mapstructure:"client_id"`
+	}
+	Event struct {
+		EncodeCode               string `mapstructure:"encode_code"`
+		MinSlug                  int    `mapstructure:"min_slug"`
+		AutoRequireParentInfoAge int    `mapstructure:"auto_require_parent_info_age"` // Age threshold for auto-requiring parent info
+	}
+	Cache struct {
+		TTLMinutes int `mapstructure:"ttl_minutes"` // Cache TTL in minutes for validation lookups
 	}
 )
 

@@ -11,11 +11,11 @@ import (
 func LogRepository(ctx context.Context, err error) {
 	if err != nil {
 		if err == models.ErrorNoRows {
-			logger.Logger.Warn("[REPOSITORY-ERROR]", zap.String("status", "error"), zap.Error(err))
+			logger.Log.Warn("[REPOSITORY-ERROR]", zap.Error(err))
 		} else {
-			logger.Logger.Error("[REPOSITORY-ERROR]", zap.String("status", "error"), zap.Error(err))
+			logger.Log.Error("[REPOSITORY-ERROR]", zap.Error(err))
 		}
 	} else {
-		logger.Logger.Info("[REPOSITORY]", zap.String("status", "success"))
+		logger.Log.Info("[REPOSITORY]", zap.String("status", "success"))
 	}
 }

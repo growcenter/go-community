@@ -3,6 +3,7 @@ package usecases
 import (
 	"go-community/internal/config"
 	"go-community/internal/pkg/authorization"
+	"go-community/internal/pkg/cache"
 	"go-community/internal/pkg/google"
 	"go-community/internal/repositories/pgsql"
 )
@@ -13,20 +14,25 @@ type Dependencies struct {
 	Authorization *authorization.Auth
 	Salt          []byte
 	Config        *config.Configuration
+	Cache         *cache.MemoryCache
+
+	Event         EventUsecase
+	EventInstance EventInstanceUsecase
 }
 
 type Usecases struct {
-	Health                  healthUsecase
-	Campus                  campusUsecase
-	CoolCategory            coolCategoryUsecase
-	Location                locationUsecase
-	User                    userUsecase
-	EventCommunityRequest   eventCommunityRequestUsecase
-	Role                    roleUsecase
-	UserType                userTypeUsecase
-	Event                   eventUsecase
+	Health                healthUsecase
+	Campus                campusUsecase
+	CoolCategory          coolCategoryUsecase
+	Location              locationUsecase
+	User                  userUsecase
+	EventCommunityRequest eventCommunityRequestUsecase
+	Role                  roleUsecase
+	UserType              userTypeUsecase
+
+	Event                   EventUsecase
+	EventInstance           EventInstanceUsecase
 	EventRegistrationRecord eventRegistrationRecordUsecase
-	EventInstance           eventInstanceUsecase
 	FeatureFlag             featureFlagUsecase
 	Config                  configDBUsecase
 	Cool                    coolUsecase
@@ -34,6 +40,14 @@ type Usecases struct {
 }
 
 func New(d Dependencies) *Usecases {
+	// Initialize EventInstance usecase first
+	eventUsecase := NewEventUsecase(&d)
+	eventInstanceUsecase := NewEventInstanceUsecase(&d)
+
+	// Inject into dependencies
+	d.EventInstance = eventInstanceUsecase
+	d.Event = eventUsecase
+
 	return &Usecases{
 		Health:                  *NewHealthUsecase(d.Repository.Health),
 		Campus:                  *NewCampusUsecase(d.Repository.Campus),
@@ -43,9 +57,9 @@ func New(d Dependencies) *Usecases {
 		EventCommunityRequest:   *NewEventCommunityRequestUsecase(d.Repository.EventCommunityRequest, d.Repository.User),
 		Role:                    *NewRoleUsecase(d.Repository.Role),
 		UserType:                *NewUserTypeUsecase(*d.Repository),
-		Event:                   *NewEventUsecase(*d.Config, *d.Authorization, *d.Repository, &featureFlagUsecase{r: *d.Repository}),
+		Event:                   eventUsecase,
+		EventInstance:           eventInstanceUsecase,
 		EventRegistrationRecord: *NewEventRegistrationRecordUsecase(*d.Repository, *d.Config),
-		EventInstance:           *NewEventInstanceUsecase(*d.Config, *d.Authorization, *d.Repository),
 		FeatureFlag:             *NewFeatureFlagUsecase(*d.Repository),
 		Config:                  *NewConfigDBUsecase(*d.Repository, *d.Config),
 		Cool:                    *NewCoolUsecase(*d.Repository, *d.Config, &featureFlagUsecase{r: *d.Repository}),

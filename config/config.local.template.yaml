@@ -35,3 +35,9 @@ department:
   "EXD": "Example Department"
 campus:
   "EXC": "Example Campus"
+event:
+  encode_code: ""
+  min_slug: 1
+  auto_require_parent_info_age: 18
+cache:
+  ttl_minutes: 5  # Cache TTL for validation lookups (roles, user types, community IDs)

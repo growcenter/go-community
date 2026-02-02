@@ -1,582 +1,485 @@
 package models
 
 import (
-	"database/sql"
-	"github.com/google/uuid"
-	"github.com/lib/pq"
-	"go-community/internal/common"
+	"go-community/internal/constants"
 	"time"
+
+	"github.com/lib/pq"
+	"gorm.io/gorm"
 )
 
-var (
+const (
 	TYPE_EVENT = "event"
 )
 
+// Event represents a church event in the system
 type Event struct {
-	ID                 int
-	Code               string
-	Title              string
-	Topics             pq.StringArray `gorm:"type:text[]"`
-	Description        string
-	TermsAndConditions string
-	AllowedFor         string
-	AllowedUsers       pq.StringArray `gorm:"type:text[]"`
-	AllowedRoles       pq.StringArray `gorm:"type:text[]"`
-	AllowedCampuses    pq.StringArray `gorm:"type:text[]"`
-	IsRecurring        bool
-	Recurrence         string
-	EventStartAt       time.Time
-	EventEndAt         time.Time
-	RegisterStartAt    time.Time
-	RegisterEndAt      time.Time
-	LocationType       string
-	LocationName       string
-	ImageLinks         pq.StringArray `gorm:"type:text[]"`
-	Status             string
-	CreatedAt          time.Time
-	UpdatedAt          time.Time
-	DeletedAt          sql.NullTime
+	// Primary Key
+	ID uint `gorm:"primaryKey;autoIncrement" json:"id"`
+
+	// Core Event Information
+	Code  string `gorm:"type:varchar(50);uniqueIndex;not null" json:"code"`
+	Title string `gorm:"type:varchar(255);not null;index" json:"title"`
+	Slug  string `gorm:"type:varchar(255);uniqueIndex;not null" json:"slug"` // Slugified title for URLs
+
+	// Content & Media
+	Topics                  pq.StringArray `gorm:"type:text[]" json:"topics"`
+	Category                string         `gorm:"type:varchar(50);not null" json:"category"`
+	Description             *string        `gorm:"type:text" json:"description"`
+	TermsAndConditions      *string        `gorm:"type:text" json:"terms_and_conditions"`
+	ImageLinks              pq.StringArray `gorm:"type:text[]" json:"imageLinks"`
+	PostRegistrationDetails JSONB          `gorm:"type:jsonb" json:"post_registration_details"` // Details shown after registration
+
+	// Creator & Organizers
+	CreatorCommunityID    string         `gorm:"type:varchar(50);not null;index" json:"creator_community_id"`
+	OrganizerCommunityIDs pq.StringArray `gorm:"type:text[]" json:"organizer_community_ids"`
+	ContactCommunityIDs   pq.StringArray `gorm:"type:text[]" json:"contact_community_ids"`
+
+	// Location Information
+	LocationType       string  `gorm:"type:varchar(20);not null" json:"location_type"`       // online, offline, hybrid
+	PhysicalAddress    *string `gorm:"type:text" json:"physical_address"`                    // Physical address
+	VirtualLink        *string `gorm:"type:text" json:"virtual_link"`                        // Meeting link
+	MeetingCTAText     *string `gorm:"type:varchar(100)" json:"meeting_cta_text"`            // CTA button text
+	LocationDetails    *string `gorm:"type:text" json:"location_details"`                    // Additional location info
+	LocationVisibility string  `gorm:"type:varchar(30);not null" json:"location_visibility"` // pre-registration, post-registration, all
+
+	// Access Control
+	AccessLevel         string         `gorm:"type:varchar(20);not null;index;index:idx_events_access_status" json:"access_level"` // public, private
+	AllowedUserTypes    pq.StringArray `gorm:"type:text[]" json:"allowed_user_types"`
+	AllowedRoles        pq.StringArray `gorm:"type:text[]" json:"allowed_roles"`
+	AllowedCampuses     pq.StringArray `gorm:"type:text[]" json:"allowed_campuses"`
+	AllowedCommunityIDs pq.StringArray `gorm:"type:text[]" json:"allowed_community_ids"`
+
+	// Scheduling
+	Recurrence *string   `gorm:"type:varchar(255)" json:"recurrence"` // daily, weekly, monthly, yearly, or Quartz cron
+	StartAt    time.Time `gorm:"type:timestamptz;not null;index;index:idx_events_status_start,priority:2" json:"start_at"`
+	EndAt      time.Time `gorm:"type:timestamptz;not null;index" json:"end_at"`
+	Timezone   string    `gorm:"type:varchar(50);not null" json:"timezone"` // IANA timezone (e.g., "Asia/Jakarta")
+
+	// Registration Configurations
+	ConfirmationMethod *string `gorm:"type:varchar(20)" json:"confirmation_method"` // whatsapp, email, both
+	ValidationMethod   *string `gorm:"type:varchar(20)" json:"validation_method"`   // location
+
+	// Status & Metadata
+	Status    string         `gorm:"type:varchar(20);not null;index;index:idx_events_status_start,priority:1;default:'draft'" json:"status"`
+	CreatedAt time.Time      `gorm:"autoCreateTime;index" json:"created_at"`
+	UpdatedAt time.Time      `gorm:"autoUpdateTime" json:"updated_at"`
+	DeletedAt gorm.DeletedAt `gorm:"index" json:"deleted_at,omitempty"`
+
+	// Relationships (loaded via joins, not stored)
+	Instances []EventInstance `gorm:"foreignKey:EventCode;references:Code" json:"instances,omitempty"`
 }
 
-func (e *CreateEventResponse) ToResponse() *CreateEventResponse {
-	return &CreateEventResponse{
-		Type:               TYPE_EVENT,
-		Code:               e.Code,
-		Title:              e.Title,
-		Topics:             e.Topics,
-		Description:        e.Description,
-		TermsAndConditions: e.TermsAndConditions,
-		AllowedFor:         e.AllowedFor,
-		AllowedUsers:       e.AllowedUsers,
-		AllowedRoles:       e.AllowedRoles,
-		AllowedCampuses:    e.AllowedCampuses,
-		IsRecurring:        e.IsRecurring,
-		Recurrence:         e.Recurrence,
-		EventStartAt:       e.EventStartAt,
-		EventEndAt:         e.EventEndAt,
-		RegisterStartAt:    e.RegisterStartAt,
-		RegisterEndAt:      e.RegisterEndAt,
-		LocationType:       e.LocationType,
-		LocationName:       e.LocationName,
-		Status:             e.Status,
-		Instances:          e.Instances,
+// TableName specifies the table name for GORM
+func (Event) TableName() string {
+	return "events"
+}
+
+// Helper Methods - Simple getters, NO validation, NO business logic
+
+// IsPublic returns true if the event is publicly accessible
+func (e *Event) IsPublic() bool {
+	return e.AccessLevel == string(constants.AccessLevelPublic)
+}
+
+// IsOnline returns true if the event is online only
+func (e *Event) IsOnline() bool {
+	return e.LocationType == string(constants.LocationTypeOnline)
+}
+
+// IsOffline returns true if the event is offline only
+func (e *Event) IsOffline() bool {
+	return e.LocationType == string(constants.LocationTypeOffline)
+}
+
+// IsHybrid returns true if the event is hybrid
+func (e *Event) IsHybrid() bool {
+	return e.LocationType == string(constants.LocationTypeHybrid)
+}
+
+// IsDraft returns true if the event is in draft status
+func (e *Event) IsDraft() bool {
+	return e.Status == string(constants.EventStatusDraft)
+}
+
+// IsRecurring returns true if the event has recurrence
+func (e *Event) IsRecurring() bool {
+	return e.Recurrence != nil && *e.Recurrence != string(constants.RecurrenceNone)
+}
+
+// Common Requests
+
+type (
+	EventLocation struct {
+		LocationType       string `json:"locationType" validate:"required,oneof=online offline hybrid"`
+		PhysicalAddress    string `json:"physicalAddress" validate:"required_if=LocationType offline|required_if=LocationType hybrid"`
+		VirtualLink        string `json:"virtualLink" validate:"required_if=LocationType online|required_if=LocationType hybrid"`
+		MeetingCTAText     string `json:"meetingCtaText"`
+		LocationDetails    string `json:"locationDetails"`
+		LocationVisibility string `json:"locationVisibility" validate:"required,oneof=pre-registration post-registration all"`
 	}
-}
 
+	EventAccess struct {
+		AccessLevel         string   `json:"accessLevel" validate:"required,oneof=public private"`
+		AllowedUserTypes    []string `json:"allowedUserTypes" validate:"omitempty"`
+		AllowedRoles        []string `json:"allowedRoles" validate:"omitempty"`
+		AllowedCampuses     []string `json:"allowedCampuses" validate:"omitempty"`
+		AllowedCommunityIDs []string `json:"allowedCommunityIds" validate:"omitempty"`
+	}
+
+	EventSchedule struct {
+		Recurrence string    `json:"recurrence" validate:"omitempty,oneof=daily weekly monthly yearly"`
+		StartAt    time.Time `json:"startAt" validate:"required"`
+		EndAt      time.Time `json:"endAt" validate:"required,gtfield=StartAt"`
+		Timezone   string    `json:"timezone" validate:"required"`
+	}
+
+	RegistrationConfig struct {
+		PostRegistrationDetails JSONB  `json:"postRegistrationDetails" example:"Event Post Registration Details"`
+		ConfirmationMethod      string `json:"confirmationMethod" validate:"required,oneof=whatsapp email both"`
+		ValidationMethod        string `json:"validationMethod" validate:"omitempty,oneof=location"`
+	}
+)
+
+// Create Event Request
 type (
 	CreateEventRequest struct {
-		Title              string                  `json:"name" validate:"required"`
-		Topics             []string                `json:"topics"`
-		Description        string                  `json:"description"`
-		TermsAndConditions string                  `json:"termsAndConditions"`
-		AllowedFor         string                  `json:"allowedFor" validate:"required,oneof=public private"`
-		AllowedUsers       []string                `json:"allowedUsers" validate:"required"`
-		AllowedRoles       []string                `json:"allowedRoles" validate:"required"`
-		AllowedCampuses    []string                `json:"allowedCampuses" validate:"required,dive,min=3"`
-		IsRecurring        bool                    `json:"isRecurring"`
-		Recurrence         string                  `json:"recurrence"`
-		EventStartAt       string                  `json:"eventStartAt"`
-		EventEndAt         string                  `json:"eventEndAt"`
-		RegisterStartAt    string                  `json:"registerStartAt"`
-		RegisterEndAt      string                  `json:"registerEndAt"`
-		LocationType       string                  `json:"locationType" validate:"required,oneof=online onsite hybrid"`
-		LocationName       string                  `json:"locationName" validate:"required"`
-		Instances          []CreateInstanceRequest `json:"instances" validate:"dive,required"`
+		Title                 string                 `json:"title" validate:"required" example:"Event Title"`
+		Slug                  string                 `json:"slug" example:"event-title"`
+		Topics                []string               `json:"topics" example:"topic1,topic2,topic3"`
+		Category              string                 `json:"category" validate:"required,oneof=announcement registerable"`
+		Description           string                 `json:"description" example:"Event Description"`
+		TermsAndConditions    string                 `json:"termsAndConditions" example:"Event Terms and Conditions"`
+		ImageLinks            []string               `json:"imageLinks" validate:"omitempty,dive,url" example:"image1,image2,image3"`
+		OrganizerCommunityIDs []string               `json:"organizerCommunityIds" validate:"required" example:"community1,community2,community3"`
+		ContactCommunityIDs   []string               `json:"contactCommunityIds" validate:"required" example:"community1,community2,community3"`
+		RegistrationConfig    RegistrationConfig     `json:"registrationConfig" validate:"required"`
+		Location              EventLocation          `json:"location" validate:"required"`
+		Access                EventAccess            `json:"access" validate:"required"`
+		Schedule              EventSchedule          `json:"schedule" validate:"required"`
+		Status                string                 `json:"status" example:"draft"`
+		Instances             *CreateInstanceRequest `json:"instances" validate:"omitempty"`
 	}
 	CreateEventResponse struct {
-		Type               string                   `json:"type" example:"event"`
-		Code               string                   `json:"code" example:"bhfe382"`
-		Title              string                   `json:"title" example:"Homebase"`
-		Topics             []string                 `json:"topics"`
-		Description        string                   `json:"description" example:"This event blabla"`
-		TermsAndConditions string                   `json:"termsAndConditions" example:"This event blabla"`
-		AllowedFor         string                   `json:"allowedFor" example:"public"`
-		AllowedUsers       []string                 `json:"allowedUsers,omitempty"`
-		AllowedRoles       []string                 `json:"allowedRoles,omitempty"`
-		AllowedCampuses    []string                 `json:"allowedCampuses,omitempty"`
-		IsRecurring        bool                     `json:"isRecurring" example:"true"`
-		Recurrence         string                   `json:"recurrence,omitempty" example:"monthly"`
-		EventStartAt       time.Time                `json:"eventStartAt,omitempty" example:""`
-		EventEndAt         time.Time                `json:"eventEndAt,omitempty" example:""`
-		RegisterStartAt    time.Time                `json:"registerStartAt,omitempty" example:""`
-		RegisterEndAt      time.Time                `json:"registerEndAt,omitempty" example:""`
-		LocationType       string                   `json:"locationType" example:"offline"`
-		LocationName       string                   `json:"locationName" example:"PIOT 6 Lt. 6"`
-		Status             string                   `json:"status,omitempty" example:"available"`
-		Instances          []CreateInstanceResponse `json:"instances" validate:"dive,required"`
+		Type                  string             `json:"type" example:"event"` // Use TypeEvent constant in code
+		Code                  string             `json:"code" example:"event-code"`
+		Title                 string             `json:"title" example:"Event Title"`
+		Slug                  string             `json:"slug" example:"event-title"`
+		Description           string             `json:"description" example:"Event Description"`
+		TermsAndConditions    string             `json:"termsAndConditions" example:"Event Terms and Conditions"`
+		ImageLinks            []string           `json:"imageLinks" example:"image1,image2,image3"`
+		OrganizerCommunityIDs []string           `json:"organizerCommunityIds" example:"community1,community2,community3"`
+		ContactCommunityIDs   []string           `json:"contactCommunityIds" example:"community1,community2,community3"`
+		RegistrationConfig    RegistrationConfig `json:"registrationConfig"`
+		Location              EventLocation      `json:"location"`
+		Access                EventAccess        `json:"access"`
+		Schedule              EventSchedule      `json:"schedule"`
+		Status                string             `json:"status" example:"draft"`
 	}
 )
 
-func (e *GetAllEventsResponse) ToResponse() GetAllEventsResponse {
-	return GetAllEventsResponse{
-		Type:               TYPE_EVENT,
-		Code:               e.Code,
-		Title:              e.Title,
-		Topics:             e.Topics,
-		AllowedFor:         e.AllowedFor,
-		AllowedUsers:       e.AllowedUsers,
-		AllowedRoles:       e.AllowedRoles,
-		AllowedCampuses:    e.AllowedCampuses,
-		IsRecurring:        e.IsRecurring,
-		Recurrence:         e.Recurrence,
-		EventStartAt:       e.EventStartAt,
-		EventEndAt:         e.EventEndAt,
-		RegisterStartAt:    e.RegisterStartAt,
-		RegisterEndAt:      e.RegisterEndAt,
-		LocationType:       e.LocationType,
-		ImagesLinks:        e.ImagesLinks,
-		AvailabilityStatus: e.AvailabilityStatus,
+func (e *Event) ToCreateResponse() *CreateEventResponse {
+	return &CreateEventResponse{
+		Type:                  TYPE_EVENT,
+		Code:                  e.Code,
+		Title:                 e.Title,
+		Slug:                  e.Slug,
+		Description:           *e.Description,
+		TermsAndConditions:    *e.TermsAndConditions,
+		ImageLinks:            e.ImageLinks,
+		OrganizerCommunityIDs: e.OrganizerCommunityIDs,
+		ContactCommunityIDs:   e.ContactCommunityIDs,
+		RegistrationConfig: RegistrationConfig{
+			PostRegistrationDetails: e.PostRegistrationDetails,
+			ConfirmationMethod:      *e.ConfirmationMethod,
+			ValidationMethod:        *e.ValidationMethod,
+		},
+		Location: EventLocation{
+			LocationType:       e.LocationType,
+			PhysicalAddress:    *e.PhysicalAddress,
+			VirtualLink:        *e.VirtualLink,
+			MeetingCTAText:     *e.MeetingCTAText,
+			LocationDetails:    *e.LocationDetails,
+			LocationVisibility: e.LocationVisibility,
+		},
+		Access: EventAccess{
+			AccessLevel:         e.AccessLevel,
+			AllowedUserTypes:    e.AllowedUserTypes,
+			AllowedRoles:        e.AllowedRoles,
+			AllowedCampuses:     e.AllowedCampuses,
+			AllowedCommunityIDs: e.AllowedCommunityIDs,
+		},
+		Schedule: EventSchedule{
+			Recurrence: *e.Recurrence,
+			StartAt:    e.StartAt,
+			EndAt:      e.EndAt,
+			Timezone:   e.Timezone,
+		},
+		Status: e.Status,
 	}
 }
 
-type (
-	GetAllEventsDBOutput struct {
-		EventCode            string         `json:"event_code"`
-		EventTitle           string         `json:"event_title"`
-		EventTopics          pq.StringArray `gorm:"type:text[]"`
-		EventLocationType    string
-		EventAllowedFor      string
-		EventAllowedRoles    pq.StringArray `gorm:"type:text[]"`
-		EventAllowedUsers    pq.StringArray `gorm:"type:text[]"`
-		EventAllowedCampuses pq.StringArray `gorm:"type:text[]"`
-		EventIsRecurring     bool           `json:"event_is_recurring"`
-		EventRecurrence      string         `json:"event_recurrence"`
-		EventStartAt         time.Time
-		EventEndAt           time.Time
-		EventRegisterStartAt time.Time `json:"event_register_start_at"`
-		EventRegisterEndAt   time.Time `json:"event_register_end_at"`
-		InstanceTotalSeats   int
-		TotalRemainingSeats  int            `json:"total_remaining_seats"`
-		EventStatus          string         `json:"event_status"`
-		EventImageLinks      pq.StringArray `gorm:"type:text[]"`
-		InstancesData        pq.StringArray `gorm:"type:text[]"`
-	}
+// ToResponse is an alias for ToCreateResponse for handler compatibility
+func (e *Event) ToResponse() *CreateEventResponse {
+	return e.ToCreateResponse()
+}
 
-	GetAllEventsResponse struct {
-		Type                string     `json:"type" example:"Event"`
-		Code                string     `json:"code" example:"2024-HOMEBASE"`
-		Title               string     `json:"title" example:"Homebase"`
-		Topics              []string   `json:"topics"`
-		LocationType        string     `json:"locationType" example:"offline"`
-		AllowedFor          string     `json:"allowedFor" example:"public"`
-		AllowedUsers        []string   `json:"allowedUsers"`
-		AllowedRoles        []string   `json:"allowedRoles"`
-		AllowedCampuses     []string   `json:"allowedCampuses,omitempty"`
-		IsRecurring         bool       `json:"isRecurring,omitempty" example:"true"`
-		Recurrence          string     `json:"recurrence,omitempty" example:"monthly"`
-		EventStartAt        time.Time  `json:"eventStartAt" example:""`
-		EventEndAt          time.Time  `json:"eventEndAt" example:""`
-		RegisterStartAt     *time.Time `json:"registerStartAt,omitempty" example:""`
-		RegisterEndAt       *time.Time `json:"registerEndAt,omitempty" example:""`
-		TotalRemainingSeats int        `json:"totalRemainingSeats,omitempty" example:"2"`
-		ImagesLinks         []string   `json:"imagesLinks"`
-		AvailabilityStatus  string     `json:"availabilityStatus,omitempty" example:"available"`
-	}
-)
-
-func (e *GetEventByCodeResponse) ToResponse() GetEventByCodeResponse {
-	return GetEventByCodeResponse{
-		Type:               TYPE_EVENT,
-		Code:               e.Code,
-		Title:              e.Title,
-		Topics:             e.Topics,
-		Description:        e.Description,
-		TermsAndConditions: e.TermsAndConditions,
-		AllowedFor:         e.AllowedFor,
-		AllowedUsers:       e.AllowedUsers,
-		AllowedRoles:       e.AllowedRoles,
-		AllowedCampuses:    e.AllowedCampuses,
-		IsRecurring:        e.IsRecurring,
-		Recurrence:         e.Recurrence,
-		EventStartAt:       e.EventStartAt,
-		EventEndAt:         e.EventEndAt,
-		RegisterStartAt:    e.RegisterStartAt,
-		RegisterEndAt:      e.RegisterEndAt,
-		LocationType:       e.LocationType,
-		LocationName:       e.LocationName,
-		ImageLinks:         e.ImageLinks,
-		AvailabilityStatus: e.AvailabilityStatus,
-		Instances:          e.Instances,
+// NewEventFromRequest constructs an Event model from CreateEventRequest
+func NewEventFromRequest(req CreateEventRequest, code, slug, creatorID string) *Event {
+	return &Event{
+		Code:                    code,
+		Title:                   req.Title,
+		Slug:                    slug,
+		Topics:                  req.Topics,
+		Category:                req.Category,
+		Description:             &req.Description,
+		TermsAndConditions:      &req.TermsAndConditions,
+		ImageLinks:              req.ImageLinks,
+		PostRegistrationDetails: req.RegistrationConfig.PostRegistrationDetails,
+		CreatorCommunityID:      creatorID,
+		OrganizerCommunityIDs:   req.OrganizerCommunityIDs,
+		ContactCommunityIDs:     req.ContactCommunityIDs,
+		LocationType:            req.Location.LocationType,
+		PhysicalAddress:         &req.Location.PhysicalAddress,
+		VirtualLink:             &req.Location.VirtualLink,
+		MeetingCTAText:          &req.Location.MeetingCTAText,
+		LocationDetails:         &req.Location.LocationDetails,
+		LocationVisibility:      req.Location.LocationVisibility,
+		AccessLevel:             req.Access.AccessLevel,
+		AllowedUserTypes:        req.Access.AllowedUserTypes,
+		AllowedRoles:            req.Access.AllowedRoles,
+		AllowedCampuses:         req.Access.AllowedCampuses,
+		AllowedCommunityIDs:     req.Access.AllowedCommunityIDs,
+		Recurrence:              &req.Schedule.Recurrence,
+		StartAt:                 req.Schedule.StartAt,
+		EndAt:                   req.Schedule.EndAt,
+		Timezone:                req.Schedule.Timezone,
+		ConfirmationMethod:      &req.RegistrationConfig.ConfirmationMethod,
+		Status:                  req.Status,
 	}
 }
 
-type (
-	GetEventByCodeDBOutput struct {
-		EventCode               string
-		EventTitle              string
-		EventTopics             pq.StringArray `gorm:"type:text[]"`
-		EventDescription        string
-		EventTermsAndConditions string
-		EventAllowedFor         string
-		EventAllowedRoles       pq.StringArray `gorm:"type:text[]"`
-		EventAllowedUsers       pq.StringArray `gorm:"type:text[]"`
-		EventAllowedCampuses    pq.StringArray `gorm:"type:text[]"`
-		EventIsRecurring        bool
-		EventRecurrence         string
-		EventStartAt            time.Time
-		EventEndAt              time.Time
-		EventRegisterStartAt    time.Time
-		EventRegisterEndAt      time.Time
-		EventLocationType       string
-		EventLocationName       string
-		EventStatus             string
-		InstanceTotalSeats      int
-		TotalRemainingSeats     int            `json:"total_remaining_seats"`
-		EventImageLinks         pq.StringArray `gorm:"type:text[]"`
-		InstanceRegisterFlow    pq.StringArray `gorm:"type:text[]"`
-		InstancesData           pq.StringArray `gorm:"type:text[]"`
-	}
-	GetInstanceByEventCodeDBOutput struct {
-		InstanceCode              string    `json:"instance_code"`
-		InstanceEventCode         string    `json:"instance_event_code"`
-		InstanceTitle             string    `json:"instance_title"`
-		InstanceDescription       string    `json:"instance_description"`
-		InstanceStartAt           time.Time `json:"instance_start_at"`
-		InstanceEndAt             time.Time `json:"instance_end_at"`
-		InstanceRegisterStartAt   time.Time `json:"instance_register_start_at"`
-		InstanceRegisterEndAt     time.Time `json:"instance_register_end_at"`
-		InstanceAllowVerifyAt     time.Time `json:"instance_allow_verify_at"`
-		InstanceDisallowVerifyAt  time.Time `json:"instance_disallow_verify_at"`
-		InstanceLocationType      string    `json:"instance_location"`
-		InstanceLocationName      string    `json:"instance_location_name"`
-		InstanceMaxPerTransaction int       `json:"instance_max_register"`
-		InstanceIsOnePerAccount   bool      `json:"instance_is_one_per_account"`
-		InstanceIsOnePerTicket    bool      `json:"instance_is_one_per_ticket"`
-		InstanceRegisterFlow      string    `json:"instance_register_flow"`
-		InstanceCheckType         string    `json:"instance_check_type"`
-		InstanceTotalSeats        int       `json:"instance_total_seats"`
-		InstanceBookedSeats       int       `json:"instance_booked_seats"`
-		InstanceScannedSeats      int       `json:"instance_scanned_seats"`
-		InstanceStatus            string    `json:"instance_status"`
-		TotalRemainingSeats       int       `json:"total_remaining_seats"`
-		EventAllowedFor           string    `json:"event_allowed_for"`
-	}
-	GetEventByCodeParameter struct {
-		Code string `json:"string" validate:"required,min=2"`
-	}
-	GetEventByCodeResponse struct {
-		Type               string                            `json:"type" example:"event"`
-		Code               string                            `json:"code" example:"bhfe382"`
-		Title              string                            `json:"title" example:"Homebase"`
-		Topics             []string                          `json:"topics"`
-		Description        string                            `json:"description" example:"This event blabla"`
-		TermsAndConditions string                            `json:"termsAndConditions" example:"This event blabla"`
-		AllowedFor         string                            `json:"allowedFor" example:"public"`
-		AllowedUsers       []string                          `json:"allowedUsers,omitempty"`
-		AllowedRoles       []string                          `json:"allowedRoles,omitempty"`
-		AllowedCampuses    []string                          `json:"allowedCampuses,omitempty"`
-		IsRecurring        bool                              `json:"isRecurring" example:"true"`
-		Recurrence         string                            `json:"recurrence,omitempty" example:"monthly"`
-		EventStartAt       time.Time                         `json:"eventStartAt,omitempty" example:""`
-		EventEndAt         time.Time                         `json:"eventEndAt,omitempty" example:""`
-		RegisterStartAt    time.Time                         `json:"registerStartAt,omitempty" example:""`
-		RegisterEndAt      time.Time                         `json:"registerEndAt,omitempty" example:""`
-		LocationType       string                            `json:"locationType" example:"offline"`
-		LocationName       string                            `json:"locationName" example:"PIOT 6 Lt. 6"`
-		ImageLinks         []string                          `json:"imageLinks"`
-		AvailabilityStatus string                            `json:"availabilityStatus,omitempty" example:"available"`
-		Instances          []GetInstancesByEventCodeResponse `json:"instances,omitempty"`
-	}
-	GetInstancesByEventCodeResponse struct {
-		Type                string    `json:"type" example:"eventInstance"`
-		Code                string    `json:"code" example:"2024-HOMEBASE"`
-		Title               string    `json:"title" example:"Homebase"`
-		Description         string    `json:"description" example:"Homebase"`
-		InstanceStartAt     time.Time `json:"instanceStartAt" example:""`
-		InstanceEndAt       time.Time `json:"instanceEndAt" example:""`
-		RegisterStartAt     time.Time `json:"registerStartAt" example:""`
-		RegisterEndAt       time.Time `json:"registerEndAt" example:""`
-		AllowVerifyAt       time.Time `json:"allowVerifyAt" example:""`
-		DisallowVerifyAt    time.Time `json:"disallowVerifyAt" example:""`
-		LocationType        string    `json:"locationType" example:"offline"`
-		LocationName        string    `json:"LocationName" example:"PIOT 6 Lt. 6"`
-		MaxPerTransaction   int       `json:"maxPerTransaction,omitempty"`
-		IsOnePerAccount     bool      `json:"isOnePerAccount"`
-		IsOnePerTicket      bool      `json:"isOnePerTicket"`
-		RegisterFlow        string    `json:"registerFlow"`
-		CheckType           string    `json:"checkType"`
-		TotalSeats          int       `json:"totalSeats" example:"0"`
-		BookedSeats         int       `json:"bookedSeats" example:"0"`
-		TotalRemainingSeats int       `json:"totalRemainingSeats" example:"0"`
-		AvailabilityStatus  string    `json:"availabilityStatus,omitempty" example:"available"`
-	}
-)
+// UpdateEventRequest represents a partial update request for an event
+// All fields are pointers to distinguish between:
+// - nil: field not provided, will not be updated
+// - pointer to empty value: field will be set to empty/null
+// - pointer to value: field will be updated to that value
+type UpdateEventRequest struct {
+	// Core Information
+	Title *string `json:"title,omitempty" validate:"omitempty,min=1,max=255"`
+	Slug  *string `json:"slug,omitempty" validate:"omitempty,min=1,max=255"`
 
-type (
-	GetAllRegisteredUserDBOutput struct {
-		EventCode                      string
-		EventTitle                     string
-		EventDescription               string
-		EventTermsAndConditions        string
-		EventStartAt                   time.Time
-		EventEndAt                     time.Time
-		EventLocationType              string
-		EventLocationName              string
-		EventImageLinks                pq.StringArray `gorm:"type:text[]"`
-		EventStatus                    string
-		InstanceCode                   string
-		InstanceTitle                  string
-		InstanceDescription            string
-		InstanceStartAt                time.Time
-		InstanceEndAt                  time.Time
-		InstanceLocationType           string
-		InstanceLocationName           string
-		InstanceStatus                 string
-		RegistrationRecordID           uuid.UUID
-		RegistrationRecordName         string
-		RegistrationRecordIdentifier   string
-		RegistrationRecordCommunityID  string
-		RegistrationRecordUpdatedBy    string
-		RegistrationRecordRegisteredAt time.Time
-		RegistrationRecordVerifiedAt   sql.NullTime
-		RegistrationRecordStatus       string
-	}
-	GetAllRegisteredUserParameter struct {
-		Search      string `query:"search"`
-		CommunityId string `json:"communityId" validate:"required,communityId"`
-	}
-	GetAllRegisteredUserResponse struct {
-		Type               string                                  `json:"type"`
-		Code               string                                  `json:"code"`
-		Title              string                                  `json:"title"`
-		Description        string                                  `json:"description"`
-		TermsAndConditions string                                  `json:"termsAndConditions"`
-		StartAt            time.Time                               `json:"startAt"`
-		EndAt              time.Time                               `json:"endAt"`
-		LocationType       string                                  `json:"locationType"`
-		LocationName       string                                  `json:"locationName"`
-		ImageLinks         []string                                `json:"imageLinks"`
-		Status             string                                  `json:"status"`
-		Instances          []InstancesForRegisteredRecordsResponse `json:"instances"`
-	}
-	InstancesForRegisteredRecordsResponse struct {
-		Type            string                          `json:"type"`
-		Code            string                          `json:"code"`
-		Title           string                          `json:"title"`
-		Description     string                          `json:"description"`
-		InstanceStartAt time.Time                       `json:"instanceStartAt"`
-		InstanceEndAt   time.Time                       `json:"instanceEndAt"`
-		LocationType    string                          `json:"locationType"`
-		LocationName    string                          `json:"locationName"`
-		Status          string                          `json:"status"`
-		Registrants     []UserRegisteredRecordsResponse `json:"registrants"`
-	}
-	UserRegisteredRecordsResponse struct {
-		Type               string    `json:"type"`
-		ID                 uuid.UUID `json:"id"`
-		Name               string    `json:"name"`
-		Identifier         string    `json:"identifier,omitempty"`
-		CommunityId        string    `json:"communityId,omitempty"`
-		IdentifierOrigin   string    `json:"identifierOrigin,omitempty"`
-		CommunityIdOrigin  string    `json:"communityIdOrigin,omitempty"`
-		UpdatedBy          string    `json:"updatedBy,omitempty"`
-		RegisteredAt       time.Time `json:"registeredAt"`
-		VerifiedAt         string    `json:"verifiedAt,omitempty"`
-		IsPersonalQr       bool      `json:"isPersonalQr"`
-		RegistrationStatus string    `json:"registrationStatus"`
-	}
-)
+	// Content & Media
+	Topics             *[]string `json:"topics,omitempty"`
+	Category           *string   `json:"category,omitempty" validate:"omitempty,oneof=announcement registerable"`
+	Description        *string   `json:"description,omitempty"`
+	TermsAndConditions *string   `json:"termsAndConditions,omitempty"`
+	ImageLinks         *[]string `json:"imageLinks,omitempty" validate:"omitempty,dive,url"`
 
-func (e GetEventTitlesDBOutput) ToResponse() GetEventTitlesResponse {
-	return GetEventTitlesResponse{
-		Type:  TYPE_EVENT,
-		Code:  e.Code,
-		Title: e.Title,
-	}
+	// Organizers & Contacts
+	OrganizerCommunityIDs *[]string `json:"organizerCommunityIds,omitempty"`
+	ContactCommunityIDs   *[]string `json:"contactCommunityIds,omitempty"`
+
+	// Location Information
+	LocationType       *string `json:"locationType,omitempty" validate:"omitempty,oneof=online offline hybrid"`
+	PhysicalAddress    *string `json:"physicalAddress,omitempty"`
+	VirtualLink        *string `json:"virtualLink,omitempty"`
+	MeetingCTAText     *string `json:"meetingCtaText,omitempty"`
+	LocationDetails    *string `json:"locationDetails,omitempty"`
+	LocationVisibility *string `json:"locationVisibility,omitempty" validate:"omitempty,oneof=pre-registration post-registration all"`
+
+	// Access Control
+	AccessLevel         *string   `json:"accessLevel,omitempty" validate:"omitempty,oneof=public private"`
+	AllowedUserTypes    *[]string `json:"allowedUserTypes,omitempty"`
+	AllowedRoles        *[]string `json:"allowedRoles,omitempty"`
+	AllowedCampuses     *[]string `json:"allowedCampuses,omitempty"`
+	AllowedCommunityIDs *[]string `json:"allowedCommunityIds,omitempty"`
+
+	// Scheduling
+	Recurrence *string    `json:"recurrence,omitempty" validate:"omitempty,oneof=daily weekly monthly yearly"`
+	StartAt    *time.Time `json:"startAt,omitempty"`
+	EndAt      *time.Time `json:"endAt,omitempty"`
+	Timezone   *string    `json:"timezone,omitempty"`
+
+	// Registration Configuration
+	PostRegistrationDetails *JSONB  `json:"postRegistrationDetails,omitempty"`
+	ConfirmationMethod      *string `json:"confirmationMethod,omitempty" validate:"omitempty,oneof=whatsapp email both"`
+	ValidationMethod        *string `json:"validationMethod,omitempty" validate:"omitempty,oneof=location"`
+
+	// Status
+	Status *string `json:"status,omitempty" validate:"omitempty,oneof=draft published cancelled completed"`
 }
 
-type (
-	GetEventTitlesDBOutput struct {
-		Code  string
-		Title string
-	}
-	GetEventTitlesResponse struct {
-		Type  string `json:"type" example:"event"`
-		Code  string `json:"code" example:"event-1"`
-		Title string `json:"title" example:"Event 1"`
-	}
-)
+// ToUpdateMap converts the UpdateEventRequest to a map for GORM Updates
+// Only includes non-nil fields, and handles null values for pointer fields
+// Returns the map and the count of fields to update
+func (u *UpdateEventRequest) ToUpdateMap() (map[string]interface{}, int) {
+	updateMap := make(map[string]interface{})
+	fieldCount := 0
 
-func (e GetEventSummaryDBOutput) ToResponse() *GetEventSummaryResponse {
-	return &GetEventSummaryResponse{
-		Type:              TYPE_EVENT,
-		Code:              e.EventCode,
-		Title:             e.EventTitle,
-		AllowedFor:        e.EventAllowedFor,
-		AllowedRoles:      e.EventAllowedRoles,
-		AllowedUsers:      e.EventAllowedUsers,
-		AllowedCampuses:   e.EventAllowedCampuses,
-		TotalBookedSeats:  e.TotalBookedSeats,
-		TotalScannedSeats: e.TotalScannedSeats,
-		TotalUsers:        e.TotalUsers,
-		Status:            e.EventStatus,
+	// Core Information
+	if u.Title != nil {
+		updateMap["title"] = *u.Title
+		fieldCount++
 	}
-}
-
-func (e GetInstanceSummaryDBOutput) ToResponse() GetInstanceSummaryResponse {
-	return GetInstanceSummaryResponse{
-		Type:                TYPE_EVENT_INSTANCE,
-		EventCode:           e.InstanceEventCode,
-		Code:                e.InstanceCode,
-		Title:               e.InstanceTitle,
-		RegisterFlow:        e.InstanceRegisterFlow,
-		CheckType:           e.InstanceCheckType,
-		TotalSeats:          e.InstanceTotalSeats,
-		BookedSeats:         e.InstanceBookedSeats,
-		ScannedSeats:        e.InstanceScannedSeats,
-		TotalRemainingSeats: e.TotalRemainingSeats,
-		MaxPerTransaction:   e.InstanceMaxPerTransaction,
-		AttendPercentage:    e.AttendancePercentage,
-		Status:              e.InstanceStatus,
-	}
-}
-
-type (
-	GetEventSummaryDBOutput struct {
-		EventCode            string
-		EventTitle           string
-		EventAllowedFor      string
-		EventAllowedRoles    pq.StringArray `gorm:"type:text[]"`
-		EventAllowedUsers    pq.StringArray `gorm:"type:text[]"`
-		EventAllowedCampuses pq.StringArray `gorm:"type:text[]"`
-		TotalBookedSeats     int
-		TotalScannedSeats    int
-		TotalUsers           int
-		EventStatus          string
-	}
-	GetInstanceSummaryDBOutput struct {
-		InstanceCode              string  `json:"instance_code"`
-		InstanceEventCode         string  `json:"instance_event_code"`
-		InstanceTitle             string  `json:"instance_title"`
-		InstanceRegisterFlow      string  `json:"instance_register_flow"`
-		InstanceCheckType         string  `json:"instance_check_type"`
-		InstanceTotalSeats        int     `json:"instance_total_seats"`
-		InstanceBookedSeats       int     `json:"instance_booked_seats"`
-		InstanceScannedSeats      int     `json:"instance_scanned_seats"`
-		InstanceMaxPerTransaction int     `json:"instance_max_per_transaction"`
-		InstanceStatus            string  `json:"instance_status"`
-		TotalRemainingSeats       int     `json:"total_remaining_seats"`
-		AttendancePercentage      float64 `json:"attendance_percentage"`
-	}
-	GetEventSummaryResponse struct {
-		Type              string   `json:"type" example:"event"`
-		Code              string   `json:"code" example:"event-1"`
-		Title             string   `json:"title" example:"Event 1"`
-		AllowedFor        string   `json:"allowedFor" example:"volunteer"`
-		AllowedRoles      []string `json:"allowedRoles" example:"event-view-volunteer, event-edit-volunteer"`
-		AllowedUsers      []string `json:"allowedUsers" example:"user-1, user-2"`
-		AllowedCampuses   []string `json:"allowedCampuses" example:"BKS, BKT"`
-		TotalBookedSeats  int      `json:"totalBookedSeats" example:"3003"`
-		TotalScannedSeats int      `json:"totalScannedSeats" example:"309"`
-		TotalUsers        int      `json:"totalUsers" example:"309"`
-		Status            string   `json:"status" example:"active"`
-	}
-	GetInstanceSummaryResponse struct {
-		Type                string  `json:"type" example:"instance"`
-		EventCode           string  `json:"eventCode" example:"event-1"`
-		Code                string  `json:"code" example:"instance-1"`
-		Title               string  `json:"title" example:"Instance 1"`
-		RegisterFlow        string  `json:"registerFlow" example:"online"`
-		CheckType           string  `json:"checkType" example:"online"`
-		TotalSeats          int     `json:"totalSeats" example:"100"`
-		BookedSeats         int     `json:"bookedSeats" example:"50"`
-		ScannedSeats        int     `json:"scannedSeats" example:"50"`
-		MaxPerTransaction   int     `json:"maxPerTransaction" example:"5"`
-		TotalRemainingSeats int     `json:"totalRemainingSeats" example:"50"`
-		AttendPercentage    float64 `json:"attendPercentage" example:"50.0"`
-		Status              string  `json:"status" example:"active"`
-	}
-)
-
-type EventAvailabilityStatus int32
-
-const (
-	AVAILABILITY_STATUS_AVAILABLE EventAvailabilityStatus = iota
-	AVAILABILITY_STATUS_UNAVAILABLE
-	AVAILABILITY_STATUS_FULL
-	AVAILABILITY_STATUS_SOON
-	AVAILABILITY_STATUS_WALKIN
-)
-
-const (
-	AvailibilityStatusAvailable   = "available"
-	AvailibilityStatusUnavailable = "unavailable"
-	AvailibilityStatusFull        = "full"
-	AvailibilityStatusSoon        = "soon"
-	AvailibilityStatusWalkin      = "walkin"
-)
-
-var (
-	MapAvailabilityStatus = map[EventAvailabilityStatus]string{
-		AVAILABILITY_STATUS_AVAILABLE:   AvailibilityStatusAvailable,
-		AVAILABILITY_STATUS_UNAVAILABLE: AvailibilityStatusUnavailable,
-		AVAILABILITY_STATUS_FULL:        AvailibilityStatusFull,
-		AVAILABILITY_STATUS_SOON:        AvailibilityStatusSoon,
-		AVAILABILITY_STATUS_WALKIN:      AvailibilityStatusWalkin,
-	}
-)
-
-func DefineAvailabilityStatus(event interface{}) (string, error) {
-	var totalRemainingSeats int
-	var countInstanceRegisterFlows int
-	var totalSeats int
-	//var eventAllowedFor string
-	var eventRegisterStartAt, eventRegisterEndAt time.Time
-	var instanceRegisterFlows []string
-
-	// Type assertion to extract fields from the concrete type
-	switch e := event.(type) {
-	case GetAllEventsDBOutput:
-		totalRemainingSeats = e.TotalRemainingSeats
-		totalSeats = e.InstanceTotalSeats
-		instanceRegisterFlows = GetRegisterFlowsFromStringArray(e.InstancesData)
-		countInstanceRegisterFlows = CountTotalRegisterFlows(instanceRegisterFlows)
-		//eventAllowedFor = e.EventAllowedFor
-		eventRegisterStartAt = e.EventRegisterStartAt
-		eventRegisterEndAt = e.EventRegisterEndAt
-	case *GetEventByCodeDBOutput:
-		totalRemainingSeats = e.TotalRemainingSeats
-		totalSeats = e.InstanceTotalSeats
-		instanceRegisterFlows = GetRegisterFlowsFromStringArray(e.InstancesData)
-		countInstanceRegisterFlows = CountTotalRegisterFlows(instanceRegisterFlows)
-		//eventAllowedFor = e.EventAllowedFor
-		eventRegisterStartAt = e.EventRegisterStartAt
-		eventRegisterEndAt = e.EventRegisterEndAt
-	case GetInstanceByEventCodeDBOutput:
-		totalRemainingSeats = e.TotalRemainingSeats
-		totalSeats = e.InstanceTotalSeats
-		countInstanceRegisterFlows = RegisterFlowToCount(e.InstanceRegisterFlow)
-		eventRegisterStartAt = e.InstanceRegisterStartAt
-		eventRegisterEndAt = e.InstanceRegisterEndAt
-		//eventAllowedFor = e.EventAllowedFor
-		instanceRegisterFlows = []string{e.InstanceRegisterFlow}
-	case *GetInstanceByCodeDBOutput:
-		totalRemainingSeats = e.TotalRemainingSeats
-		totalSeats = e.InstanceTotalSeats
-		countInstanceRegisterFlows = RegisterFlowToCount(e.InstanceRegisterFlow)
-		eventRegisterStartAt = e.InstanceRegisterStartAt
-		eventRegisterEndAt = e.InstanceRegisterEndAt
-		//eventAllowedFor = "none"
-		instanceRegisterFlows = []string{e.InstanceRegisterFlow}
-	default:
-		// Return a default or error if the type is not recognized
-		return "", ErrorInvalidInput
+	if u.Slug != nil {
+		updateMap["slug"] = *u.Slug
+		fieldCount++
 	}
 
-	switch {
-	case totalSeats == 0 && countInstanceRegisterFlows == 0:
-		return MapAvailabilityStatus[AVAILABILITY_STATUS_WALKIN], nil
-	case totalRemainingSeats <= 0 && countInstanceRegisterFlows < len(instanceRegisterFlows):
-		return MapAvailabilityStatus[AVAILABILITY_STATUS_AVAILABLE], nil
-	//case totalRemainingSeats <= 0 && countInstanceRegisterFlows == len(instanceRegisterFlows) && eventAllowedFor != "private" && totalSeats > 0:
-	//	return MapAvailabilityStatus[AVAILABILITY_STATUS_FULL], nil
-	case totalRemainingSeats <= 0 && countInstanceRegisterFlows == len(instanceRegisterFlows) && totalSeats > 0:
-		return MapAvailabilityStatus[AVAILABILITY_STATUS_FULL], nil
-	case common.Now().Before(eventRegisterStartAt.In(common.GetLocation())):
-		return MapAvailabilityStatus[AVAILABILITY_STATUS_SOON], nil
-	case common.Now().After(eventRegisterEndAt.In(common.GetLocation())):
-		return MapAvailabilityStatus[AVAILABILITY_STATUS_UNAVAILABLE], nil
-	default:
-		return MapAvailabilityStatus[AVAILABILITY_STATUS_AVAILABLE], nil
+	// Content & Media
+	if u.Topics != nil {
+		updateMap["topics"] = *u.Topics
+		fieldCount++
 	}
+	if u.Category != nil {
+		updateMap["category"] = *u.Category
+		fieldCount++
+	}
+	if u.Description != nil {
+		if *u.Description == "" {
+			updateMap["description"] = nil
+		} else {
+			updateMap["description"] = *u.Description
+		}
+		fieldCount++
+	}
+	if u.TermsAndConditions != nil {
+		if *u.TermsAndConditions == "" {
+			updateMap["terms_and_conditions"] = nil
+		} else {
+			updateMap["terms_and_conditions"] = *u.TermsAndConditions
+		}
+		fieldCount++
+	}
+	if u.ImageLinks != nil {
+		updateMap["image_links"] = *u.ImageLinks
+		fieldCount++
+	}
+
+	// Organizers & Contacts
+	if u.OrganizerCommunityIDs != nil {
+		updateMap["organizer_community_ids"] = *u.OrganizerCommunityIDs
+		fieldCount++
+	}
+	if u.ContactCommunityIDs != nil {
+		updateMap["contact_community_ids"] = *u.ContactCommunityIDs
+		fieldCount++
+	}
+
+	// Location Information
+	if u.LocationType != nil {
+		updateMap["location_type"] = *u.LocationType
+		fieldCount++
+	}
+	if u.PhysicalAddress != nil {
+		if *u.PhysicalAddress == "" {
+			updateMap["physical_address"] = nil
+		} else {
+			updateMap["physical_address"] = *u.PhysicalAddress
+		}
+		fieldCount++
+	}
+	if u.VirtualLink != nil {
+		if *u.VirtualLink == "" {
+			updateMap["virtual_link"] = nil
+		} else {
+			updateMap["virtual_link"] = *u.VirtualLink
+		}
+		fieldCount++
+	}
+	if u.MeetingCTAText != nil {
+		if *u.MeetingCTAText == "" {
+			updateMap["meeting_cta_text"] = nil
+		} else {
+			updateMap["meeting_cta_text"] = *u.MeetingCTAText
+		}
+		fieldCount++
+	}
+	if u.LocationDetails != nil {
+		if *u.LocationDetails == "" {
+			updateMap["location_details"] = nil
+		} else {
+			updateMap["location_details"] = *u.LocationDetails
+		}
+		fieldCount++
+	}
+	if u.LocationVisibility != nil {
+		updateMap["location_visibility"] = *u.LocationVisibility
+		fieldCount++
+	}
+
+	// Access Control
+	if u.AccessLevel != nil {
+		updateMap["access_level"] = *u.AccessLevel
+		fieldCount++
+	}
+	if u.AllowedUserTypes != nil {
+		updateMap["allowed_user_types"] = *u.AllowedUserTypes
+		fieldCount++
+	}
+	if u.AllowedRoles != nil {
+		updateMap["allowed_roles"] = *u.AllowedRoles
+		fieldCount++
+	}
+	if u.AllowedCampuses != nil {
+		updateMap["allowed_campuses"] = *u.AllowedCampuses
+		fieldCount++
+	}
+	if u.AllowedCommunityIDs != nil {
+		updateMap["allowed_community_ids"] = *u.AllowedCommunityIDs
+		fieldCount++
+	}
+
+	// Scheduling
+	if u.Recurrence != nil {
+		if *u.Recurrence == "" {
+			updateMap["recurrence"] = nil
+		} else {
+			updateMap["recurrence"] = *u.Recurrence
+		}
+		fieldCount++
+	}
+	if u.StartAt != nil {
+		updateMap["start_at"] = *u.StartAt
+		fieldCount++
+	}
+	if u.EndAt != nil {
+		updateMap["end_at"] = *u.EndAt
+		fieldCount++
+	}
+	if u.Timezone != nil {
+		updateMap["timezone"] = *u.Timezone
+		fieldCount++
+	}
+
+	// Registration Configuration
+	if u.PostRegistrationDetails != nil {
+		updateMap["post_registration_details"] = *u.PostRegistrationDetails
+		fieldCount++
+	}
+	if u.ConfirmationMethod != nil {
+		if *u.ConfirmationMethod == "" {
+			updateMap["confirmation_method"] = nil
+		} else {
+			updateMap["confirmation_method"] = *u.ConfirmationMethod
+		}
+		fieldCount++
+	}
+	if u.ValidationMethod != nil {
+		if *u.ValidationMethod == "" {
+			updateMap["validation_method"] = nil
+		} else {
+			updateMap["validation_method"] = *u.ValidationMethod
+		}
+		fieldCount++
+	}
+
+	// Status
+	if u.Status != nil {
+		updateMap["status"] = *u.Status
+		fieldCount++
+	}
+
+	return updateMap, fieldCount
 }
