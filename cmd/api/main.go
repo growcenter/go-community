@@ -10,15 +10,13 @@ import (
 	"os/signal"
 	"syscall"
 	"time"
-
-	"go.uber.org/zap"
 )
 
 func main() {
 	var (
 		ctx = context.Background()
 	)
-	
+
 	config, err := config.New(ctx)
 	if err != nil {
 		panic(err)
@@ -34,15 +32,15 @@ func main() {
 	}()
 
 	quit := make(chan os.Signal, 1)
-    signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
-    <-quit
+	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
+	<-quit
 
 	c, cancel := context.WithTimeout(context.Background(), 10*time.Second)
-    defer cancel()
+	defer cancel()
 
-    if err := contract.Stop(c); err != nil {
-        logger.Logger.Error("server shutdown failed: ", zap.Error(err))
-    } else {
-        logger.Logger.Info("Server gracefully stopped")
-    }
+	if err := contract.Stop(c); err != nil {
+		logger.Instance.Error(ctx, "server shutdown failed: ", logger.Error(err))
+	} else {
+		logger.Instance.Info(ctx, "Server gracefully stopped")
+	}
 }

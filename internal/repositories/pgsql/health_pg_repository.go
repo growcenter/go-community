@@ -19,19 +19,14 @@ func NewHealthRepository(db *gorm.DB) HealthRepository {
 }
 
 func (hr *healthRepository) Check(ctx context.Context) (err error) {
-	defer func ()  {
+	defer func() {
 		LogRepository(ctx, err)
 	}()
-	
+
 	psql, err := hr.db.DB()
 	if err != nil {
 		return err
 	}
 
-	err = psql.PingContext(ctx)
-	if err != nil {
-		return err
-	}
-
-	return nil
+	return psql.PingContext(ctx)
 }

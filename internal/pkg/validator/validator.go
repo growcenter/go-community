@@ -27,6 +27,10 @@ func init() {
 	registerEmailOrPhoneField()
 	registerNameIdentifierCommunityIdFields()
 	registerPhoneStandardize()
+	registerCommunityIds()
+	registerCampusCode()
+	registerCampusCodes()
+	registerBannerRequiresImages()
 }
 
 func Validate(request interface{}) error {
@@ -231,6 +235,82 @@ func registerPhoneStandardize() {
 			return false
 		}
 
+		return true
+	})
+}
+
+func registerCommunityIds() {
+	valid.RegisterValidation("communityIds", func(fl v10.FieldLevel) bool {
+		communityIds := fl.Field().Interface().([]string)
+
+		for _, communityId := range communityIds {
+			if !LuhnAccountNumber(communityId) {
+				return false
+			}
+		}
+
+		return true
+	})
+}
+
+func registerCampusCode() {
+	valid.RegisterValidation("campusCode", func(fl v10.FieldLevel) bool {
+		campusCode := fl.Field().String()
+
+		return campusCode == "" || len(campusCode) == 3
+	})
+}
+
+func registerCampusCodes() {
+	valid.RegisterValidation("campusCodes", func(fl v10.FieldLevel) bool {
+		campusCodes := fl.Field().Interface().([]string)
+
+		for _, campusCode := range campusCodes {
+			return campusCode == "" || len(campusCode) == 3
+		}
+
+		return true
+	})
+}
+
+// registerBannerRequiresImages validates that BannerLink can only have a value if ImageLinks is not empty
+// Business Rule:
+//   - If ImageLinks is empty → BannerLink MUST be empty (nil or empty string)
+//   - If ImageLinks is not empty → BannerLink CAN be empty or have a value
+func registerBannerRequiresImages() {
+	valid.RegisterValidation("bannerRequiresImages", func(fl v10.FieldLevel) bool {
+		// Get BannerLink field (pointer to string)
+		bannerLinkField := fl.Field()
+
+		// If BannerLink is nil, it's always valid (let omitempty handle it)
+		if bannerLinkField.Kind() == reflect.Ptr && bannerLinkField.IsNil() {
+			return true
+		}
+
+		// If BannerLink is an empty string, it's always valid
+		if bannerLinkField.Kind() == reflect.Ptr && !bannerLinkField.IsNil() {
+			bannerStr := bannerLinkField.Elem().String()
+			if bannerStr == "" {
+				return true
+			}
+		}
+
+		// BannerLink has a non-empty value - check if ImageLinks is also non-empty
+		parent := fl.Parent()
+		imageLinksField := parent.FieldByName("ImageLinks")
+		if !imageLinksField.IsValid() {
+			return true // If field doesn't exist, skip validation
+		}
+
+		// Check if ImageLinks is empty
+		imageLinksEmpty := imageLinksField.Len() == 0
+
+		// If ImageLinks is empty but BannerLink has a value, fail validation
+		if imageLinksEmpty {
+			return false
+		}
+
+		// ImageLinks is not empty, so BannerLink can have a value
 		return true
 	})
 }

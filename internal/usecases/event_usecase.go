@@ -2,712 +2,738 @@ package usecases
 
 import (
 	"context"
-	"errors"
-	"fmt"
 	"go-community/internal/common"
-	"go-community/internal/config"
 	"go-community/internal/constants"
 	"go-community/internal/models"
-	"go-community/internal/pkg/authorization"
+	"go-community/internal/pkg/cache"
+	"go-community/internal/pkg/contextc"
+	"go-community/internal/pkg/errorc"
 	"go-community/internal/pkg/generator"
+	"go-community/internal/pkg/logger"
+	"go-community/internal/pkg/stringc"
 	"go-community/internal/repositories/pgsql"
-	"gorm.io/gorm"
-	"strings"
 	"time"
 )
 
 type EventUsecase interface {
-	Create(ctx context.Context, request models.CreateEventRequest) (response *models.CreateEventResponse, err error)
-	GetAll(ctx context.Context, roles []string) (responses *[]models.GetAllEventsResponse, err error)
-	GetByCode(ctx context.Context, code string) (response *models.GetEventByCodeResponse, err error)
-	GetRegistered(ctx context.Context, communityIdOrigin string) (eventRegistrations []models.GetAllRegisteredUserResponse, err error)
-	GetTitles(ctx context.Context) (eventTitles []models.GetEventTitlesResponse, err error)
-	GetSummary(ctx context.Context, code string) (detail *models.GetEventSummaryResponse, data []models.GetInstanceSummaryResponse, err error)
+	Create(ctx context.Context, request models.CreateEventRequest) (*models.Event, error)
+	GetAll(ctx context.Context) ([]models.Event, error)
 }
 
 type eventUsecase struct {
-	cfg  *config.Configuration
-	a    authorization.Auth
-	r    pgsql.PostgreRepositories
-	flag FeatureFlagUsecase
+	d *Dependencies
 }
 
-func NewEventUsecase(cfg config.Configuration, a authorization.Auth, r pgsql.PostgreRepositories, flag FeatureFlagUsecase) *eventUsecase {
+func NewEventUsecase(d *Dependencies) EventUsecase {
 	return &eventUsecase{
-		cfg:  &cfg,
-		a:    a,
-		r:    r,
-		flag: flag,
+		d: d,
 	}
 }
 
-func (eu *eventUsecase) Create(ctx context.Context, request models.CreateEventRequest) (response *models.CreateEventResponse, err error) {
-	defer func() {
-		LogService(ctx, err)
-	}()
-
-	timeNowNano, err := common.NowWithNanoTime()
-	if err != nil {
-		return nil, err
-	}
-
-	eventStart, _ := time.Parse(time.RFC3339, request.EventStartAt)
-	eventEnd, _ := time.Parse(time.RFC3339, request.EventEndAt)
-
-	code := fmt.Sprintf("event-%d-%d-%d", timeNowNano.UnixNano(), eventStart.UnixNano(), eventEnd.UnixNano())
-	eventCode := generator.GenerateHashCode(code, 7)
-	eventExist, err := eu.r.Event.CheckByCode(ctx, eventCode)
-	if err != nil {
-		return nil, err
-	}
-
-	if eventExist {
-		return nil, models.ErrorAlreadyExist
-	}
-
-	var allowedRoles []string
-	var allowedUsers []string
-	var allowedCampuses []string
-	switch {
-	case request.AllowedFor == "public":
-		allowedRoles = nil
-		allowedUsers = nil
-		allowedCampuses = nil
-	case request.AllowedFor == "private" && request.AllowedCampuses != nil && request.AllowedRoles != nil && request.AllowedUsers != nil:
-		countRole, err := eu.r.Role.CheckMultiple(ctx, request.AllowedRoles)
-		if err != nil {
-			return nil, err
-		}
-
-		if int(countRole) != len(request.AllowedRoles) {
-			return nil, models.ErrorDataNotFound
-		}
-
-		countUserType, err := eu.r.UserType.CheckMultiple(ctx, request.AllowedUsers)
-		if err != nil {
-			return nil, err
-		}
-
-		if int(countUserType) != len(request.AllowedUsers) {
-			return nil, models.ErrorDataNotFound
-		}
-
-		for i, str := range request.AllowedCampuses {
-			request.AllowedCampuses[i] = strings.ToLower(str)
-		}
-
-		campusExist := common.CheckAllDataMapStructure(eu.cfg.Campus, request.AllowedCampuses)
-		if !campusExist {
-			return nil, models.ErrorDataNotFound
-		}
-
-		for i, str := range request.AllowedCampuses {
-			request.AllowedCampuses[i] = strings.ToUpper(str)
-		}
-
-		allowedRoles = request.AllowedRoles
-		allowedUsers = request.AllowedUsers
-		allowedCampuses = request.AllowedCampuses
-	default:
-		return nil, models.ErrorViolateAllowedForPrivate
-	}
-
-	if eventStart.After(eventEnd) {
-		return nil, models.ErrorStartDateLater
-	}
-
-	event := models.Event{
-		Code:               eventCode,
-		Title:              request.Title,
-		Topics:             request.Topics,
-		Description:        request.Description,
-		TermsAndConditions: request.TermsAndConditions,
-		AllowedFor:         request.AllowedFor,
-		AllowedUsers:       allowedUsers,
-		AllowedRoles:       allowedRoles,
-		AllowedCampuses:    allowedCampuses,
-		IsRecurring:        request.IsRecurring,
-		Recurrence:         request.Recurrence,
-		EventStartAt:       eventStart,
-		EventEndAt:         eventEnd,
-		LocationType:       request.LocationType,
-		LocationName:       request.LocationName,
-		Status:             constants.MapStatus[constants.STATUS_ACTIVE],
-	}
-
-	instances := make([]models.EventInstance, 0)
-	countInstance, err := eu.r.EventInstance.CountByCode(ctx, eventCode)
-	if err != nil {
-		return nil, err
-	}
-
-	if countInstance == 0 {
-		countInstance = 1
-	}
-
-	for i, instanceRequest := range request.Instances {
-		instanceStart, _ := time.Parse(time.RFC3339, instanceRequest.InstanceStartAt)
-		instanceEnd, _ := time.Parse(time.RFC3339, instanceRequest.InstanceEndAt)
-		instanceRegisterStart, _ := time.Parse(time.RFC3339, instanceRequest.RegisterStartAt)
-		instanceRegisterEnd, _ := time.Parse(time.RFC3339, instanceRequest.RegisterEndAt)
-		instanceAllowVerifyAt, _ := time.Parse(time.RFC3339, instanceRequest.AllowVerifyAt)
-		instanceDisallowVerifyAt, _ := time.Parse(time.RFC3339, instanceRequest.DisallowVerifyAt)
-
-		numberForCode := int(countInstance) + i
-		code := fmt.Sprintf("instance-%s-%d-%d", eventCode, numberForCode, timeNowNano.UnixNano())
-		instanceCode := fmt.Sprintf("%s-%s", eventCode, generator.GenerateHashCode(code, 7))
-
-		if instanceStart.After(instanceEnd) || instanceRegisterStart.After(instanceRegisterEnd) || instanceAllowVerifyAt.After(instanceDisallowVerifyAt) {
-			return nil, models.ErrorStartDateLater
-		}
-
-		if instanceRequest.RegisterFlow != models.MapRegisterFlow[models.REGISTER_FLOW_NONE] {
-			if instanceRequest.MaxPerTransaction == 0 {
-				if request.IsRecurring && instanceRequest.IsOnePerTicket {
-					instanceRequest.MaxPerTransaction = 1
-				}
-				return nil, models.ErrorMaxPerTrxIsZero
-			}
-
-			if instanceRequest.CheckType == "" {
-				return nil, models.ErrorAttendanceTypeWhenRequired
-			}
-		} else {
-			instanceRequest.IsOnePerAccount = false
-			instanceRequest.IsOnePerTicket = false
-			instanceRequest.RegisterFlow = models.MapRegisterFlow[models.REGISTER_FLOW_NONE]
-			instanceRequest.MaxPerTransaction = 0
-			instanceRequest.CheckType = "none"
-			instanceRequest.TotalSeats = 0
-		}
-
-		instance := models.EventInstance{
-			Code:              instanceCode,
-			EventCode:         eventCode,
-			Title:             instanceRequest.Title,
-			Description:       instanceRequest.Description,
-			InstanceStartAt:   instanceStart,
-			InstanceEndAt:     instanceEnd,
-			RegisterStartAt:   instanceRegisterStart,
-			RegisterEndAt:     instanceRegisterEnd,
-			AllowVerifyAt:     instanceAllowVerifyAt,
-			DisallowVerifyAt:  instanceDisallowVerifyAt,
-			LocationType:      instanceRequest.LocationType,
-			LocationName:      instanceRequest.LocationName,
-			MaxPerTransaction: instanceRequest.MaxPerTransaction,
-			IsOnePerAccount:   instanceRequest.IsOnePerAccount,
-			IsOnePerTicket:    instanceRequest.IsOnePerTicket,
-			RegisterFlow:      instanceRequest.RegisterFlow,
-			CheckType:         instanceRequest.CheckType,
-			TotalSeats:        instanceRequest.TotalSeats,
-			Status:            constants.MapStatus[constants.STATUS_ACTIVE],
-		}
-
-		instances = append(instances, instance)
-	}
-
-	if err := eu.r.Event.Create(ctx, &event); err != nil {
-		return nil, err
-	}
-
-	if err = eu.r.EventInstance.BulkCreate(ctx, &instances); err != nil {
-		return nil, err
-	}
-
-	instanceResponse := make([]models.CreateInstanceResponse, len(instances))
-	for i, p := range instances {
-		instanceResponse[i] = models.CreateInstanceResponse{
-			Type:              models.TYPE_EVENT_INSTANCE,
-			InstanceCode:      p.Code,
-			EventCode:         p.EventCode,
-			Title:             p.Title,
-			Description:       p.Description,
-			InstanceStartAt:   p.InstanceStartAt,
-			InstanceEndAt:     p.InstanceEndAt,
-			RegisterStartAt:   p.RegisterStartAt,
-			RegisterEndAt:     p.RegisterEndAt,
-			AllowVerifyAt:     p.AllowVerifyAt,
-			DisallowVerifyAt:  p.DisallowVerifyAt,
-			LocationType:      p.LocationType,
-			LocationName:      p.LocationName,
-			MaxPerTransaction: p.MaxPerTransaction,
-			IsOnePerTicket:    p.IsOnePerTicket,
-			IsOnePerAccount:   p.IsOnePerAccount,
-			RegisterFlow:      p.RegisterFlow,
-			CheckType:         p.CheckType,
-			TotalSeats:        p.TotalSeats,
-			Status:            p.Status,
-		}
-	}
-
-	mainResponse := models.CreateEventResponse{
-		Type:               models.TYPE_EVENT,
-		Code:               event.Code,
-		Title:              event.Title,
-		Topics:             event.Topics,
-		Description:        event.Description,
-		TermsAndConditions: event.TermsAndConditions,
-		AllowedFor:         event.AllowedFor,
-		AllowedUsers:       event.AllowedUsers,
-		AllowedRoles:       event.AllowedRoles,
-		AllowedCampuses:    event.AllowedCampuses,
-		IsRecurring:        event.IsRecurring,
-		Recurrence:         event.Recurrence,
-		EventStartAt:       event.EventStartAt,
-		EventEndAt:         event.EventEndAt,
-		RegisterStartAt:    event.RegisterStartAt,
-		RegisterEndAt:      event.RegisterEndAt,
-		LocationType:       event.LocationType,
-		LocationName:       event.LocationName,
-		Status:             event.Status,
-		Instances:          instanceResponse,
-	}
-
-	return &mainResponse, nil
-}
-
-func (eu *eventUsecase) GetAll(ctx context.Context, roles []string, userTypes []string) (responses *[]models.GetAllEventsResponse, err error) {
-	defer func() {
-		LogService(ctx, err)
-	}()
-
-	userTypeInfos, err := eu.r.UserType.GetByArray(ctx, userTypes)
-	if err != nil {
-		return nil, err
-	}
-
-	isNotGeneral := common.ContainsValueInModel(userTypeInfos, func(userType models.UserType) bool {
-		return userType.Category == "internal" || userType.Category == "cool"
+// Create creates a new event with comprehensive validation and error handling
+// Returns pointer to created Event model
+func (eu *eventUsecase) Create(ctx context.Context, request models.CreateEventRequest) (*models.Event, error) {
+	// Enrich wide event with operation context
+	logger.Add(ctx, map[string]any{
+		"operation": "event.create",
 	})
 
-	events, err := eu.r.Event.GetAllByRolesAndUserTypes(ctx, roles, userTypes, isNotGeneral, constants.MapStatus[constants.STATUS_ACTIVE])
+	// Step 1: Extract creator community ID from context safely
+	logger.Add(ctx, "step", "extract_creator_id")
+	creatorCommunityID, err := contextc.ExtractCommunityID(ctx)
 	if err != nil {
-		return nil, err
-	}
-
-	enableUniversalFlag, err := eu.flag.IsFeatureEnabled(ctx, "event_be_universaleventaccess", "")
-	if err != nil {
-		return nil, err
-	}
-
-	list := make([]models.GetAllEventsResponse, len(events))
-	if !enableUniversalFlag {
-		for i, e := range events {
-			availableStatus, err := models.DefineAvailabilityStatus(e)
-			if err != nil {
-				return nil, err
-			}
-
-			if e.InstanceTotalSeats == 0 {
-				e.TotalRemainingSeats = 0
-			}
-
-			list[i] = models.GetAllEventsResponse{
-				Type:                models.TYPE_EVENT,
-				Code:                e.EventCode,
-				Title:               e.EventTitle,
-				Topics:              e.EventTopics,
-				LocationType:        e.EventLocationType,
-				AllowedFor:          e.EventAllowedFor,
-				AllowedUsers:        e.EventAllowedUsers,
-				AllowedRoles:        e.EventAllowedRoles,
-				AllowedCampuses:     e.EventAllowedCampuses,
-				IsRecurring:         e.EventIsRecurring,
-				Recurrence:          e.EventRecurrence,
-				EventStartAt:        e.EventStartAt,
-				EventEndAt:          e.EventEndAt,
-				RegisterStartAt:     &e.EventRegisterStartAt,
-				RegisterEndAt:       &e.EventRegisterEndAt,
-				TotalRemainingSeats: e.TotalRemainingSeats,
-				ImagesLinks:         e.EventImageLinks,
-				AvailabilityStatus:  availableStatus,
-			}
-		}
-
-		return &list, nil
-	}
-
-	for i, e := range events {
-		list[i] = models.GetAllEventsResponse{
-			Type:            models.TYPE_EVENT,
-			Code:            e.EventCode,
-			Title:           e.EventTitle,
-			Topics:          e.EventTopics,
-			LocationType:    e.EventLocationType,
-			AllowedFor:      e.EventAllowedFor,
-			AllowedUsers:    e.EventAllowedUsers,
-			AllowedRoles:    e.EventAllowedRoles,
-			AllowedCampuses: e.EventAllowedCampuses,
-			EventStartAt:    e.EventStartAt,
-			EventEndAt:      e.EventEndAt,
-			ImagesLinks:     e.EventImageLinks,
-		}
-	}
-
-	return &list, nil
-
-}
-
-func (eu *eventUsecase) GetByCode(ctx context.Context, code string, roles []string, userTypes []string) (detail *models.GetEventByCodeResponse, data []models.GetInstancesByEventCodeResponse, err error) {
-	defer func() {
-		LogService(ctx, err)
-	}()
-
-	event, err := eu.r.Event.GetOneByCode(ctx, code)
-	if err != nil {
-		if errors.Is(err, gorm.ErrRecordNotFound) {
-			return nil, nil, models.ErrorDataNotFound
-		}
-		return nil, nil, err
-	}
-
-	switch {
-	case event == nil:
-		return nil, nil, models.ErrorDataNotFound
-	case event.EventCode == "" || event.EventStatus != "active":
-		return nil, nil, models.ErrorDataNotFound
-	case event.EventAllowedFor != "public":
-		isAllowedRoles := common.CheckOneDataInList(event.EventAllowedRoles, roles)
-		isAllowedUsers := common.CheckOneDataInList(event.EventAllowedUsers, userTypes)
-
-		if !isAllowedRoles && !isAllowedUsers {
-			return nil, nil, models.ErrorForbiddenRole
-		}
-	case code != event.EventCode:
-		return nil, nil, models.ErrorEventNotValid
-	}
-
-	enableUniversalFlag, err := eu.flag.IsFeatureEnabled(ctx, "event_be_universaleventaccess", "")
-	if err != nil {
-		return nil, nil, err
-	}
-
-	if !enableUniversalFlag {
-		availableStatus, err := models.DefineAvailabilityStatus(event)
-		if err != nil {
-			return nil, nil, err
-		}
-
-		switch {
-		case code != event.EventCode:
-			return nil, nil, models.ErrorEventNotValid
-		case availableStatus == models.MapAvailabilityStatus[models.AVAILABILITY_STATUS_UNAVAILABLE]:
-			return nil, nil, models.ErrorEventNotAvailable
-		case availableStatus == models.MapAvailabilityStatus[models.AVAILABILITY_STATUS_FULL]:
-			return nil, nil, models.ErrorRegisterQuotaNotAvailable
-		case availableStatus == models.MapAvailabilityStatus[models.AVAILABILITY_STATUS_SOON]:
-			return nil, nil, models.ErrorCannotRegisterYet
-		}
-	}
-
-	instances, err := eu.r.EventInstance.GetManyByEventCode(ctx, event.EventCode, constants.MapStatus[constants.STATUS_ACTIVE])
-	if err != nil {
-		return nil, nil, err
-	}
-
-	if instances == nil {
-		return nil, nil, models.ErrorDataNotFound
-	}
-
-	enableShowDescriptionFlag, err := eu.flag.IsFeatureEnabled(ctx, "event_be_showdecriptionatinstance", "")
-	if err != nil {
-		return nil, nil, err
-	}
-
-	instancesRes := make([]models.GetInstancesByEventCodeResponse, len(*instances))
-	if !enableShowDescriptionFlag {
-		for i, p := range *instances {
-			instanceAvailableStatus, err := models.DefineAvailabilityStatus(p)
-			if err != nil {
-				return nil, nil, err
-			}
-
-			instancesRes[i] = models.GetInstancesByEventCodeResponse{
-				Type:                models.TYPE_EVENT_INSTANCE,
-				Code:                p.InstanceCode,
-				Title:               p.InstanceTitle,
-				Description:         "",
-				InstanceStartAt:     p.InstanceStartAt,
-				InstanceEndAt:       p.InstanceEndAt,
-				RegisterStartAt:     p.InstanceRegisterStartAt,
-				RegisterEndAt:       p.InstanceRegisterEndAt,
-				AllowVerifyAt:       p.InstanceAllowVerifyAt,
-				DisallowVerifyAt:    p.InstanceDisallowVerifyAt,
-				LocationType:        p.InstanceLocationType,
-				LocationName:        p.InstanceLocationName,
-				MaxPerTransaction:   p.InstanceMaxPerTransaction,
-				IsOnePerTicket:      p.InstanceIsOnePerTicket,
-				IsOnePerAccount:     p.InstanceIsOnePerAccount,
-				RegisterFlow:        p.InstanceRegisterFlow,
-				CheckType:           p.InstanceCheckType,
-				TotalSeats:          p.InstanceTotalSeats,
-				BookedSeats:         p.InstanceBookedSeats,
-				TotalRemainingSeats: p.TotalRemainingSeats,
-				AvailabilityStatus:  instanceAvailableStatus,
-			}
-		}
-
-		return &models.GetEventByCodeResponse{
-			Type:               models.TYPE_EVENT,
-			Code:               event.EventCode,
-			Title:              event.EventTitle,
-			Topics:             event.EventTopics,
-			Description:        event.EventDescription,
-			TermsAndConditions: event.EventTermsAndConditions,
-			AllowedFor:         event.EventAllowedFor,
-			AllowedUsers:       event.EventAllowedUsers,
-			AllowedRoles:       event.EventAllowedRoles,
-			AllowedCampuses:    event.EventAllowedCampuses,
-			IsRecurring:        event.EventIsRecurring,
-			Recurrence:         event.EventRecurrence,
-			EventStartAt:       event.EventStartAt,
-			EventEndAt:         event.EventEndAt,
-			RegisterStartAt:    event.EventRegisterStartAt,
-			RegisterEndAt:      event.EventRegisterEndAt,
-			LocationType:       event.EventLocationType,
-			LocationName:       event.EventLocationName,
-			ImageLinks:         event.EventImageLinks,
-		}, instancesRes, nil
-	}
-
-	for i, p := range *instances {
-		instanceAvailableStatus, err := models.DefineAvailabilityStatus(p)
-		if err != nil {
-			return nil, nil, err
-		}
-
-		instancesRes[i] = models.GetInstancesByEventCodeResponse{
-			Type:                models.TYPE_EVENT_INSTANCE,
-			Code:                p.InstanceCode,
-			Title:               p.InstanceTitle,
-			Description:         p.InstanceDescription,
-			InstanceStartAt:     p.InstanceStartAt,
-			InstanceEndAt:       p.InstanceEndAt,
-			RegisterStartAt:     p.InstanceRegisterStartAt,
-			RegisterEndAt:       p.InstanceRegisterEndAt,
-			AllowVerifyAt:       p.InstanceAllowVerifyAt,
-			DisallowVerifyAt:    p.InstanceDisallowVerifyAt,
-			LocationType:        p.InstanceLocationType,
-			LocationName:        p.InstanceLocationName,
-			MaxPerTransaction:   p.InstanceMaxPerTransaction,
-			IsOnePerTicket:      p.InstanceIsOnePerTicket,
-			IsOnePerAccount:     p.InstanceIsOnePerAccount,
-			RegisterFlow:        p.InstanceRegisterFlow,
-			CheckType:           p.InstanceCheckType,
-			TotalSeats:          p.InstanceTotalSeats,
-			BookedSeats:         p.InstanceBookedSeats,
-			TotalRemainingSeats: p.TotalRemainingSeats,
-			AvailabilityStatus:  instanceAvailableStatus,
-		}
-	}
-
-	return &models.GetEventByCodeResponse{
-		Type:               models.TYPE_EVENT,
-		Code:               event.EventCode,
-		Title:              event.EventTitle,
-		Topics:             event.EventTopics,
-		Description:        event.EventDescription,
-		TermsAndConditions: event.EventTermsAndConditions,
-		AllowedFor:         event.EventAllowedFor,
-		AllowedUsers:       event.EventAllowedUsers,
-		AllowedRoles:       event.EventAllowedRoles,
-		AllowedCampuses:    event.EventAllowedCampuses,
-		IsRecurring:        event.EventIsRecurring,
-		Recurrence:         event.EventRecurrence,
-		EventStartAt:       event.EventStartAt,
-		EventEndAt:         event.EventEndAt,
-		RegisterStartAt:    event.EventRegisterStartAt,
-		RegisterEndAt:      event.EventRegisterEndAt,
-		LocationType:       event.EventLocationType,
-		LocationName:       event.EventLocationName,
-		ImageLinks:         event.EventImageLinks,
-	}, instancesRes, nil
-}
-
-func (eu *eventUsecase) GetRegistered(ctx context.Context, communityIdOrigin string) (eventRegistrations []models.GetAllRegisteredUserResponse, err error) {
-	defer func() {
-		LogService(ctx, err)
-	}()
-
-	output, err := eu.r.Event.GetRegistered(ctx, communityIdOrigin)
-	if err != nil {
-		return nil, err
-	}
-
-	events := []models.GetAllRegisteredUserResponse{}
-	for _, r := range output {
-		e := models.GetAllRegisteredUserResponse{
-			Type:               models.TYPE_EVENT,
-			Code:               r.EventCode,
-			Title:              r.EventTitle,
-			Description:        r.EventDescription,
-			TermsAndConditions: r.EventTermsAndConditions,
-			StartAt:            r.EventStartAt,
-			EndAt:              r.EventEndAt,
-			LocationType:       r.EventLocationType,
-			LocationName:       r.EventLocationName,
-			ImageLinks:         r.EventImageLinks,
-			Status:             r.EventStatus,
-		}
-
-		ei := models.InstancesForRegisteredRecordsResponse{
-			Type:            models.TYPE_EVENT_INSTANCE,
-			Code:            r.InstanceCode,
-			Title:           r.InstanceTitle,
-			Description:     r.InstanceDescription,
-			InstanceStartAt: r.InstanceStartAt,
-			InstanceEndAt:   r.InstanceEndAt,
-			LocationType:    r.InstanceLocationType,
-			LocationName:    r.InstanceLocationName,
-			Status:          r.InstanceStatus,
-		}
-
-		var isPersonalQr bool
-		if r.RegistrationRecordUpdatedBy == "user" {
-			isPersonalQr = true
-		}
-
-		var verifiedAt string
-		if !r.RegistrationRecordVerifiedAt.Time.IsZero() {
-			verifiedAt = common.FormatDatetimeToString(r.RegistrationRecordVerifiedAt.Time, time.RFC3339)
-		}
-
-		rr := models.UserRegisteredRecordsResponse{
-			Type:               models.TYPE_EVENT_REGISTRATION_RECORD,
-			ID:                 r.RegistrationRecordID,
-			Name:               r.RegistrationRecordName,
-			Identifier:         r.RegistrationRecordIdentifier,
-			CommunityId:        r.RegistrationRecordCommunityID,
-			UpdatedBy:          r.RegistrationRecordUpdatedBy,
-			RegisteredAt:       r.RegistrationRecordRegisteredAt,
-			IsPersonalQr:       isPersonalQr,
-			VerifiedAt:         verifiedAt,
-			RegistrationStatus: r.RegistrationRecordStatus,
-		}
-
-		eventExist := false
-		for j := range events {
-			if events[j].Code == e.Code {
-				instanceExist := false
-				for k := range events[j].Instances {
-					if events[j].Instances[k].Code == ei.Code {
-						// Append registration record to the existing instance
-						events[j].Instances[k].Registrants = append(events[j].Instances[k].Registrants, rr)
-						instanceExist = true
-						break
-					}
-				}
-
-				// If instance doesn't exist, add it and include the registration
-				if !instanceExist {
-					ei.Registrants = append(ei.Registrants, rr)
-					events[j].Instances = append(events[j].Instances, ei)
-				}
-
-				eventExist = true
-				break
-			}
-		}
-
-		if !eventExist {
-			ei.Registrants = append(ei.Registrants, rr)
-			e.Instances = append(e.Instances, ei)
-			events = append(events, e)
-		}
-	}
-
-	return events, nil
-}
-
-func (eu *eventUsecase) GetTitles(ctx context.Context) (eventTitles []models.GetEventTitlesResponse, err error) {
-	defer func() {
-		LogService(ctx, err)
-	}()
-
-	output, err := eu.r.Event.GetTitles(ctx)
-	if err != nil {
-		return nil, err
-	}
-
-	var res []models.GetEventTitlesResponse
-	for _, i := range output {
-		res = append(res, i.ToResponse())
-	}
-
-	return res, nil
-}
-
-func (eu *eventUsecase) GetSummary(ctx context.Context, code string) (detail *models.GetEventSummaryResponse, data []models.GetInstanceSummaryResponse, err error) {
-	defer func() {
-		LogService(ctx, err)
-	}()
-
-	event, err := eu.r.Event.GetSummary(ctx, code)
-	if err != nil {
-		if errors.Is(err, gorm.ErrRecordNotFound) {
-			return nil, nil, models.ErrorDataNotFound
-		}
-		return nil, nil, err
-	}
-
-	if event == nil {
-		return nil, nil, models.ErrorDataNotFound
-	}
-
-	switch event.EventAllowedFor {
-	case "public":
-		publicCount, err := eu.r.User.CountUserByUserTypeCategory(ctx, []string{"general", "cool", "internal"})
-		if err != nil {
-			return nil, nil, err
-		}
-
-		event.TotalUsers = int(publicCount)
-	case "private":
-		privateCount, err := eu.r.User.CountUserByUserTypeCategory(ctx, []string{"cool", "internal"})
-		if err != nil {
-			return nil, nil, err
-		}
-
-		event.TotalUsers = int(privateCount)
-	default:
-		return nil, nil, models.ErrorEventNotValid
-	}
-
-	instances, err := eu.r.EventInstance.GetSummary(ctx, event.EventCode)
-	if err != nil {
-		return nil, nil, err
-	}
-
-	var instanceRes []models.GetInstanceSummaryResponse
-	for _, i := range instances {
-		var totalRemainingSeats int
-		switch {
-		case event.EventAllowedFor == "private" && i.InstanceTotalSeats == 0:
-			totalRemainingSeats = event.TotalUsers - i.InstanceBookedSeats
-		case event.EventAllowedFor == "public" && i.InstanceTotalSeats == 0:
-			totalRemainingSeats = event.TotalUsers - i.InstanceBookedSeats
-		default:
-			totalRemainingSeats = i.TotalRemainingSeats
-		}
-
-		i.AttendancePercentage = float64(i.InstanceScannedSeats) / float64(event.TotalUsers) * 100
-
-		instanceRes = append(instanceRes, models.GetInstanceSummaryResponse{
-			Type:                models.TYPE_EVENT_INSTANCE,
-			EventCode:           event.EventCode,
-			Code:                i.InstanceCode,
-			Title:               i.InstanceTitle,
-			RegisterFlow:        i.InstanceRegisterFlow,
-			CheckType:           i.InstanceCheckType,
-			TotalSeats:          i.InstanceTotalSeats,
-			BookedSeats:         i.InstanceBookedSeats,
-			ScannedSeats:        i.InstanceScannedSeats,
-			TotalRemainingSeats: totalRemainingSeats,
-			AttendPercentage:    i.AttendancePercentage,
-			MaxPerTransaction:   i.InstanceMaxPerTransaction,
-			Status:              i.InstanceStatus,
+		logger.AddError(ctx, &logger.ErrorContext{
+			Type:      "ContextError",
+			Code:      "CONTEXT_ERROR",
+			Message:   err.Error(),
+			Retriable: true,
 		})
+		return nil, errorc.Error(err)
+	}
+	logger.Add(ctx, "creator_community_id", creatorCommunityID)
+
+	// Step 2: Normalize request (set defaults, cleanup)
+	logger.Add(ctx, "step", "normalize_request")
+	normalizeEventRequest(&request)
+	logger.Add(ctx,
+		"normalized_status", request.Status,
+		"normalized_timezone", *request.Schedule.Timezone,
+	)
+
+	// Step 3: Generate unique event code with retry mechanism
+	logger.Add(ctx, "step", "generate_event_code")
+	eventCode, err := generateUniqueEventCode(ctx, eu, constants.EventCodeMaxRetries)
+	if err != nil {
+		logger.AddError(ctx, &logger.ErrorContext{
+			Type:      "GenerateEventCodeError",
+			Code:      "GENERATE_EVENT_CODE_ERROR",
+			Message:   err.Error(),
+			Retriable: false,
+		})
+		return nil, errorc.Error(err)
+	}
+	logger.Add(ctx, "event_code", eventCode)
+
+	// Step 4: Generate or validate slug
+	logger.Add(ctx, "step", "generate_slug")
+	logger.Add(ctx, "requested_slug", request.Slug)
+	slug, err := generateEventSlug(ctx, eu, request.Slug, *eventCode)
+	if err != nil {
+		logger.AddError(ctx, &logger.ErrorContext{
+			Type:      "GenerateSlugError",
+			Code:      "GENERATE_SLUG_ERROR",
+			Message:   err.Error(),
+			Retriable: false,
+		})
+		return nil, errorc.Error(err)
+	}
+	logger.Add(ctx, "event_slug", slug)
+
+	// Step 5: Validate access control settings
+	logger.Add(ctx, "step", "validate_access_control")
+	if err := validateAccessControl(ctx, eu, &request.Access); err != nil {
+		logger.AddError(ctx, &logger.ErrorContext{
+			Type:      "ValidationFailed",
+			Code:      "VALIDATION_FAILED",
+			Message:   err.Error(),
+			Retriable: false,
+		})
+		return nil, errorc.Error(err)
 	}
 
-	return event.ToResponse(), instanceRes, nil
+	// Step 6: Validate organizer community IDs
+	logger.Add(ctx, "step", "validate_organizers")
+	if err := validateOrganizers(ctx, eu, &request.Organizer); err != nil {
+		logger.AddError(ctx, &logger.ErrorContext{
+			Type:      "ValidationFailed",
+			Code:      "VALIDATION_FAILED",
+			Message:   err.Error(),
+			Retriable: false,
+		})
+		return nil, errorc.Error(err)
+	}
+
+	// Step 7: Validate location by type
+	logger.Add(ctx, "step", "validate_location_type")
+	if err := request.Location.Validate(&request.Category); err != nil {
+		logger.AddError(ctx, &logger.ErrorContext{
+			Type:      "ValidationFailed",
+			Code:      "LOCATION_VALIDATION_FAILED",
+			Message:   err.Error(),
+			Retriable: false,
+		})
+		return nil, errorc.Error(errorc.ErrorValidation, err.Error())
+	}
+
+	// Step 7: Validate click to action
+	logger.Add(ctx, "step", "validate_click_to_action")
+	if request.Location.ClickToAction.TextNotEmpty() && !request.Location.ClickToAction.LinkNotEmpty() {
+		request.Location.ClickToAction.Link = stringc.Pointer("NORMAL_FLOW")
+	} else if !request.Location.ClickToAction.TextNotEmpty() && request.Location.ClickToAction.LinkNotEmpty() {
+		request.Location.ClickToAction.Text = stringc.Pointer("Register Here!")
+	} else if !request.Location.ClickToAction.TextNotEmpty() && !request.Location.ClickToAction.LinkNotEmpty() {
+		request.Location.ClickToAction.Link = stringc.Pointer("NORMAL_FLOW")
+		request.Location.ClickToAction.Text = stringc.Pointer("Register Here!")
+	}
+
+	// Step 8: Validate schedule
+	logger.Add(ctx, "step", "validate_schedule")
+	if err := validateSchedule(&request.Schedule); err != nil {
+		logger.AddError(ctx, &logger.ErrorContext{
+			Type:      "ValidationFailed",
+			Code:      "SCHEDULE_VALIDATION_FAILED",
+			Message:   err.Error(),
+			Retriable: false,
+		})
+		return nil, errorc.Error(err)
+	}
+
+	// Step 10: Validate recurrence pattern if recurring
+	if request.Recurrence.IsRecurring {
+		logger.Add(ctx, "step", "validate_recurrence_pattern")
+		if err := validateRecurrencePattern(&request.Recurrence); err != nil {
+			logger.AddError(ctx, &logger.ErrorContext{
+				Type:      "ValidationFailed",
+				Code:      "RECURRENCE_VALIDATION_FAILED",
+				Message:   err.Error(),
+				Retriable: false,
+			})
+			return nil, errorc.Error(err)
+		}
+	}
+
+	// Step 10: Validate notification
+	logger.Add(ctx, "step", "validate_notification")
+	if err := validateNotification(&request.Notification); err != nil {
+		logger.AddError(ctx, &logger.ErrorContext{
+			Type:      "ValidationFailed",
+			Code:      "NOTIFICATION_VALIDATION_FAILED",
+			Message:   err.Error(),
+			Retriable: false,
+		})
+		return nil, errorc.Error(err)
+	}
+
+	// Step 11: Prepare Event Model (Transform DTO to Model)
+	logger.Add(ctx, "step", "prepare_event_model")
+	event := &models.Event{
+		Code:               *eventCode,
+		Title:              request.Title,
+		Slug:               slug,
+		PreDescription:     &request.PreDescription,
+		PostDescription:    request.PostDescription,
+		TermsAndConditions: &request.TermsAndConditions,
+		Category:           request.Category,
+		Status:             request.Status,
+
+		// Images
+		ImageURLs: request.Images.ImageLinks,
+
+		// Organization
+		CreatorCommunityID:    creatorCommunityID,
+		OrganizerCommunityIDs: request.Organizer.OrganizerCommunityIDs,
+		ContactCommunityIDs:   request.Organizer.ContactCommunityIDs,
+
+		// Access
+		AccessLevel:         *request.Access.AccessLevel,
+		AllowedUserTypes:    request.Access.AllowedUserTypes,
+		AllowedRoles:        request.Access.AllowedRoles,
+		AllowedCampuses:     request.Access.AllowedCampuses,
+		AllowedCommunityIDs: request.Access.AllowedCommunityIDs,
+
+		// Location
+		LocationType:       *request.Location.LocationType,
+		PhysicalAddress:    request.Location.PhysicalAddress,
+		PhysicalPlaceName:  request.Location.PhysicalPlaceName,
+		VirtualLink:        request.Location.VirtualLink,
+		VirtualPlatform:    request.Location.VirtualPlatform,
+		LocationDetails:    request.Location.LocationDetails,
+		LocationVisibility: *request.Location.LocationVisibility,
+		CTAText:            request.Location.ClickToAction.Text,
+		CTALink:            request.Location.ClickToAction.Link,
+
+		// Schedule
+		StartAt:  *request.Schedule.StartAt,
+		EndAt:    *request.Schedule.EndAt,
+		Timezone: *request.Schedule.Timezone,
+
+		// Recurrence
+		IsRecurring: request.Recurrence.IsRecurring,
+		// RecurrencePattern will be set below if not nil
+
+		// Template
+		IsTemplate: request.Template.IsTemplate,
+		TemplateID: *request.Template.TemplateID,
+		SeriesID:   *request.Template.SeriesID,
+
+		// Notification
+		NotificationChannels: request.Notification.NotificationChannels,
+		// ReminderConfig will be set below if not nil
+	}
+
+	// Handle optional string pointers
+	if request.Images.BannerLink != nil {
+		event.BannerURL = *request.Images.BannerLink
+		logger.Add(ctx, "has_banner", true)
+	}
+	if request.Template.TemplateID != nil {
+		event.TemplateID = *request.Template.TemplateID
+		logger.Add(ctx, "template_id", *request.Template.TemplateID)
+	}
+	if request.Template.SeriesID != nil {
+		event.SeriesID = *request.Template.SeriesID
+		logger.Add(ctx, "series_id", *request.Template.SeriesID)
+	}
+
+	// Convert structs to JSONB for RecurrencePattern and ReminderConfig
+	logger.Add(ctx, "step", "marshal_jsonb")
+	if request.Recurrence.RecurrencePattern != nil {
+		if err := event.RecurrencePattern.Marshal(request.Recurrence.RecurrencePattern); err != nil {
+			logger.AddError(ctx, &logger.ErrorContext{
+				Type:      "MarshalError",
+				Code:      "MARSHAL_RECURRENCE_FAILED",
+				Message:   "failed to marshal recurrence pattern",
+				Retriable: false,
+			})
+			return nil, errorc.Error(errorc.ErrorInternalServer, "failed to marshal recurrence pattern")
+		}
+		logger.Add(ctx, "recurrence_frequency", request.Recurrence.RecurrencePattern.Frequency)
+	}
+	if request.Notification.ReminderConfig != nil {
+		if err := event.ReminderConfig.Marshal(request.Notification.ReminderConfig); err != nil {
+			logger.AddError(ctx, &logger.ErrorContext{
+				Type:      "MarshalError",
+				Code:      "MARSHAL_REMINDER_FAILED",
+				Message:   "failed to marshal reminder config",
+				Retriable: false,
+			})
+			return nil, errorc.Error(errorc.ErrorInternalServer, "failed to marshal reminder config")
+		}
+		logger.Add(ctx, "reminder_enabled", request.Notification.ReminderConfig.Enabled)
+	}
+
+	if request.Category == string("announcement") && request.Sessions != nil {
+		return nil, errorc.Error(errorc.ErrorValidation, "instances is not required for announcement category")
+	}
+
+	// Step 12: Create event in database within transaction
+	logger.Add(ctx, "step", "database_transaction")
+	if err := eu.d.Repository.Transaction.Atomic(ctx, func(ctx context.Context, r *pgsql.PostgreRepositories) error {
+		if err := r.Event.Create(ctx, event); err != nil {
+			logger.AddError(ctx, &logger.ErrorContext{
+				Type:      "DatabaseError",
+				Code:      "EVENT_CREATE_FAILED",
+				Message:   err.Error(),
+				Retriable: true,
+			})
+			return errorc.Error(errorc.ErrorDatabase, "failed to create event: %s", err)
+		}
+		logger.Add(ctx, "event_id", event.ID)
+
+		// Create sessions atomically with the event — both succeed or both roll back.
+		// CreateWithRepos accepts the transactional repos `r` so every INSERT
+		// (sessions + optional event schedule update via IsUpdateEvent) shares
+		// the same GORM transaction that also holds the event INSERT above.
+		if request.Sessions != nil {
+			logger.Add(ctx, "creating_sessions", true)
+			logger.Add(ctx, "sessions_requested", len(request.Sessions))
+			// ctx already has the transactional DB embedded by Atomic; Create will
+			// pick it up via BaseRepository.db(ctx) — no special repo arg needed.
+			if _, err := eu.d.EventSession.Create(ctx, request.Sessions, nil, event); err != nil {
+				logger.AddError(ctx, &logger.ErrorContext{
+					Type:      "DatabaseError",
+					Code:      "SESSIONS_CREATE_FAILED",
+					Message:   err.Error(),
+					Retriable: true,
+				})
+				return errorc.Error(err, "failed to create event sessions: %s", err)
+			}
+			logger.Add(ctx, "sessions_created", len(request.Sessions))
+		}
+
+		// Note: For recurring events, occurrences are calculated on-demand
+		// based on the recurrence_pattern JSONB field when querying events.
+		// No pre-generation needed.
+
+		if request.Questions != nil {
+			logger.Add(ctx, "creating_questions", true)
+
+			form := models.CreateFormRequest{
+				Name: event.Title,
+				Entity: models.FormEntityRequest{
+					Type: "event",
+					Code: event.Code,
+				},
+				Questions: request.Questions,
+			}
+
+			logger.Add(ctx, "questions_requested", len(request.Questions))
+			if _, err := eu.d.Form.Create(ctx, &form); err != nil {
+				logger.AddError(ctx, &logger.ErrorContext{
+					Type:      "DatabaseError",
+					Code:      "QUESTIONS_CREATE_FAILED",
+					Message:   err.Error(),
+					Retriable: true,
+				})
+				return errorc.Error(err, "failed to create event questions: %s", err)
+			}
+			logger.Add(ctx, "questions_created", len(request.Questions))
+		}
+
+		return nil
+	}); err != nil {
+		logger.AddError(ctx, &logger.ErrorContext{
+			Type:      "DatabaseError",
+			Code:      "DATABASE_ATOMIC_ERROR",
+			Message:   err.Error(),
+			Retriable: true,
+		})
+		return nil, errorc.Error(err, "failed to create event: %s", err)
+	}
+
+	// Final enrichment with success metrics
+	instanceCount := 0
+	if request.Sessions != nil {
+		instanceCount = len(request.Sessions)
+	}
+
+	logger.Add(ctx, map[string]any{
+		"event_created":      true,
+		"step":               "completed",
+		"instances_count":    instanceCount,
+		"notification_count": len(request.Notification.NotificationChannels),
+		"final_status":       event.Status,
+	})
+
+	return event, nil
+}
+
+// generateUniqueEventCode generates a unique event code with retry mechanism
+func generateUniqueEventCode(ctx context.Context, eu *eventUsecase, maxRetries int) (*string, error) {
+	for attempt := 0; attempt < maxRetries; attempt++ {
+		code, err := generator.IdentifierCode(ctx, eu.d.Config.Event.EncodeCode, time.Now(), constants.EventCodePrefix)
+		if err != nil {
+			return nil, errorc.Error(err, "failed to generate event code")
+		}
+
+		// Check if code already exists
+		isCodeExist, err := eu.d.Repository.Event.CheckByCode(ctx, code)
+		if err != nil {
+			return nil, errorc.Error(err, "failed to check event code uniqueness")
+		}
+
+		if !isCodeExist {
+			logger.Add(ctx, "code_generation_attempts", attempt+1)
+			return &code, nil
+		}
+
+		// Code collision detected, retry
+		logger.Add(ctx, map[string]any{
+			"code_collision":    true,
+			"collision_attempt": attempt + 1,
+			"colliding_code":    code,
+		})
+
+		if attempt < maxRetries-1 {
+			time.Sleep(time.Duration(eu.d.Config.Event.Backoff.CodeGeneration) * time.Millisecond * time.Duration(attempt+1)) // Exponential backoff
+		}
+	}
+
+	logger.Add(ctx, "code_generation_failed", true)
+	return nil, errorc.Error(errorc.ErrorInternalServer, "failed to generate unique event code after %d attempts", maxRetries)
+}
+
+// generateEventSlug generates or validates the event slug
+func generateEventSlug(ctx context.Context, eu *eventUsecase, requestSlug, eventCode string) (string, error) {
+	var slug string
+
+	if requestSlug != "" {
+		// User provided a slug
+		if len(requestSlug) < eu.d.Config.Event.MinSlug {
+			// Slug too short, regenerate from provided slug
+			slug = generator.Slug(requestSlug, time.Now())
+		} else {
+			slug = requestSlug
+		}
+	} else {
+		// No slug provided, generate from event code
+		slug = generator.Slug(eventCode, time.Now())
+	}
+
+	// Check if slug already exists
+	exists, err := eu.d.Repository.Event.CheckBySlug(ctx, slug)
+	if err != nil {
+		return "", errorc.Error(err, "failed to check slug uniqueness")
+	}
+
+	if exists {
+		return "", errorc.Error(errorc.ErrorAlreadyExist, "event with slug '%s' already exists", slug)
+	}
+
+	return slug, nil
+}
+
+// validateAccessControl validates all access control settings
+func validateAccessControl(ctx context.Context, eu *eventUsecase, access *models.EventAccess) error {
+	// Public events don't need access restrictions
+	if *access.AccessLevel == string(constants.AccessLevelPublic) {
+		access.AllowedCampuses = nil
+		access.AllowedRoles = nil
+		access.AllowedUserTypes = nil
+		access.AllowedCommunityIDs = nil
+		return nil
+	}
+
+	// Log private event access control validation
+	logger.Add(ctx, map[string]any{
+		"validating_access_control": true,
+		"campuses_count":            len(access.AllowedCampuses),
+		"roles_count":               len(access.AllowedRoles),
+		"user_types_count":          len(access.AllowedUserTypes),
+		"communities_count":         len(access.AllowedCommunityIDs),
+	})
+
+	// Validate campuses
+	if access.AllowedCampuses != nil && len(access.AllowedCampuses) > 0 {
+		lowerCampuses := make([]string, len(access.AllowedCampuses))
+		for i, c := range access.AllowedCampuses {
+			lowerCampuses[i] = stringc.LowerAndTrimSpace(c)
+		}
+
+		if !common.CheckAllDataMapStructure(eu.d.Config.Campus, lowerCampuses) {
+			return errorc.Error(errorc.ErrorDataNotFound, "one or more campuses do not exist")
+		}
+	}
+
+	// Validate roles with caching
+	if access.AllowedRoles != nil && len(access.AllowedRoles) > 0 {
+		cacheKey := cache.RolesCacheKey(access.AllowedRoles)
+
+		// Try to get from cache or fetch from database
+		result, err := eu.d.Cache.GetOrSet(cacheKey, func() (interface{}, error) {
+			count, err := eu.d.Repository.Role.CheckMultiple(ctx, access.AllowedRoles)
+			if err != nil {
+				return nil, errorc.Error(err, "failed to validate roles")
+			}
+			return count, nil
+		})
+
+		if err != nil {
+			return err
+		}
+
+		count := result.(int64)
+		if count != int64(len(access.AllowedRoles)) {
+			return errorc.Error(errorc.ErrorDataNotFound, "one or more roles do not exist")
+		}
+	}
+
+	// Validate user types with caching
+	if access.AllowedUserTypes != nil && len(access.AllowedUserTypes) > 0 {
+		cacheKey := cache.UserTypesCacheKey(access.AllowedUserTypes)
+
+		// Try to get from cache or fetch from database
+		result, err := eu.d.Cache.GetOrSet(cacheKey, func() (interface{}, error) {
+			count, err := eu.d.Repository.UserType.CheckMultiple(ctx, access.AllowedUserTypes)
+			if err != nil {
+				return nil, errorc.Error(err, "failed to validate user types")
+			}
+			return count, nil
+		})
+
+		if err != nil {
+			return err
+		}
+
+		count := result.(int64)
+		if count != int64(len(access.AllowedUserTypes)) {
+			return errorc.Error(errorc.ErrorDataNotFound, "one or more user types do not exist")
+		}
+	}
+
+	// Validate community IDs
+	if err := validateCommunityIDs(ctx, eu.d.Repository.User, access.AllowedCommunityIDs, "allowed"); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func validateOrganizers(ctx context.Context, eu *eventUsecase, organizers *models.EventOrganizer) error {
+	if organizers == nil {
+		return nil
+	}
+
+	// Log private event access control validation
+	logger.Add(ctx, map[string]any{
+		"validating_organizers": true,
+		"organizer_count":       len(organizers.OrganizerCommunityIDs),
+		"contact_count":         len(organizers.ContactCommunityIDs),
+	})
+
+	if organizers.ContactCommunityIDs != nil && len(organizers.ContactCommunityIDs) > 0 {
+		cacheKey := cache.RolesCacheKey(organizers.ContactCommunityIDs)
+
+		// Try to get from cache or fetch from database
+		result, err := eu.d.Cache.GetOrSet(cacheKey, func() (interface{}, error) {
+			count, err := eu.d.Repository.Role.CheckMultiple(ctx, organizers.ContactCommunityIDs)
+			if err != nil {
+				return nil, errorc.Error(err, "failed to validate roles")
+			}
+			return count, nil
+		})
+
+		if err != nil {
+			return err
+		}
+
+		count := result.(int64)
+		if count != int64(len(organizers.ContactCommunityIDs)) {
+			return errorc.Error(errorc.ErrorDataNotFound, "one or more contact community IDs do not exist")
+		}
+	}
+
+	if organizers.OrganizerCommunityIDs != nil && len(organizers.OrganizerCommunityIDs) > 0 {
+		cacheKey := cache.RolesCacheKey(organizers.OrganizerCommunityIDs)
+
+		// Try to get from cache or fetch from database
+		result, err := eu.d.Cache.GetOrSet(cacheKey, func() (interface{}, error) {
+			count, err := eu.d.Repository.Role.CheckMultiple(ctx, organizers.OrganizerCommunityIDs)
+			if err != nil {
+				return nil, errorc.Error(err, "failed to validate roles")
+			}
+			return count, nil
+		})
+
+		if err != nil {
+			return err
+		}
+
+		count := result.(int64)
+		if count != int64(len(organizers.OrganizerCommunityIDs)) {
+			return errorc.Error(errorc.ErrorDataNotFound, "one or more organizer community IDs do not exist")
+		}
+	}
+
+	return nil
+}
+
+// validateCommunityIDs validates that all provided community IDs exist in the database
+func validateCommunityIDs(ctx context.Context, repo pgsql.UserRepository, ids []string, entityType string) error {
+	if ids == nil || len(ids) == 0 {
+		return nil
+	}
+
+	count, err := repo.CheckMultiple(ctx, ids)
+	if err != nil {
+		return errorc.Error(errorc.ErrorDatabase, "failed to validate %s community IDs for the event", entityType)
+	}
+
+	if count != int64(len(ids)) {
+		return errorc.Error(errorc.ErrorDataNotFound, "one or more %s community IDs for the event do not exist", entityType)
+	}
+
+	return nil
+}
+
+// normalizeEventRequest sets default values and normalizes the request
+func normalizeEventRequest(req *models.CreateEventRequest) {
+	// Set default location visibility
+	if *req.Location.LocationVisibility == "" {
+		*req.Location.LocationVisibility = string(constants.LocationVisibilityAll)
+	}
+
+	// Set default status
+	if req.Status == "" {
+		req.Status = string(constants.EventStatusDraft)
+	}
+
+	// If draft, set all instances to draft
+	if req.Status == string(constants.EventStatusDraft) {
+		for _, session := range req.Sessions {
+			session.Status = string(constants.EventStatusDraft)
+		}
+	}
+
+	// Set default timezone if not provided
+	if req.Schedule.Timezone == nil {
+		tz := common.DefaultTimeZone
+		req.Schedule.Timezone = &tz
+	}
+
+	if req.Location.ClickToAction.Link == nil {
+		*req.Location.ClickToAction.Link = "NORMAL_FLOW"
+	}
+
+	if req.Location.ClickToAction.Text == nil {
+		*req.Location.ClickToAction.Text = "Register Here!"
+	}
+
+}
+
+// validateSchedule validates that the event schedule is valid
+func validateSchedule(schedule *models.EventSchedule) error {
+	if schedule.StartAt == nil {
+		return errorc.Error(errorc.ErrorValidation, "start time is required")
+	}
+	if schedule.EndAt == nil {
+		return errorc.Error(errorc.ErrorValidation, "end time is required")
+	}
+
+	// Explicit check: EndAt must be after StartAt
+	if !schedule.EndAt.After(*schedule.StartAt) {
+		return errorc.Error(errorc.ErrorValidation, "end time must be after start time")
+	}
+
+	// Check that the event is not too far in the past (more than 1 day)
+	oneDayAgo := time.Now().AddDate(0, 0, -1)
+	if schedule.StartAt.Before(oneDayAgo) {
+		return errorc.Error(errorc.ErrorValidation, "event start time cannot be more than 1 day in the past")
+	}
+
+	return nil
+}
+
+// validateRecurrencePattern validates the recurrence pattern
+func validateRecurrencePattern(recurrence *models.EventRecurrence) error {
+	if !recurrence.IsRecurring {
+		return nil
+	}
+
+	if recurrence.RecurrencePattern == nil {
+		return errorc.Error(errorc.ErrorValidation, "recurrence pattern is required when event is recurring")
+	}
+
+	// Use the existing validation function from models
+	if err := models.ValidateRecurrencePattern(recurrence.RecurrencePattern); err != nil {
+		return errorc.Error(errorc.ErrorValidation, "invalid recurrence pattern: %v", err)
+	}
+
+	return nil
+}
+
+// getNthWeekdayOfMonth gets the nth occurrence of a weekday in a month
+func getNthWeekdayOfMonth(year int, month time.Month, nth string, weekday time.Weekday, template time.Time) time.Time {
+	// Start at the first day of the month
+	firstDay := time.Date(year, month, 1, template.Hour(), template.Minute(), template.Second(), 0, template.Location())
+
+	// Find the first occurrence of the target weekday
+	daysUntilWeekday := int(weekday - firstDay.Weekday())
+	if daysUntilWeekday < 0 {
+		daysUntilWeekday += 7
+	}
+
+	firstOccurrence := firstDay.AddDate(0, 0, daysUntilWeekday)
+
+	// Calculate the nth occurrence
+	var offset int
+	switch nth {
+	case "first":
+		offset = 0
+	case "second":
+		offset = 7
+	case "third":
+		offset = 14
+	case "fourth":
+		offset = 21
+	case "last":
+		// Find the last occurrence by going to the 5th and checking if it's in the same month
+		fifthOccurrence := firstOccurrence.AddDate(0, 0, 28)
+		if fifthOccurrence.Month() == month {
+			return fifthOccurrence
+		}
+		return firstOccurrence.AddDate(0, 0, 21)
+	default:
+		offset = 0
+	}
+
+	return firstOccurrence.AddDate(0, 0, offset)
+}
+
+// isExcluded checks if a date is in the exclusion list
+func isExcluded(date time.Time, excludeDates []time.Time) bool {
+	for _, excluded := range excludeDates {
+		if date.Year() == excluded.Year() &&
+			date.Month() == excluded.Month() &&
+			date.Day() == excluded.Day() {
+			return true
+		}
+	}
+	return false
+}
+
+func validateNotification(notification *models.EventNotification) error {
+	if notification == nil {
+		return nil
+	}
+
+	if notification.ReminderConfig != nil && (notification.NotificationChannels == nil || len(notification.NotificationChannels) == 0) {
+		return errorc.Error(errorc.ErrorValidation, "notification channels is required when reminder config is set")
+	}
+
+	return nil
+}
+
+func (eu *eventUsecase) GetAll(ctx context.Context) ([]models.Event, error) {
+	return eu.d.Repository.Event.GetDummy(ctx)
 }

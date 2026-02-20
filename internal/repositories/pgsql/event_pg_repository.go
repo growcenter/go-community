@@ -2,149 +2,244 @@ package pgsql
 
 import (
 	"context"
-	"github.com/lib/pq"
+	"errors"
 	"go-community/internal/models"
+	"go-community/internal/pkg/logger"
+
 	"gorm.io/gorm"
 )
 
 type EventRepository interface {
-	Create(ctx context.Context, event *models.Event) (err error)
-	GetByCode(ctx context.Context, code string) (campus models.Event, err error)
-	GetAll(ctx context.Context) (campus []models.Event, err error)
-	GetAllByRolesAndUserTypes(ctx context.Context, roles []string, uTypes []string, isTypeNotGeneral bool, status string) (output []models.GetAllEventsDBOutput, err error)
-	CheckByCode(ctx context.Context, code string) (dataExist bool, err error)
-	GetOneByCode(ctx context.Context, code string) (output *models.GetEventByCodeDBOutput, err error)
-	GetRegistered(ctx context.Context, communityIdOrigin string) (output []models.GetAllRegisteredUserDBOutput, err error)
-	GetTitles(ctx context.Context) (output []models.GetEventTitlesDBOutput, err error)
-	GetSummary(ctx context.Context, code string) (output *models.GetEventSummaryDBOutput, err error)
-	Update(ctx context.Context, event *models.Event) (err error)
+	// Create
+	Create(ctx context.Context, event *models.Event) error
+
+	// Get
+	GetDummy(ctx context.Context) ([]models.Event, error)
+	GetByCode(ctx context.Context, code string) (*models.Event, error)
+
+	// Check
+	CheckByCode(ctx context.Context, code string) (bool, error)
+	CheckBySlug(ctx context.Context, slug string) (bool, error)
+	CheckByCodeOrSlug(ctx context.Context, identifier ...string) (bool, error)
+
+	// Update
+	UpdatePartial(ctx context.Context, code string, updates *models.UpdateEventRequest) error
 }
 
 type eventRepository struct {
-	db  *gorm.DB
-	trx TransactionRepository
+	*BaseRepository
 }
 
-func NewEventRepository(db *gorm.DB, trx TransactionRepository) EventRepository {
-	return &eventRepository{db: db, trx: trx}
+// Compile-time interface compliance check
+var _ EventRepository = (*eventRepository)(nil)
+
+func NewEventRepository(db *gorm.DB) EventRepository {
+	return &eventRepository{
+		BaseRepository: NewBaseRepository(db),
+	}
 }
 
+// Create creates a new event
+// Returns error if the event could not be created
 func (er *eventRepository) Create(ctx context.Context, event *models.Event) (err error) {
-	defer func() {
-		LogRepository(ctx, err)
-	}()
-
-	return er.trx.Transaction(func(dtx *gorm.DB) error {
-		return er.db.Create(&event).Error
-	})
-}
-
-func (er *eventRepository) GetByCode(ctx context.Context, code string) (campus models.Event, err error) {
-	defer func() {
-		LogRepository(ctx, err)
-	}()
-
-	var e models.Event
-	err = er.db.Where("code = ?", code).Find(&e).Error
-
-	return e, err
-}
-
-func (er *eventRepository) GetAll(ctx context.Context) (campus []models.Event, err error) {
-	defer func() {
-		LogRepository(ctx, err)
-	}()
-
-	var e []models.Event
-	err = er.db.Find(&e).Error
-
-	return e, err
-}
-
-func (er *eventRepository) CheckByCode(ctx context.Context, code string) (dataExist bool, err error) {
-	defer func() {
-		LogRepository(ctx, err)
-	}()
-
-	err = er.db.Raw(queryCheckEventByCode, code).Scan(&dataExist).Error
+	logger.Add(ctx, "db_operation", "event.create")
+	err = er.db(ctx).Create(&event).Error
 	if err != nil {
+		logger.AddError(ctx, &logger.ErrorContext{
+			Type:    "DatabaseError",
+			Code:    "EVENT_CREATE_FAILED",
+			Message: err.Error(),
+			Details: map[string]any{
+				"db_table": "events",
+			},
+		})
+	}
+	return err
+}
+
+// GetDummy retrieves all event without filter
+// Returns the event if found, or an error if not found or on database error
+func (er *eventRepository) GetDummy(ctx context.Context) ([]models.Event, error) {
+	logger.Add(ctx, "db_operation", "event.get_dummy")
+
+	var event []models.Event
+	err := er.db(ctx).Find(&event).Error
+	if err != nil {
+		logger.AddError(ctx, &logger.ErrorContext{
+			Type:    "DatabaseError",
+			Code:    "EVENT_GET_FAILED",
+			Message: err.Error(),
+			Details: map[string]any{
+				"db_table": "events",
+			},
+		})
+		return nil, err
+	}
+
+	logger.Add(ctx, "event_found", true)
+	return event, nil
+}
+
+// GetByCode retrieves an event by its code
+// Returns the event if found, or an error if not found or on database error
+func (er *eventRepository) GetByCode(ctx context.Context, code string) (*models.Event, error) {
+	logger.Add(ctx, "db_operation", "event.get_by_code")
+	logger.Add(ctx, "lookup_code", code)
+
+	var event models.Event
+	err := er.db(ctx).Where("code = ?", code).First(&event).Error
+	if err != nil {
+		logger.AddError(ctx, &logger.ErrorContext{
+			Type:    "DatabaseError",
+			Code:    "EVENT_GET_FAILED",
+			Message: err.Error(),
+			Details: map[string]any{
+				"db_table": "events",
+			},
+		})
+		return nil, err
+	}
+
+	logger.Add(ctx, "event_found", true)
+	return &event, nil
+}
+
+// CheckByCode checks if a session code exists in the database
+// Uses PostgreSQL EXISTS for optimal performance - stops at first match instead of counting all rows
+// Returns true if the code exists, false otherwise
+func (er *eventRepository) CheckByCode(ctx context.Context, code string) (bool, error) {
+	logger.Add(ctx, "db_operation", "event.check_by_code")
+	logger.Add(ctx, "lookup_code", code)
+
+	var exists bool
+	err := er.db(ctx).
+		Raw(QueryCheckEventByCode, code).
+		Scan(&exists).Error
+
+	if err != nil {
+		logger.AddError(ctx, &logger.ErrorContext{
+			Type:    "DatabaseError",
+			Code:    "EVENT_CHECK_FAILED",
+			Message: err.Error(),
+			Details: map[string]any{
+				"db_table": "events",
+			},
+		})
 		return false, err
 	}
 
-	return dataExist, nil
+	logger.Add(ctx, "code_exists", exists)
+	return exists, nil
 }
 
-func (er *eventRepository) GetAllByRolesAndUserTypes(ctx context.Context, roles []string, uTypes []string, isTypeNotGeneral bool, status string) (output []models.GetAllEventsDBOutput, err error) {
-	defer func() {
-		LogRepository(ctx, err)
-	}()
+// CheckBySlug checks if a session slug exists in the database
+// Uses PostgreSQL EXISTS for optimal performance - stops at first match instead of counting all rows
+// Returns true if the slug exists, false otherwise
+func (er *eventRepository) CheckBySlug(ctx context.Context, slug string) (bool, error) {
+	logger.Add(ctx, "db_operation", "event.check_by_slug")
+	logger.Add(ctx, "lookup_slug", slug)
 
-	query := BuildQueryGetAllEvents(isTypeNotGeneral)
-	err = er.db.Raw(query, pq.Array(roles), pq.Array(uTypes), status).Scan(&output).Error
+	var exists bool
+	err := er.db(ctx).
+		Raw(QueryCheckEventBySlug, slug).
+		Scan(&exists).Error
+
 	if err != nil {
-		return nil, err
+		logger.AddError(ctx, &logger.ErrorContext{
+			Type:    "DatabaseError",
+			Code:    "EVENT_CHECK_FAILED",
+			Message: err.Error(),
+			Details: map[string]any{
+				"db_table": "events",
+			},
+		})
+		return false, err
 	}
 
-	return output, nil
-
+	logger.Add(ctx, "slug_exists", exists)
+	return exists, nil
 }
 
-func (er *eventRepository) GetOneByCode(ctx context.Context, code string) (output *models.GetEventByCodeDBOutput, err error) {
-	defer func() {
-		LogRepository(ctx, err)
-	}()
+// CheckByCodeOrSlug checks if an event exists with the given code or slug
+// Pass empty string for code or slug to skip checking that field
+// Returns true if an event with the given code or slug exists
+func (er *eventRepository) CheckByCodeOrSlug(ctx context.Context, identifier ...string) (bool, error) {
+	logger.Add(ctx, "db_operation", "event.check_by_code_or_slug")
+	logger.Add(ctx, "lookup_code", identifier)
 
-	err = er.db.Raw(queryGetEventInstancesByEventCode, code).Scan(&output).Error
-	if err != nil {
-		return nil, err
+	var exists bool
+	var err error
+	if len(identifier) == 2 {
+		code := identifier[0]
+		slug := identifier[1]
+		err = er.db(ctx).
+			Raw(QueryCheckEventByCodeOrSlug, code, slug).
+			Scan(&exists).Error
+	} else if len(identifier) == 1 {
+		code := identifier[0]
+
+		err = er.db(ctx).
+			Raw(QueryCheckEventByCodeOrSlug, code, code).
+			Scan(&exists).Error
+	} else {
+		return false, errors.New("should have 1 or 2 identifiers")
 	}
 
-	return output, nil
-}
-
-func (er *eventRepository) GetRegistered(ctx context.Context, communityIdOrigin string) (output []models.GetAllRegisteredUserDBOutput, err error) {
-	defer func() {
-		LogRepository(ctx, err)
-	}()
-
-	err = er.db.Raw(queryGetRegisteredUserByCommunityIdOrigin, communityIdOrigin).Scan(&output).Error
 	if err != nil {
-		return nil, err
+		logger.AddError(ctx, &logger.ErrorContext{
+			Type:    "DatabaseError",
+			Code:    "EVENT_CHECK_FAILED",
+			Message: err.Error(),
+			Details: map[string]any{
+				"db_table": "events",
+			},
+		})
+		return false, err
 	}
 
-	return output, nil
+	logger.Add(ctx, "code_exists", exists)
+	return exists, nil
 }
 
-func (er *eventRepository) GetTitles(ctx context.Context) (output []models.GetEventTitlesDBOutput, err error) {
-	defer func() {
-		LogRepository(ctx, err)
-	}()
+// UpdatePartial performs a partial update on an event, only updating fields that are explicitly provided
+// This is a pure data access method - it executes the update and returns success/failure
+// The usecase layer is responsible for validation and fetching updated data if needed
+func (er *eventRepository) UpdatePartial(ctx context.Context, code string, updates *models.UpdateEventRequest) error {
+	logger.Add(ctx, "db_operation", "event.update_partial")
+	logger.Add(ctx, "event_code", code)
 
-	err = er.db.Raw(queryGetEventTitles).Scan(&output).Error
-	if err != nil {
-		return nil, err
+	// Build update map from model
+	updateMap, fieldCount := updates.ToUpdateMap()
+
+	// If no fields to update, return early
+	if fieldCount == 0 {
+		logger.Add(ctx, "no_fields_to_update", true)
+		return nil
 	}
 
-	return output, nil
-}
+	logger.Add(ctx, "fields_to_update", fieldCount)
 
-func (er *eventRepository) GetSummary(ctx context.Context, code string) (output *models.GetEventSummaryDBOutput, err error) {
-	defer func() {
-		LogRepository(ctx, err)
-	}()
+	// Execute update
+	err := er.db(ctx).
+		Model(&models.Event{}).
+		Where("code = ?", code).
+		Updates(updateMap).
+		Error
 
-	err = er.db.Raw(queryGetEventSummary, code).Scan(&output).Error
 	if err != nil {
-		return nil, err
+		logger.AddError(ctx, &logger.ErrorContext{
+			Type:    "DatabaseError",
+			Code:    "EVENT_UPDATE_FAILED",
+			Message: err.Error(),
+			Details: map[string]any{
+				"db_table": "events",
+			},
+		})
+		return err
 	}
 
-	return output, nil
-}
+	logger.Add(ctx, "update_succeeded", true)
+	logger.Add(ctx, "fields_updated", fieldCount)
 
-func (er *eventRepository) Update(ctx context.Context, event *models.Event) (err error) {
-	defer func() {
-		LogRepository(ctx, err)
-	}()
-
-	return er.db.Save(&event).Error
+	return nil
 }
