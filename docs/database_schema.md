@@ -163,13 +163,6 @@ CREATE TABLE event_sessions (
     max_registrations_per_user INTEGER DEFAULT 1, -- How many people a user can register (including self)
     one_session_per_event BOOLEAN DEFAULT FALSE, -- If true, user can only register for ONE session in this event
 
-    -- Form Requirements for Additional Registrants
-    additional_registrant_form_mode VARCHAR(30) DEFAULT 'name_only',
-    -- Values: 'same_as_primary' (same form as primary registrant)
-    --         'name_only' (only name required for additional registrants)
-    --         'custom' (use additional_registrant_form_id)
-    additional_registrant_form_id BIGINT REFERENCES forms(id),
-
     -- Check-in Configuration (Detailed)
     check_in_enabled BOOLEAN DEFAULT TRUE,           -- Is check-in feature enabled?
     check_in_required BOOLEAN DEFAULT FALSE,         -- Is check-in mandatory?
@@ -269,38 +262,27 @@ The form system is **domain-agnostic** and can be used across events, volunteer 
 CREATE TYPE form_status_enum AS ENUM ('draft', 'active', 'archived', 'template');
 
 CREATE TYPE question_type_enum AS ENUM (
-    'text',
-    'textarea',
+    'short_text',
+    'long_text',
     'number',
     'email',
     'phone',
-    'select',
-    'multiselect',
-    'radio',
-    'checkbox',
+    'single_choice',
+    'multiple_choice',
     'date',
-    'datetime',
-    'file',
-    'rating',
-    'scale'
+    'time'
 );
 
 CREATE TYPE entity_type_enum AS ENUM (
     'event',
-    'event_session',
-    'user',
-    'organization',
-    'volunteer_application',
-    'registration'
+    'event_session'
+    -- Future: 'user', 'organization', 'volunteer_application', 'registration'
 );
 
 CREATE TYPE identifier_type_enum AS ENUM (
-    'community_id',
-    'registration_code',
-    'email',
-    'phone',
-    'session_code',
-    'event_code'
+    'community_id',      -- Authenticated community member
+    'eventAttendance'    -- Walk-in / attendance-only check-in
+    -- Future: 'registration_code', 'email', 'phone', 'session_code', 'event_code'
 );
 ```
 
@@ -312,7 +294,7 @@ CREATE TABLE forms (
     code UUID NOT NULL UNIQUE DEFAULT gen_random_uuid(),
     name VARCHAR(255) NOT NULL,
     description TEXT,
-    form_type VARCHAR(50), -- event_registration, survey, quiz, volunteer_application
+    form_type VARCHAR(50), -- registration, survey, quiz
     status form_status_enum NOT NULL DEFAULT 'draft',
     is_template BOOLEAN DEFAULT FALSE,
     
@@ -349,12 +331,17 @@ CREATE TABLE form_questions (
     text TEXT NOT NULL,
     type question_type_enum NOT NULL,
     
-    -- Context-aware filtering (NEW!)
-    mandatory_for TEXT[] DEFAULT ARRAY[]::TEXT[], -- ['primary', 'additional', 'kids_session']
-    apply_for TEXT[] DEFAULT ARRAY['all']::TEXT[], -- ['all', 'primary', 'additional']
+    -- Context-aware filtering
+    -- mandatory_for: contexts in which answering this question is required.
+    --   Valid values: 'parent' (primary registrant), 'child' (additional registrant)
+    mandatory_for TEXT[] DEFAULT ARRAY[]::TEXT[],
+    -- apply_for: contexts in which this question is shown.
+    --   Valid values: 'parent', 'child'
+    apply_for TEXT[] DEFAULT ARRAY[]::TEXT[],
     
-    -- Options for select/multiselect/radio/checkbox
-    options JSONB, -- [{"value": "opt1", "label": "Option 1"}]
+    -- Options for single_choice / multiple_choice questions
+    -- Structure: {"choices": ["Option A", "Option B", ...]}
+    options JSONB,
     
     -- Validation rules
     rules JSONB, -- {"min_length": 5, "max_length": 100, "pattern": "^[A-Z]"}
@@ -625,24 +612,20 @@ VALUES (
     'admin123'
 ) RETURNING code; -- Returns form_code
 
--- Add questions with context filtering
+-- Context values: 'parent' = primary registrant, 'child' = additional registrant
 INSERT INTO form_questions (code, form_code, text, type, mandatory_for, apply_for, display_order)
 VALUES
-  -- Name: mandatory for everyone
-  (gen_random_uuid(), form_code, 'Full Name', 'text', 
-   ARRAY['primary', 'additional'], ARRAY['all'], 1),
+  -- Name: required for parent only
+  (gen_random_uuid(), form_code, 'Full Name', 'short_text',
+   ARRAY['parent'], ARRAY['parent'], 1),
   
-  -- Email: mandatory for primary, optional for additional
+  -- Email: required for parent, visible for both
   (gen_random_uuid(), form_code, 'Email Address', 'email',
-   ARRAY['primary'], ARRAY['primary', 'additional'], 2),
+   ARRAY['parent'], ARRAY['parent', 'child'], 2),
   
-  -- Dietary: optional for all
-  (gen_random_uuid(), form_code, 'Dietary Restrictions', 'multiselect',
-   ARRAY[]::TEXT[], ARRAY['all'], 3),
-  
-  -- Parent name: only for kids sessions
-  (gen_random_uuid(), form_code, 'Parent/Guardian Name', 'text',
-   ARRAY['kids_session'], ARRAY['kids_session'], 4);
+  -- Dietary: optional for parent
+  (gen_random_uuid(), form_code, 'Dietary Restrictions', 'multiple_choice',
+   ARRAY[]::TEXT[], ARRAY['parent'], 3);
 
 -- Associate with event
 INSERT INTO form_associations (form_code, entity_type, entity_code)

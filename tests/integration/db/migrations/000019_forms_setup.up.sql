@@ -1,206 +1,214 @@
-SET
-    TIME ZONE 'Asia/Jakarta';
+SET TIME ZONE 'Asia/Jakarta';
 
 -- ============================================================================
 -- TABLE: forms
 -- Description: Universal form definitions (domain-agnostic)
--- Supports: Event registrations, volunteer applications, surveys, feedback
+-- Supports: Event registrations, surveys, quizzes
+-- Aligns with: models.Form
 -- ============================================================================
 CREATE TABLE forms (
     id BIGSERIAL PRIMARY KEY,
-    code VARCHAR(30) UNIQUE NOT NULL,
-    title VARCHAR(255) NOT NULL,
+    code UUID NOT NULL UNIQUE DEFAULT gen_random_uuid(),
+    name VARCHAR(255) NOT NULL,
     description TEXT,
-    form_type VARCHAR(30),
+    form_type VARCHAR(50),           -- 'registration', 'survey', 'quiz'
     is_template BOOLEAN DEFAULT FALSE,
-    status VARCHAR(20) NOT NULL DEFAULT 'active',
-    created_by_community_id VARCHAR(50) NOT NULL,
-    created_at TIMESTAMPTZ DEFAULT NOW (),
-    updated_at TIMESTAMPTZ DEFAULT NOW (),
-    deleted_at TIMESTAMPTZ
+    status VARCHAR(50) NOT NULL DEFAULT 'active',
+    creator_community_id VARCHAR(50) NOT NULL,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    deleted_at TIMESTAMPTZ,
+
+    CONSTRAINT forms_name_not_empty CHECK (LENGTH(TRIM(name)) > 0),
+    CONSTRAINT chk_forms_type CHECK (
+        form_type IS NULL
+        OR form_type IN ('registration', 'survey', 'quiz')
+    ),
+    CONSTRAINT chk_forms_status CHECK (
+        status IN ('active', 'archived', 'draft')
+    )
 );
 
 -- ============================================================================
--- TABLE: form_fields
--- Description: Individual questions/fields within a form
+-- TABLE: form_questions
+-- Description: Individual questions within a form
+-- Aligns with: models.FormQuestion
 -- ============================================================================
-CREATE TABLE form_fields (
+CREATE TABLE form_questions (
     id BIGSERIAL PRIMARY KEY,
-    form_id BIGINT NOT NULL REFERENCES forms (id) ON DELETE CASCADE,
-    field_key VARCHAR(50) NOT NULL,
-    field_type VARCHAR(30) NOT NULL,
-    label VARCHAR(255) NOT NULL,
-    placeholder TEXT,
-    help_text TEXT,
-    options JSONB,
-    validation_rules JSONB,
-    display_order INTEGER NOT NULL,
-    is_required BOOLEAN DEFAULT FALSE,
-    created_at TIMESTAMPTZ DEFAULT NOW (),
-    updated_at TIMESTAMPTZ DEFAULT NOW (),
-    UNIQUE (form_id, field_key)
-);
+    code UUID NOT NULL UNIQUE DEFAULT gen_random_uuid(),
+    form_code UUID NOT NULL REFERENCES forms (code) ON DELETE CASCADE,
 
--- ============================================================================
--- TABLE: form_submissions
--- Description: Tracks form submissions (polymorphic)
--- ============================================================================
-CREATE TABLE form_submissions (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid (),
-    form_id BIGINT NOT NULL REFERENCES forms (id),
-    submission_type VARCHAR(30) NOT NULL,
-    reference_id UUID,
-    submitted_by_community_id VARCHAR(50),
-    submitted_at TIMESTAMPTZ DEFAULT NOW (),
-    ip_address INET,
-    user_agent TEXT,
-    created_at TIMESTAMPTZ DEFAULT NOW (),
-    updated_at TIMESTAMPTZ DEFAULT NOW ()
+    -- Question content
+    text TEXT NOT NULL,
+    type VARCHAR(50) NOT NULL,       -- question_type: short_text, long_text, number, email, phone, single_choice, multiple_choice, date, time
+
+    -- Context-aware filtering
+    -- mandatory_for: contexts where this question is required. Values: 'parent', 'child'
+    mandatory_for TEXT[] DEFAULT ARRAY[]::TEXT[],
+    -- apply_for: contexts where this question is shown. Values: 'parent', 'child'
+    apply_for TEXT[] DEFAULT ARRAY[]::TEXT[],
+
+    -- Options for single_choice / multiple_choice
+    -- Structure: {"choices": ["Option A", "Option B", ...]}
+    options JSONB,
+
+    -- Validation rules
+    -- Structure: {"minLength": 5, "maxLength": 100, "pattern": "^[A-Z]", "minValue": 0, ...}
+    rules JSONB,
+
+    -- For quiz/assessment questions
+    correct_answer TEXT,
+
+    display_order INTEGER NOT NULL,
+
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    deleted_at TIMESTAMPTZ,
+
+    CONSTRAINT form_questions_text_not_empty CHECK (LENGTH(TRIM(text)) > 0),
+    CONSTRAINT form_questions_display_order_non_negative CHECK (display_order >= 0),
+    CONSTRAINT chk_form_questions_type CHECK (
+        type IN (
+            'short_text', 'long_text', 'number',
+            'email', 'phone',
+            'single_choice', 'multiple_choice',
+            'date', 'time'
+        )
+    )
 );
 
 -- ============================================================================
 -- TABLE: form_answers
--- Description: Individual answers to form fields (optimized for querying)
+-- Description: Individual answers submitted to form questions
+-- Aligns with: models.FormAnswer
 -- ============================================================================
 CREATE TABLE form_answers (
     id BIGSERIAL PRIMARY KEY,
-    submission_id UUID NOT NULL REFERENCES form_submissions (id) ON DELETE CASCADE,
-    field_id BIGINT NOT NULL REFERENCES form_fields (id),
-    answer_value TEXT,
-    answer_values TEXT[],
-    answer_number DECIMAL(15, 2),
-    answer_date DATE,
-    answer_boolean BOOLEAN,
-    created_at TIMESTAMPTZ DEFAULT NOW (),
-    updated_at TIMESTAMPTZ DEFAULT NOW (),
-    UNIQUE (submission_id, field_id)
+    code UUID NOT NULL UNIQUE DEFAULT gen_random_uuid(),
+    form_code UUID REFERENCES forms (code) ON DELETE SET NULL,
+    question_code UUID NOT NULL REFERENCES form_questions (code) ON DELETE CASCADE,
+
+    -- Flexible identifier (supports authenticated users and walk-ins)
+    identifier_type VARCHAR(50) NOT NULL,   -- 'community_id', 'eventAttendance'
+    identifier_code VARCHAR(255) NOT NULL,
+
+    answer TEXT NOT NULL,
+    is_correct BOOLEAN,
+    status VARCHAR(50) NOT NULL DEFAULT 'active',
+
+    submitted_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    deleted_at TIMESTAMPTZ,
+
+    CONSTRAINT form_answers_answer_not_empty CHECK (LENGTH(TRIM(answer)) > 0),
+    CONSTRAINT chk_form_answers_identifier_type CHECK (
+        identifier_type IN ('community_id', 'eventAttendance')
+    ),
+    -- One answer per question per identifier
+    CONSTRAINT unique_answer_per_question_per_identifier
+        UNIQUE (question_code, identifier_type, identifier_code, deleted_at)
+);
+
+-- ============================================================================
+-- TABLE: form_associations
+-- Description: Polymorphic many-to-many link between forms and entities
+-- Aligns with: models.FormAssociation
+-- ============================================================================
+CREATE TABLE form_associations (
+    id BIGSERIAL PRIMARY KEY,
+    code UUID NOT NULL UNIQUE DEFAULT gen_random_uuid(),
+    form_code UUID NOT NULL REFERENCES forms (code) ON DELETE CASCADE,
+    entity_type VARCHAR(50) NOT NULL,   -- 'event', 'event_session'
+    entity_code VARCHAR(50) NOT NULL,
+
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    deleted_at TIMESTAMPTZ,
+
+    CONSTRAINT form_associations_entity_code_not_empty
+        CHECK (LENGTH(TRIM(entity_code)) > 0),
+    CONSTRAINT chk_form_associations_entity_type CHECK (
+        entity_type IN ('event', 'event_session')
+    ),
+    -- Prevent duplicate associations
+    CONSTRAINT unique_form_entity_association
+        UNIQUE (form_code, entity_type, entity_code, deleted_at)
 );
 
 -- ============================================================================
 -- INDEXES: Performance Optimization
 -- ============================================================================
--- Forms indexes
-CREATE INDEX idx_forms_type ON forms (form_type)
-WHERE
-    deleted_at IS NULL;
+-- forms
+CREATE INDEX idx_forms_status ON forms (status) WHERE deleted_at IS NULL;
+CREATE INDEX idx_forms_type ON forms (form_type) WHERE deleted_at IS NULL;
+CREATE INDEX idx_forms_template ON forms (is_template) WHERE is_template = TRUE AND deleted_at IS NULL;
+CREATE INDEX idx_forms_creator ON forms (creator_community_id) WHERE deleted_at IS NULL;
 
-CREATE INDEX idx_forms_creator ON forms (created_by_community_id)
-WHERE
-    deleted_at IS NULL;
+-- form_questions
+CREATE INDEX idx_form_questions_form ON form_questions (form_code) WHERE deleted_at IS NULL;
+CREATE INDEX idx_form_questions_type ON form_questions (type) WHERE deleted_at IS NULL;
+CREATE INDEX idx_form_questions_display_order ON form_questions (form_code, display_order) WHERE deleted_at IS NULL;
+CREATE INDEX idx_form_questions_mandatory_for ON form_questions USING GIN (mandatory_for) WHERE deleted_at IS NULL;
+CREATE INDEX idx_form_questions_apply_for ON form_questions USING GIN (apply_for) WHERE deleted_at IS NULL;
 
-CREATE INDEX idx_forms_status ON forms (status)
-WHERE
-    deleted_at IS NULL;
+-- form_answers
+CREATE INDEX idx_form_answers_question ON form_answers (question_code) WHERE deleted_at IS NULL;
+CREATE INDEX idx_form_answers_form ON form_answers (form_code) WHERE deleted_at IS NULL;
+CREATE INDEX idx_form_answers_identifier ON form_answers (identifier_type, identifier_code) WHERE deleted_at IS NULL;
+CREATE INDEX idx_form_answers_submitted_at ON form_answers (submitted_at DESC) WHERE deleted_at IS NULL;
 
-CREATE INDEX idx_forms_template ON forms (is_template)
-WHERE
-    is_template = TRUE
-    AND deleted_at IS NULL;
-
--- Form fields indexes
-CREATE INDEX idx_form_fields_form ON form_fields (form_id, display_order);
-
-CREATE INDEX idx_form_fields_type ON form_fields (field_type);
-
--- Form submissions indexes
-CREATE INDEX idx_form_submissions_form ON form_submissions (form_id);
-
-CREATE INDEX idx_form_submissions_type_ref ON form_submissions (submission_type, reference_id);
-
-CREATE INDEX idx_form_submissions_submitted_by ON form_submissions (submitted_by_community_id);
-
--- Form answers indexes (CRITICAL for querying)
-CREATE INDEX idx_form_answers_field_value ON form_answers (field_id, answer_value);
-
-CREATE INDEX idx_form_answers_field_values ON form_answers USING GIN (answer_values);
-
-CREATE INDEX idx_form_answers_field_number ON form_answers (field_id, answer_number)
-WHERE
-    answer_number IS NOT NULL;
-
-CREATE INDEX idx_form_answers_field_date ON form_answers (field_id, answer_date)
-WHERE
-    answer_date IS NOT NULL;
-
-CREATE INDEX idx_form_answers_submission ON form_answers (submission_id);
+-- form_associations
+CREATE INDEX idx_form_associations_form ON form_associations (form_code) WHERE deleted_at IS NULL;
+CREATE INDEX idx_form_associations_entity ON form_associations (entity_type, entity_code) WHERE deleted_at IS NULL;
 
 -- ============================================================================
--- CONSTRAINTS: Data Integrity
+-- AUTO-UPDATE TRIGGERS: Keep updated_at current
 -- ============================================================================
--- Forms constraints
-ALTER TABLE forms ADD CONSTRAINT chk_forms_type CHECK (
-    form_type IS NULL
-    OR form_type IN (
-        'event_registration',
-        'volunteer_application',
-        'survey',
-        'membership',
-        'feedback'
-    )
-);
+CREATE OR REPLACE FUNCTION update_updated_at_column()
+RETURNS TRIGGER AS $$
+BEGIN
+    NEW.updated_at = NOW();
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
 
-ALTER TABLE forms ADD CONSTRAINT chk_forms_status CHECK (status IN ('active', 'archived', 'draft'));
+CREATE TRIGGER trg_forms_updated_at
+    BEFORE UPDATE ON forms
+    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
--- Form fields constraints
-ALTER TABLE form_fields ADD CONSTRAINT chk_form_fields_type CHECK (
-    field_type IN (
-        'text',
-        'textarea',
-        'select',
-        'multiselect',
-        'radio',
-        'checkbox',
-        'date',
-        'number',
-        'email',
-        'phone'
-    )
-);
+CREATE TRIGGER trg_form_questions_updated_at
+    BEFORE UPDATE ON form_questions
+    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
-ALTER TABLE form_fields ADD CONSTRAINT chk_form_fields_display_order CHECK (display_order > 0);
+CREATE TRIGGER trg_form_answers_updated_at
+    BEFORE UPDATE ON form_answers
+    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
--- Form submissions constraints
-ALTER TABLE form_submissions ADD CONSTRAINT chk_form_submissions_type CHECK (
-    submission_type IN (
-        'event_registration',
-        'volunteer_application',
-        'survey_response'
-    )
-);
+CREATE TRIGGER trg_form_associations_updated_at
+    BEFORE UPDATE ON form_associations
+    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
 -- ============================================================================
 -- COMMENTS: Documentation
 -- ============================================================================
-COMMENT ON TABLE forms IS 'Universal form definitions. Domain-agnostic and reusable across events, volunteer applications, surveys, and any future use case requiring custom data collection.';
+COMMENT ON TABLE forms IS 'Universal form definitions. Reusable across events, surveys, and quizzes.';
+COMMENT ON COLUMN forms.form_type IS 'Classifies form purpose: registration, survey, quiz';
+COMMENT ON COLUMN forms.is_template IS 'If true, this form serves as a reusable template';
 
-COMMENT ON COLUMN forms.form_type IS 'Categorizes forms by domain: event_registration, volunteer_application, survey, membership, feedback';
+COMMENT ON TABLE form_questions IS 'Questions within a form. Context-aware via mandatory_for and apply_for arrays.';
+COMMENT ON COLUMN form_questions.type IS 'Question input type: short_text, long_text, number, email, phone, single_choice, multiple_choice, date, time';
+COMMENT ON COLUMN form_questions.mandatory_for IS 'Registrant contexts that must answer this question. Values: parent, child';
+COMMENT ON COLUMN form_questions.apply_for IS 'Registrant contexts that see this question. Values: parent, child';
+COMMENT ON COLUMN form_questions.options IS 'Choices for single_choice/multiple_choice. Structure: {"choices": ["A", "B"]}';
+COMMENT ON COLUMN form_questions.rules IS 'Validation rules. Supports: minLength, maxLength, minValue, maxValue, notBefore, notAfter, minSelection, maxSelection, pattern';
 
-COMMENT ON COLUMN forms.is_template IS 'Whether this form is a template for creating similar forms';
+COMMENT ON TABLE form_answers IS 'Individual answers to form questions. Supports both authenticated users (community_id) and walk-ins (eventAttendance).';
+COMMENT ON COLUMN form_answers.identifier_type IS 'How the submitter is identified: community_id or eventAttendance';
+COMMENT ON COLUMN form_answers.identifier_code IS 'The actual identifier value (community_id value or attendance reference)';
+COMMENT ON COLUMN form_answers.is_correct IS 'Populated for quiz/assessment questions with a correct_answer defined';
 
-COMMENT ON TABLE form_fields IS 'Individual questions/fields within a form. Each field has a stable field_key for querying.';
-
-COMMENT ON COLUMN form_fields.field_key IS 'Stable identifier for querying (e.g., dietary_preference). Does not change if label changes.';
-
-COMMENT ON COLUMN form_fields.field_type IS 'Input type: text, textarea, select, multiselect, radio, checkbox, date, number, email, phone';
-
-COMMENT ON COLUMN form_fields.options IS 'JSONB array of options for select/multiselect/radio/checkbox fields. Example: [{"value":"vegetarian","label":"Vegetarian"}]';
-
-COMMENT ON COLUMN form_fields.validation_rules IS 'JSONB validation configuration. Example: {"required":true,"min_length":5,"max_length":100,"pattern":"regex"}';
-
-COMMENT ON TABLE form_submissions IS 'Tracks form submissions. Uses polymorphic pattern (submission_type + reference_id) to link to any domain.';
-
-COMMENT ON COLUMN form_submissions.submission_type IS 'What this submission is for: event_registration, volunteer_application, survey_response';
-
-COMMENT ON COLUMN form_submissions.reference_id IS 'UUID reference to the related record (registration_id, application_id, etc.)';
-
-COMMENT ON TABLE form_answers IS 'Individual answers to form fields. Optimized for querying with multiple answer columns for different data types.';
-
-COMMENT ON COLUMN form_answers.answer_value IS 'Text answer for text, textarea, select, radio fields';
-
-COMMENT ON COLUMN form_answers.answer_values IS 'Array answer for multiselect, checkbox fields';
-
-COMMENT ON COLUMN form_answers.answer_number IS 'Numeric answer for number fields';
-
-COMMENT ON COLUMN form_answers.answer_date IS 'Date answer for date fields';
-
-COMMENT ON COLUMN form_answers.answer_boolean IS 'Boolean answer for single checkbox fields';
+COMMENT ON TABLE form_associations IS 'Polymorphic many-to-many link between forms and entities (event, event_session).';
+COMMENT ON COLUMN form_associations.entity_type IS 'Type of linked entity: event, event_session';
+COMMENT ON COLUMN form_associations.entity_code IS 'Code of the linked entity (event code or session code)';

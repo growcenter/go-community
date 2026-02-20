@@ -22,8 +22,8 @@ type FormQuestion struct {
 	Category      string         `gorm:"type:varchar(50);not null"`
 	RequiredFor   pq.StringArray `gorm:"type:text[];default:ARRAY[]::TEXT[]"`
 	VisibleFor    pq.StringArray `gorm:"type:text[];default:ARRAY[]::TEXT[]"`
-	Options       JSONB          `gorm:"type:jsonb"`
-	Rules         JSONB          `gorm:"type:jsonb"`
+	Options       JSONB          `gorm:"type:jsonb" swaggertype:"object"`
+	Rules         JSONB          `gorm:"type:jsonb" swaggertype:"object"`
 	CorrectAnswer string         `gorm:"type:text"`
 	DisplayOrder  int            `gorm:"type:integer;not null"`
 	CreatedAt     time.Time      `gorm:"type:timestamptz;default:now()"`

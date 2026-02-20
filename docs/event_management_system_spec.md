@@ -166,15 +166,8 @@ Sessions can be configured with different registration rules to handle various s
 | --------------------------------- | ------- | ------------------------------------------------------------- |
 | `max_registrations_per_user`      | INTEGER | Max people one user can register (including self). Default: 1 |
 | `one_session_per_event`           | BOOLEAN | If true, user can only register for ONE session in this event |
-| `additional_registrant_form_mode` | ENUM    | Form requirements for additional registrants                  |
 
-#### Form Modes for Additional Registrants
-
-| Mode              | Primary Registrant               | Additional Registrants                         |
-| ----------------- | -------------------------------- | ---------------------------------------------- |
-| `same_as_primary` | Name + email/phone + custom form | Name + email/phone + same custom form          |
-| `name_only`       | Name + email/phone + custom form | **Name only** (simplest - no contact required) |
-| `custom`          | Name + email/phone + custom form | Uses `additional_registrant_form_id`           |
+**Note:** Per-registrant form field control is handled by `identifierConfig` (see §3.5), not by a separate form mode field. The `mandatory_for` / `apply_for` arrays on each form question handle which registrant contexts see or must answer a question.
 
 #### Example Configurations
 
@@ -186,41 +179,38 @@ Sessions can be configured with different registration rules to handle various s
   "one_session_per_event": true
 }
 
-// Christmas service: family registration allowed, friends just need name
+// Christmas service: family registration allowed
 {
   "registration_mode": "self_and_others",
-  "max_registrations_per_user": 5,
-  "additional_registrant_form_mode": "name_only"
+  "max_registrations_per_user": 5
 }
 
-// Conference: registered users only, separate form for guests
+// Conference: registered users only
 {
   "registration_mode": "self_and_registered",
-  "max_registrations_per_user": 3,
-  "additional_registrant_form_mode": "custom",
-  "additional_registrant_form_id": 123
+  "max_registrations_per_user": 3
 }
 ```
 
 ### 3.5 Identifier Configuration
 
-Each session can configure which identifier fields are **visible** and **required** for both primary and additional registrants.
+Each session can configure which identifier fields are **visible** and **required** for both primary and additional registrants. This is the replacement for the old `additional_registrant_form_mode` field and is stored as the `identifier_config` JSONB column on `event_sessions`.
 
 #### Available Identifier Fields
 
-| Field      | Description             | Example            |
-| ---------- | ----------------------- | ------------------ |
-| `name`     | Full name of registrant | "John Doe"         |
-| `email`    | Email address           | "john@example.com" |
-| `phone`    | Phone number            | "+62812345678"     |
-| `legal_id` | Legal ID (KTP/Passport) | "3171234567890001" |
+| Field         | Go field      | Description                  | Example            |
+| ------------- | ------------- | ---------------------------- | ------------------ |
+| `name`        | `name`        | Full name of registrant      | "John Doe"         |
+| `email`       | `email`       | Email address                | "john@example.com" |
+| `phone`       | `phone`       | Phone number                 | "+62812345678"     |
+| `communityId` | `communityId` | Internal community member ID | "GKI-001"          |
 
 #### Configuration Structure
 
-Each field has two properties:
+Maps to `SessionIdentifierConfig` in the Go model. Each field has two boolean properties:
 
 - **`visible`**: Whether the field is shown on the form
-- **`required`**: Whether the field must be filled (only applies if visible)
+- **`required`**: Whether the field must be filled (only applies if `visible: true`)
 
 ```json
 {
@@ -229,13 +219,13 @@ Each field has two properties:
       "name": { "visible": true, "required": true },
       "email": { "visible": true, "required": true },
       "phone": { "visible": true, "required": false },
-      "legal_id": { "visible": false, "required": false }
+      "communityId": { "visible": false, "required": false }
     },
     "additional": {
       "name": { "visible": true, "required": true },
       "email": { "visible": false, "required": false },
       "phone": { "visible": false, "required": false },
-      "legal_id": { "visible": false, "required": false }
+      "communityId": { "visible": false, "required": false }
     }
   }
 }
@@ -243,12 +233,12 @@ Each field has two properties:
 
 #### Common Patterns
 
-| Scenario                     | Primary Config                       | Additional Config  |
-| ---------------------------- | ------------------------------------ | ------------------ |
-| **Family registration**      | name ✓, email ✓, phone optional      | name ✓ only        |
-| **Conference (all contact)** | name ✓, email ✓, phone ✓             | name ✓, email ✓    |
-| **High-security event**      | name ✓, email ✓, phone ✓, legal_id ✓ | name ✓, legal_id ✓ |
-| **Simple attendance**        | name ✓                               | name ✓             |
+| Scenario                     | Primary Config                                | Additional Config        |
+| ---------------------------- | --------------------------------------------- | ------------------------ |
+| **Family registration**      | name ✓, email ✓, phone optional               | name ✓ only              |
+| **Conference (all contact)** | name ✓, email ✓, phone ✓                      | name ✓, email ✓          |
+| **Member-only event**        | name ✓, email ✓, communityId ✓ (required)     | name ✓, communityId ✓    |
+| **Simple attendance**        | name ✓                                        | name ✓                   |
 
 ### 3.6 Geolocation Validation
 
@@ -337,538 +327,308 @@ Events and sessions can enforce geolocation validation to ensure attendees are p
 
 ### 4.1 Event Creation Flow
 
-This diagram shows the complete flow of creating an event with all its components.
+This diagram shows the complete flow of creating an event. Sessions and questions are created **atomically inside the same database transaction** — one commit or one rollback.
 
 ```mermaid
 sequenceDiagram
     participant Client
-    participant API as Event API
-    participant UC as Event UseCase
-    participant Validator
-    participant Repo as Event Repository
+    participant API as Event API (v2)
+    participant UC as EventUsecase.Create
     participant DB as Database
 
-    Client->>API: POST /api/v1/events
-    Note over Client,API: CreateEventRequest with:<br/>- Basic Info<br/>- Location<br/>- Schedule<br/>- Recurrence Pattern<br/>- Registration Config<br/>- Forms
+    Client->>API: POST /v2/internal/events
+    Note over Client,API: CreateEventRequest:<br/>- title, category, status<br/>- images (imageLinks, bannerLink)<br/>- organizer (communityIds, contactIds)<br/>- access (level, allowedUserTypes/Roles/Campuses)<br/>- location (type, address, virtualLink, CTA)<br/>- schedule (startAt, endAt, timezone)<br/>- recurrence (isRecurring, recurrencePattern)<br/>- template (isTemplate, templateId, seriesId)<br/>- notification (channels, reminderConfig)<br/>- sessions[] (optional, created atomically)<br/>- questions[] (optional, form created atomically)
 
-    API->>Validator: Validate Request
-    Validator->>Validator: Check required fields
-    Validator->>Validator: Validate recurrence pattern
-    Validator->>Validator: Validate location based on type
-    Validator-->>API: Validation Result
-
+    API->>API: Struct-tag validation (go-playground/validator)
     alt Validation Failed
-        API-->>Client: 400 Bad Request
+        API-->>Client: 422 Unprocessable Entity
     end
 
     API->>UC: Create(ctx, request)
 
-    UC->>UC: Generate Event Code
-    UC->>UC: Set Default Timezone
-    UC->>UC: Process Recurrence Pattern
-
-    Note over UC: If recurrence pattern exists,<br/>validate and prepare for storage
-
-    UC->>Repo: CreateEvent(event)
-    Repo->>DB: BEGIN TRANSACTION
-
-    Repo->>DB: INSERT INTO events
-    DB-->>Repo: Event ID
-
-    alt Has Recurrence Pattern
-        Repo->>DB: Store recurrence_pattern JSONB
-        Note over Repo,DB: Stores: frequency, interval,<br/>count, endDate, weekDays,<br/>monthlyPattern, excludeDates,<br/>additionalDates<br/><br/>Occurrences calculated on-demand<br/>when querying events
+    UC->>UC: Step 1 – Extract creatorCommunityID from JWT context
+    alt Context missing community_id
+        UC-->>API: 401 Unauthorized
     end
 
-    alt Has Registration Form
-        Repo->>DB: Link registration_form_id
+    UC->>UC: Step 2 – normalizeEventRequest()<br/>• Default status = "draft"<br/>• Default timezone = "Asia/Jakarta"<br/>• Default locationVisibility = "all"<br/>• Default CTA.Link = "NORMAL_FLOW"<br/>• Default CTA.Text = "Register Here!"<br/>• Draft event forces all sessions to "draft"
+
+    UC->>UC: Step 3 – generateUniqueEventCode() with retries<br/>• IdentifierCode(config.EncodeCode, time.Now())<br/>• CheckByCode(code) – retry on collision<br/>• Exponential backoff, max = EventCodeMaxRetries
+    alt All retries exhausted
+        UC-->>API: 500 Internal Server Error
     end
 
-    Repo->>DB: COMMIT TRANSACTION
-    Repo-->>UC: Created Event
+    UC->>UC: Step 4 – generateEventSlug()<br/>• Use provided slug if len ≥ MinSlug<br/>• Otherwise Slug(eventCode, time.Now())<br/>• CheckBySlug → reject if duplicate
+    alt Slug duplicate
+        UC-->>API: 409 Conflict
+    end
 
-    UC-->>API: Event Response
-    API-->>Client: 201 Created (Event Response)
+    UC->>UC: Step 5 – validateAccessControl()<br/>• PUBLIC → clear all restrictions<br/>• Campus check: config map lookup<br/>• Roles, UserTypes: DB CheckMultiple (cached)<br/>• CommunityIDs: DB CheckMultiple
+    alt Invalid access config
+        UC-->>API: 404 / 422 error
+    end
+
+    UC->>UC: Step 6 – validateOrganizers()<br/>• contactCommunityIds → DB CheckMultiple (cached)<br/>• organizerCommunityIds → DB CheckMultiple (cached)
+
+    UC->>UC: Step 7 – request.Location.Validate(&category)<br/>• Required fields checked per locationType<br/>• CTA consistency validated
+
+    UC->>UC: Step 7b – CTA normalization<br/>• text only → link = "NORMAL_FLOW"<br/>• link only → text = "Register Here!"<br/>• neither → both defaults
+
+    UC->>UC: Step 8 – validateSchedule()<br/>• startAt required<br/>• endAt > startAt<br/>• startAt not > 1 day in the past
+
+    UC->>UC: Step 9 – validateRecurrencePattern() if isRecurring<br/>• recurrencePattern must be present<br/>• Validates frequency, weekDays, count/endDate, etc.
+
+    UC->>UC: Step 10 – validateNotification()<br/>• reminderConfig requires notificationChannels to be set
+
+    UC->>UC: Step 11 – Build Event model<br/>• Marshal RecurrencePattern → JSONB<br/>• Marshal ReminderConfig → JSONB<br/>• "announcement" + sessions != nil → reject
+
+    UC->>DB: BEGIN TRANSACTION (Atomic)
+    UC->>DB: INSERT INTO events
+    DB-->>UC: event.ID assigned
+
+    alt request.Sessions != nil
+        loop For each session in request.Sessions
+            UC->>UC: EventSession.Create(ctx, sessions, nil, event)<br/>(ctx carries transaction — no separate Atomic)
+            Note over UC: Full 13-step session pipeline (§4.2)
+            UC->>DB: INSERT INTO event_sessions
+            opt session.Questions != nil
+                UC->>DB: INSERT INTO forms + associations + form_questions
+            end
+        end
+        alt Any session/form step fails
+            UC->>DB: ROLLBACK
+            UC-->>API: Error
+        end
+    end
+
+    alt request.Questions != nil
+        UC->>UC: Build CreateFormRequest:<br/>name=event.Title, entity={type:"event", code:event.Code}
+        UC->>UC: Form.Create(ctx, &formRequest)
+        UC->>DB: INSERT INTO forms
+        UC->>DB: INSERT INTO form_associations
+        UC->>DB: INSERT INTO form_questions (bulk)
+        alt Form step fails
+            UC->>DB: ROLLBACK
+            UC-->>API: Error
+        end
+    end
+
+    UC->>DB: COMMIT TRANSACTION
+    UC-->>API: *models.Event
+    API-->>Client: 201 Created
 ```
 
 ### 4.2 Event Session Creation Flow
 
-This diagram shows how sessions are created within an event.
+Sessions can be created standalone via the API or inline with the event (§4.1). Both paths run the identical `EventSessionUsecase.Create` validation pipeline.
 
 ```mermaid
 sequenceDiagram
     participant Client
-    participant API as Session API
-    participant UC as Session UseCase
-    participant Validator
-    participant Repo as Session Repository
+    participant API as Session API (v2)
+    participant UC as EventSessionUsecase.Create
     participant DB as Database
 
-    Client->>API: POST /api/v1/events/:code/sessions
-    Note over Client,API: CreateSessionRequest with:<br/>- Session Info<br/>- Location<br/>- Schedule<br/>- Capacity<br/>- Check-in/Check-out Config<br/>- Registration Rules<br/>- Forms
+    Client->>API: POST /v2/internal/events/{eventCode}/sessions
+    Note over Client,API: []CreateEventSessionRequest:<br/>- title, sessionType, description<br/>- parentSessionCode (optional hierachy)<br/>- location (type, physicalAddress, virtualLink, CTA)<br/>- geolocation (enabled, lat, lng, radiusMeters)<br/>- schedule (startAt, endAt, timezone)<br/>- times.registration (startAt, endAt)<br/>- times.checkIn (enabled, required, startAt, endAt,<br/>    allowLate, lateThreshold)<br/>- times.checkOut (enabled, required, startAt, endAt,<br/>    allowLate, lateThreshold)<br/>- sessionCapacity (capacity, waitlistEnabled, waitlistCapacity)<br/>- sessionRules (registrationMode, registrationMethods,<br/>    maxPerUser, onePerEvent, minAge, maxAge, prerequisites)<br/>- status<br/>- questions[] (optional)
 
-    API->>Validator: Validate Request
-    Validator->>Validator: Check session type
-    Validator->>Validator: Validate capacity
-    Validator->>Validator: Validate check-in config
-    Validator->>Validator: Validate registration mode
+    API->>UC: Create(ctx, [request], &eventCode, nil)
 
-    alt Check-in Validation
-        Note over Validator: If check_in_required = true,<br/>must have time windows
-        Note over Validator: If check_out_required = true,<br/>check_in must be enabled
-    end
-
-    Validator-->>API: Validation Result
-
-    alt Validation Failed
-        API-->>Client: 400 Bad Request
-    end
-
-    API->>UC: CreateSession(ctx, request)
-
-    UC->>UC: Generate Session Code
-    UC->>UC: Validate Parent Event Exists
-
-    alt Parent Event Not Found
+    UC->>UC: resolveAndValidateEvent()<br/>• event=nil → GetByCode(eventCode) from DB<br/>• event passed → verify codes match
+    alt Event not found
         UC-->>API: 404 Not Found
-        API-->>Client: 404 Not Found
     end
 
-    UC->>UC: Process Check-in/Check-out Config
-    Note over UC: Set defaults:<br/>- check_in_enabled: true<br/>- check_in_window_before: 30<br/>- check_in_window_after: 15<br/>- check_in_late_threshold: 10
-
-    UC->>UC: Process Form Configuration
-    Note over UC: Handle:<br/>- registration_form_id<br/>- additional_registrant_form_mode<br/>- form_field_overrides
-
-    UC->>Repo: CreateSession(session)
-    Repo->>DB: BEGIN TRANSACTION
-
-    Repo->>DB: INSERT INTO event_sessions
-    Note over Repo,DB: Stores all fields including:<br/>- Check-in config (12 fields)<br/>- Check-out config (6 fields)<br/>- Registration rules<br/>- Form references
-
-    alt Has Geolocation Config
-        Repo->>DB: Store geolocation_config JSONB
-    end
-
-    alt Has Identifier Config
-        Repo->>DB: Store identifier_config JSONB
-    end
-
-    alt Has Form Field Overrides
-        Repo->>DB: Store form_field_overrides JSONB
-    end
-
-    Repo->>DB: COMMIT TRANSACTION
-    Repo-->>UC: Created Session
-
-    UC-->>API: Session Response
-    API-->>Client: 201 Created (Session Response)
-```
-
-### 4.3 Recurring Event with Sessions Flow
-
-This diagram shows the complete flow when creating a recurring event with multiple sessions.
-
-```mermaid
-sequenceDiagram
-    participant Client
-    participant EventAPI as Event API
-    participant EventUC as Event UseCase
-    participant SessionAPI as Session API
-    participant SessionUC as Session UseCase
-    participant DB as Database
-
-    Client->>EventAPI: POST /api/v1/events
-    Note over Client,EventAPI: Recurring event request<br/>with recurrence pattern
-
-    EventAPI->>EventUC: Create(ctx, request)
-    EventUC->>DB: INSERT INTO events
-    DB-->>EventUC: Event Created
-
-    Note over EventUC,DB: Recurrence pattern stored as JSONB.<br/>When querying events for a date range,<br/>occurrences are calculated on-the-fly<br/>based on this pattern.
-
-    EventUC-->>EventAPI: Event Response
-    EventAPI-->>Client: 201 Created
-
-    Note over Client: Now create sessions<br/>for this event
-
-    Client->>SessionAPI: POST /api/v1/events/:code/sessions
-    Note over Client,SessionAPI: Kids Session (9:00-10:00)
-
-    SessionAPI->>SessionUC: CreateSession(ctx, request)
-    SessionUC->>DB: INSERT INTO event_sessions
-    Note over SessionUC,DB: Session applies to<br/>all calculated occurrences
-
-    DB-->>SessionUC: Kids Session Created
-    SessionUC-->>SessionAPI: Session Response
-    SessionAPI-->>Client: 201 Created
-
-    Client->>SessionAPI: POST /api/v1/events/:code/sessions
-    Note over Client,SessionAPI: Youth Session (10:00-11:00)
-
-    SessionAPI->>SessionUC: CreateSession(ctx, request)
-    SessionUC->>DB: INSERT INTO event_sessions
-    DB-->>SessionUC: Youth Session Created
-    SessionUC-->>SessionAPI: Session Response
-    SessionAPI-->>Client: 201 Created
-
-    Note over Client,DB: Result:<br/>1 Event<br/>2 Sessions<br/>Occurrences calculated on-demand
-```
-
-### 4.4 Registration with Check-in Flow
-
-This diagram shows how check-in configuration affects the registration and attendance flow.
-
-```mermaid
-sequenceDiagram
-    participant User
-    participant RegAPI as Registration API
-    participant AttAPI as Attendance API
-    participant UC as UseCase
-    participant DB as Database
-    participant Validator as Check-in Validator
-
-    Note over User,DB: Session Config:<br/>check_in_enabled: true<br/>check_in_required: true<br/>check_in_window_before: 30<br/>check_in_window_after: 15<br/>check_in_late_threshold: 10
-
-    User->>RegAPI: POST /api/v1/registrations
-    Note over User,RegAPI: Register for session<br/>Event starts at 09:00
-
-    RegAPI->>UC: CreateRegistration(request)
-    UC->>DB: INSERT INTO registrations
-    DB-->>UC: Registration Created
-    UC-->>RegAPI: Registration Response
-    RegAPI-->>User: 201 Created + QR Code
-
-    Note over User: Event day arrives<br/>User arrives at 08:45<br/>(15 min early)
-
-    User->>AttAPI: POST /api/v1/attendance/check-in
-    Note over User,AttAPI: Scan QR code<br/>Current time: 08:45
-
-    AttAPI->>Validator: ValidateCheckInTime(session, currentTime)
-
-    Validator->>Validator: Calculate check-in window
-    Note over Validator: Window start: 08:30<br/>(30 min before)<br/>Window end: 09:15<br/>(15 min after)
-
-    Validator->>Validator: Check if within window
-    Note over Validator: 08:45 is within window ✓
-
-    Validator->>Validator: Calculate lateness
-    Note over Validator: Event starts: 09:00<br/>Check-in: 08:45<br/>Difference: -15 min<br/>Status: on_time
-
-    Validator-->>AttAPI: Validation Passed
-
-    AttAPI->>UC: RecordCheckIn(registration)
-    UC->>DB: INSERT INTO attendance_records
-    Note over UC,DB: check_in_at: 08:45<br/>status: on_time<br/>late_minutes: 0
-
-    DB-->>UC: Attendance Recorded
-    UC-->>AttAPI: Check-in Success
-    AttAPI-->>User: 200 OK (Checked In)
-
-    Note over User: Alternative: User arrives late<br/>at 09:12 (12 min late)
-
-    User->>AttAPI: POST /api/v1/attendance/check-in
-    AttAPI->>Validator: ValidateCheckInTime(session, 09:12)
-
-    Validator->>Validator: Check if within window
-    Note over Validator: 09:12 is within window ✓<br/>(before 09:15)
-
-    Validator->>Validator: Calculate lateness
-    Note over Validator: 09:12 - 09:00 = 12 min<br/>Late threshold: 10 min<br/>Status: late
-
-    Validator-->>AttAPI: Validation Passed (Late)
-
-    AttAPI->>UC: RecordCheckIn(registration)
-    UC->>DB: INSERT INTO attendance_records
-    Note over UC,DB: check_in_at: 09:12<br/>status: late<br/>late_minutes: 12
-
-    DB-->>UC: Attendance Recorded
-    UC-->>AttAPI: Check-in Success (Late)
-    AttAPI-->>User: 200 OK (Checked In - Late)
-
-    Note over User: Alternative: User arrives too late<br/>at 09:20 (20 min late)
-
-    User->>AttAPI: POST /api/v1/attendance/check-in
-    AttAPI->>Validator: ValidateCheckInTime(session, 09:20)
-
-    Validator->>Validator: Check if within window
-    Note over Validator: 09:20 > 09:15<br/>Outside window!
-
-    Validator->>Validator: Check allow_late flag
-    Note over Validator: check_in_allow_late: true
-
-    alt Allow Late = true
-        Validator-->>AttAPI: Validation Passed (Very Late)
-        AttAPI->>UC: RecordCheckIn(registration)
-        UC->>DB: INSERT INTO attendance_records
-        Note over UC,DB: status: very_late<br/>late_minutes: 20
-        UC-->>AttAPI: Check-in Success
-        AttAPI-->>User: 200 OK (Very Late)
-    else Allow Late = false
-        Validator-->>AttAPI: Validation Failed
-        AttAPI-->>User: 400 Check-in Window Closed
-    end
-```
-
-### 4.5 Bulk Event + Sessions Creation Flow
-
-This diagram shows how to create an event with multiple sessions in a single API call.
-
-```mermaid
-sequenceDiagram
-    participant Client
-    participant API as Event API
-    participant Validator
-    participant UC as Event UseCase
-    participant SessionUC as Session UseCase
-    participant Repo as Event Repository
-    participant SessionRepo as Session Repository
-    participant DB as Database
-    participant OccGen as Occurrence Generator
-
-    Client->>API: POST /api/v1/events/bulk
-    Note over Client,API: CreateEventWithSessionsRequest:<br/>- Event data<br/>- Sessions: [Kids, Youth, Adult]<br/>- Recurrence pattern<br/>- Forms
-
-    API->>Validator: Validate Request
-    Validator->>Validator: Validate event data
-
-    loop For each session
-        Validator->>Validator: Validate session data
-        Validator->>Validator: Check session times don't overlap
-        Validator->>Validator: Validate check-in/check-out config
-    end
-
-    Validator-->>API: Validation Result
-
-    alt Validation Failed
-        API-->>Client: 400 Bad Request
-    end
-
-    API->>UC: CreateEventWithSessions(ctx, request)
-
-    UC->>DB: BEGIN TRANSACTION
-    Note over UC,DB: All-or-nothing:<br/>If any step fails,<br/>rollback everything
-
-    UC->>UC: Generate Event Code
-    UC->>UC: Process Recurrence Pattern
-
-    UC->>Repo: CreateEvent(event)
-    Repo->>DB: INSERT INTO events
-    DB-->>Repo: Event ID & Code
-    Repo-->>UC: Event Created
-
-    Note over UC,DB: Recurrence pattern stored.<br/>No pre-generation of occurrences.
-
-    Note over UC: Now create all sessions<br/>in the same transaction
-
-    loop For each session in request
-        UC->>SessionUC: CreateSession(eventCode, sessionData)
-
-        SessionUC->>SessionUC: Generate Session Code
-        SessionUC->>SessionUC: Validate against event schedule
-        SessionUC->>SessionUC: Process check-in/check-out config
-
-        SessionUC->>SessionRepo: CreateSession(session)
-        SessionRepo->>DB: INSERT INTO event_sessions
-        Note over SessionRepo,DB: Session 1: Kids (9:00-10:00)<br/>Session 2: Youth (10:00-11:00)<br/>Session 3: Adult (11:00-12:00)
-
-        DB-->>SessionRepo: Session Created
-        SessionRepo-->>SessionUC: Session Created
-        SessionUC-->>UC: Session Created
-    end
-
-    alt Any Session Creation Failed
-        UC->>DB: ROLLBACK TRANSACTION
-        UC-->>API: 500 Internal Server Error
-        API-->>Client: 500 Error (Nothing Created)
-    else All Sessions Created Successfully
-        UC->>DB: COMMIT TRANSACTION
-        UC-->>API: Event + Occurrences + Sessions
-        API-->>Client: 201 Created
-        Note over Client,API: Response includes:<br/>- Event details<br/>- 12 Occurrences<br/>- 3 Sessions<br/>- 36 Session-Occurrence combinations
-    end
-```
-
-### 4.6 Bulk Form + Questions Creation Flow
-
-This diagram shows how to create a form with multiple questions in a single API call.
-
-```mermaid
-sequenceDiagram
-    participant Client
-    participant API as Form API
-    participant Validator
-    participant UC as Form UseCase
-    participant Repo as Form Repository
-    participant DB as Database
-
-    Client->>API: POST /api/v1/forms/bulk
-    Note over Client,API: CreateFormWithFieldsRequest:<br/>- Form metadata<br/>- Fields: [<br/>  {dietary_preference},<br/>  {tshirt_size},<br/>  {special_needs},<br/>  {transportation},<br/>  ...<br/>]
-
-    API->>Validator: Validate Request
-    Validator->>Validator: Validate form metadata
-    Validator->>Validator: Check form_type is valid
-
-    loop For each field
-        Validator->>Validator: Validate field_key is unique
-        Validator->>Validator: Validate field_type
-        Validator->>Validator: Validate display_order
-        Validator->>Validator: Check conditional logic
-    end
-
-    alt Has duplicate field_key
-        Validator-->>API: Validation Error
-        API-->>Client: 400 Duplicate field_key
-    end
-
-    Validator-->>API: Validation Result
-
-    API->>UC: CreateFormWithFields(ctx, request)
-
-    UC->>DB: BEGIN TRANSACTION
-    Note over UC,DB: All-or-nothing:<br/>If any field fails,<br/>rollback entire form
-
-    UC->>UC: Generate Form Code
-    UC->>UC: Validate field dependencies
-    Note over UC: Check conditional logic:<br/>If field B depends on field A,<br/>ensure field A exists
-
-    UC->>Repo: CreateForm(form)
-    Repo->>DB: INSERT INTO forms
-    Note over Repo,DB: code: FORM-CHRISTMAS-2026<br/>title: Christmas Registration<br/>form_type: event_registration<br/>status: draft
-
-    DB-->>Repo: Form ID
-    Repo-->>UC: Form Created (ID: 123)
-
-    Note over UC: Now create all fields<br/>in the same transaction
-
-    loop For each field in request (10 fields)
-        UC->>UC: Process field configuration
-        Note over UC: Field 1: dietary_preference<br/>Field 2: tshirt_size<br/>Field 3: special_needs<br/>...
-
-        UC->>Repo: CreateFormField(formID, field)
-        Repo->>DB: INSERT INTO form_fields
-        Note over Repo,DB: form_id: 123<br/>field_key: dietary_preference<br/>field_type: multiselect<br/>label: Dietary Restrictions<br/>display_order: 1<br/>is_required: false<br/>options: [vegetarian, vegan, ...]
-
-        DB-->>Repo: Field ID
-        Repo-->>UC: Field Created
-
-        alt Has Conditional Logic
-            UC->>Repo: CreateFieldCondition(fieldID, condition)
-            Repo->>DB: INSERT INTO form_field_conditions
-            Note over Repo,DB: field_id: 456<br/>depends_on_field_id: 123<br/>condition_type: equals<br/>condition_value: "yes"
-            DB-->>Repo: Condition Created
+    loop For each session in requests[]
+
+        UC->>UC: Step 1 – inheritLocationFromEvent(req, event)<br/>Copy each location field only where session field is nil:<br/>locationType, physicalPlaceName, physicalAddress,<br/>virtualLink, virtualPlatform, locationDetails,<br/>locationVisibility, CTAText, CTALink
+
+        alt req.ParentSessionCode is set
+            UC->>DB: EventSession.GetByCode(parentCode)
+            DB-->>UC: parent EventSession
+            UC->>UC: Step 2 – inheritLocationFromSession(req, parent)<br/>Same field-by-field copy from parent session<br/>(parent overrides event where session field is nil)
+            alt Parent not found
+                UC-->>API: 404 Not Found
+            end
         end
 
-        alt Has Validation Rules
-            UC->>Repo: CreateFieldValidation(fieldID, rules)
-            Repo->>DB: INSERT INTO form_field_validations
-            Note over Repo,DB: field_id: 456<br/>validation_type: regex<br/>validation_value: "^[0-9]{10}$"<br/>error_message: "Invalid phone"
-            DB-->>Repo: Validation Created
+        UC->>UC: Step 3 – req.Location.Validate(nil)<br/>• locationType required after inheritance<br/>• Checks required sub-fields per type
+        alt Location invalid
+            UC-->>API: 422 Validation Error
         end
+
+        alt geolocation.Enabled is true
+            UC->>UC: Step 4 – req.Geolocation.Validate()<br/>• Checks lat/lng range, radius > 0
+            alt Invalid
+                UC-->>API: 422 Validation Error
+            end
+        end
+
+        UC->>UC: Step 5 – normalizeSessionRequest(req, event)<br/>• status: inherit event.Status if empty,<br/>  force "draft" if event is "draft"<br/>• timezone: event.Timezone → "Asia/Jakarta"<br/>• locationVisibility → "all"<br/>• CTA text="Register Here!", link="NORMAL_FLOW"<br/>• checkIn.Enabled=true if no check-in config at all<br/>• maxRegistrationsPerUser → 1 if zero
+
+        UC->>UC: Step 6 – validateSchedule(&req.Schedule)<br/>• startAt required, endAt > startAt<br/>• startAt not > 1 day in the past
+
+        UC->>UC: Step 7 – validateSessionTimeConfiguration(&req.Times)<br/>• Registration window: startAt+endAt both or neither<br/>• Check-in window: startAt+endAt both or neither<br/>• Check-out window: startAt+endAt both or neither<br/>• All window ends > window starts
+
+        UC->>UC: Step 8 – validateSessionCapacity()<br/>• capacity ≥ 0 (0 = unlimited)<br/>• waitlist requires capacity > 0<br/>• waitlist blocked for personal-qr / event-qr methods
+
+        UC->>UC: Step 9 – validateSessionRules()<br/>• self_only or personal-qr → maxPerUser forced to 1<br/>• recurring + self_only → maxPerUser defaults to 1<br/>• maxAge must be > minAge (when both set)
+
+        UC->>UC: Step 10 – Status gate<br/>• session "active" while event is not "active" → reject
+
+        UC->>UC: Step 11 – generateUniqueSessionCode() with retries<br/>• IdentifierCode(config.EncodeCode, time.Now())<br/>• CheckByCode → retry on collision, exponential backoff
+
+        UC->>UC: Step 12 – buildSessionModel(req, eventCode, sessionCode)<br/>Maps all validated fields → models.EventSession<br/>Marshal geolocation → JSONB
+
+        UC->>DB: INSERT INTO event_sessions
+        alt DB error
+            UC-->>API: 500 DB error
+        end
+
+        alt req.Questions != nil
+            UC->>UC: Form.Create(ctx)<br/>name=session.Title, entity={type:"event_session", code:session.Code}<br/>questions: req.Questions
+            UC->>DB: INSERT INTO forms + form_associations + form_questions
+            alt Form fails
+                UC-->>API: Error (rolls back outer Atomic if inside one)
+            end
+        end
+
+        UC->>UC: Step 13 – updateEvent(ctx, req, event)<br/>• Expands event.StartAt/EndAt if session extends the range
+
     end
 
-    alt Any Field Creation Failed
-        UC->>DB: ROLLBACK TRANSACTION
-        UC-->>API: 500 Internal Server Error
-        API-->>Client: 500 Error (Nothing Created)
-    else All Fields Created Successfully
-        UC->>DB: COMMIT TRANSACTION
-
-        UC->>UC: Build Form Response
-        Note over UC: Aggregate:<br/>- Form metadata<br/>- All fields with options<br/>- All conditions<br/>- All validations
-
-        UC-->>API: Form + Fields
-        API-->>Client: 201 Created
-        Note over Client,API: Response includes:<br/>- Form details<br/>- 10 Fields<br/>- Field options<br/>- Conditional logic<br/>- Validation rules
-    end
+    UC-->>API: *models.EventSession (last created)
+    API-->>Client: 201 Created
 ```
 
-### 4.7 Event + Sessions + Forms Creation Flow (Complete)
+### 4.3 Form + Questions Creation Flow
 
-This diagram shows the most complex scenario: creating everything at once.
+`FormUsecase.Create` is triggered either directly via the Form API or internally from `EventUsecase` / `EventSessionUsecase` when `questions` are included in their payloads. It always runs atomically.
 
 ```mermaid
 sequenceDiagram
-    participant Client
-    participant EventAPI as Event API
-    participant FormAPI as Form API
-    participant EventUC as Event UseCase
-    participant FormUC as Form UseCase
-    participant SessionUC as Session UseCase
+    participant Caller as Caller (EventUC / SessionUC / FormAPI)
+    participant FormUC as FormUsecase.Create
+    participant FormQuestionUC as FormQuestionUsecase.BulkCreate
     participant DB as Database
-    participant OccGen as Occurrence Generator
 
-    Note over Client: Admin wants to create:<br/>- 1 Event (recurring)<br/>- 2 Forms (Primary + Kids)<br/>- 3 Sessions (Kids, Youth, Adult)
+    Caller->>FormUC: Create(ctx, &CreateFormRequest)<br/>{ name, entity:{type, code}, questions[] }
 
-    Client->>FormAPI: POST /api/v1/forms/bulk
-    Note over Client,FormAPI: Create Primary Registrant Form<br/>with 10 questions
+    FormUC->>DB: BEGIN TRANSACTION (Atomic)
 
-    FormAPI->>FormUC: CreateFormWithFields(request)
-    FormUC->>DB: BEGIN TRANSACTION
+    FormUC->>FormUC: Build models.Form:<br/>• code = uuid.New()<br/>• name = request.Name<br/>• formType = "registration" (hardcoded)<br/>• status = "active"<br/>• creatorCommunityID = (from request entity)
+
     FormUC->>DB: INSERT INTO forms
-    DB-->>FormUC: Form ID: 100
+    DB-->>FormUC: form created
 
-    loop 10 questions
-        FormUC->>DB: INSERT INTO form_fields
+    FormUC->>FormUC: Build models.FormAssociation:<br/>• formCode = form.Code<br/>• entityCode = request.Entity.Code<br/>• entityType = request.Entity.Type<br/>  ("event" or "event_session")
+
+    FormUC->>DB: INSERT INTO form_associations
+    DB-->>FormUC: association created
+
+    alt request.Questions != nil && len > 0
+        FormUC->>FormQuestionUC: BulkCreate(ctx, formCode.String(), questions)
+
+        FormQuestionUC->>FormQuestionUC: Sort questions by DisplayOrder
+
+        loop For each question
+            FormQuestionUC->>FormQuestionUC: Validate type via custom "questionType" validator<br/>Allowed: short_text, long_text, number, email, phone,<br/>single_choice, multiple_choice, date, time
+
+            FormQuestionUC->>FormQuestionUC: validateQuestionRules(type, rules, options)<br/>• single_choice/multiple_choice → options required<br/>• multiple_choice → MinSelection ≤ MaxSelection<br/>• text types → MinLength ≤ MaxLength<br/>• number → MinValue ≤ MaxValue<br/>• date → NotBefore/NotAfter are "today" or date string<br/>• text/email/phone → Pattern must be valid regex
+
+            FormQuestionUC->>FormQuestionUC: Build models.FormQuestion:<br/>• code = uuid.New()<br/>• formCode = formCode<br/>• category = questionType (stored in "type" DB column)<br/>• RequiredFor = mandatoryFor ("parent"/"child")<br/>• VisibleFor = applyFor ("parent"/"child")<br/>• Options marshaled to JSONB<br/>• Rules marshaled to JSONB
+
+            FormQuestionUC->>DB: INSERT INTO form_questions
+        end
+
+        DB-->>FormQuestionUC: all questions created
+        FormQuestionUC-->>FormUC: []FormQuestionResponse
     end
 
     FormUC->>DB: COMMIT TRANSACTION
-    FormUC-->>FormAPI: Form 100 Created
-    FormAPI-->>Client: 201 Created (Form 100)
+    FormUC-->>Caller: *CreateFormResponse { code, name, entity, status, questions[] }
+```
 
-    Client->>FormAPI: POST /api/v1/forms/bulk
-    Note over Client,FormAPI: Create Kids Form<br/>with 5 questions
+### 4.4 Inline Event + Sessions + Questions (Single Request)
 
-    FormAPI->>FormUC: CreateFormWithFields(request)
-    FormUC->>DB: BEGIN TRANSACTION
-    FormUC->>DB: INSERT INTO forms
-    DB-->>FormUC: Form ID: 101
+This shows the fully atomic flow when a client sends event, sessions, and questions all in one `POST /v2/internal/events` call.
 
-    loop 5 questions
-        FormUC->>DB: INSERT INTO form_fields
-    end
+```mermaid
+sequenceDiagram
+    participant Client
+    participant API as Event API (v2)
+    participant EventUC as EventUsecase
+    participant SessionUC as EventSessionUsecase
+    participant FormUC as FormUsecase
+    participant DB as Database
 
-    FormUC->>DB: COMMIT TRANSACTION
-    FormUC-->>FormAPI: Form 101 Created
-    FormAPI-->>Client: 201 Created (Form 101)
+    Client->>API: POST /v2/internal/events
+    Note over Client,API: Full payload with sessions[] and questions[]
 
-    Note over Client: Now create event with sessions<br/>and link to forms
+    API->>EventUC: Create(ctx, request)
+    EventUC->>EventUC: Validation pipeline steps 1–11 (see §4.1)
 
-    Client->>EventAPI: POST /api/v1/events/bulk
-    Note over Client,EventAPI: CreateEventWithSessionsRequest:<br/>- Event (recurring, 12 weeks)<br/>- Sessions: [<br/>  Kids (form_id: 101),<br/>  Youth (form_id: 100),<br/>  Adult (form_id: 100)<br/>]
-
-    EventAPI->>EventUC: CreateEventWithSessions(request)
-    EventUC->>DB: BEGIN TRANSACTION
-
+    EventUC->>DB: BEGIN TRANSACTION (Atomic)
     EventUC->>DB: INSERT INTO events
-    DB-->>EventUC: Event Created
+    DB-->>EventUC: event.ID, event.Code
 
-    EventUC->>OccGen: GenerateOccurrences(event)
-    loop 12 occurrences
-        OccGen->>DB: INSERT INTO event_occurrences
-    end
-    OccGen-->>EventUC: 12 Occurrences Created
-
-    loop For each session (3 sessions)
-        EventUC->>SessionUC: CreateSession(sessionData)
-
-        SessionUC->>SessionUC: Validate form_id exists
-        Note over SessionUC: Kids session → Form 101<br/>Youth session → Form 100<br/>Adult session → Form 100
-
+    loop For each session in request.Sessions
+        EventUC->>SessionUC: Create(ctx, sessions, nil, event)<br/>[ctx carries the open transaction]
+        SessionUC->>SessionUC: Full 13-step pipeline (§4.2)
         SessionUC->>DB: INSERT INTO event_sessions
-        Note over SessionUC,DB: Links to form via<br/>registration_form_id
 
-        DB-->>SessionUC: Session Created
-        SessionUC-->>EventUC: Session Created
+        opt session.Questions != nil
+            SessionUC->>FormUC: Create(ctx, {entity:"event_session", ...})
+            FormUC->>DB: INSERT INTO forms + form_associations + form_questions
+        end
+    end
+
+    opt request.Questions != nil (event-level questions)
+        EventUC->>FormUC: Create(ctx, {entity:"event", code:event.Code, ...})
+        FormUC->>DB: INSERT INTO forms + form_associations + form_questions
     end
 
     EventUC->>DB: COMMIT TRANSACTION
-    EventUC-->>EventAPI: Event + Occurrences + Sessions
-    EventAPI-->>Client: 201 Created
+    Note over EventUC,DB: ALL-OR-NOTHING:<br/>Any failure at any step rolls back<br/>the entire transaction.
 
-    Note over Client,DB: Final Result:<br/>- 2 Forms (100, 101)<br/>- 15 Form Fields (10 + 5)<br/>- 1 Event<br/>- 12 Occurrences<br/>- 3 Sessions<br/>- 36 Session-Occurrence combinations
+    EventUC-->>API: *models.Event
+    API-->>Client: 201 Created
+```
 
-    Note over Client: Users can now:<br/>1. Register for sessions<br/>2. Fill out appropriate forms<br/>3. Check-in on event day
+### 4.5 Recurring Event with Sessions
+
+For recurring events, occurrence dates are **calculated on-demand** from the `recurrence_pattern` JSONB field. No `event_occurrences` table is used.
+
+```mermaid
+sequenceDiagram
+    participant Client
+    participant API as Event API (v2)
+    participant EventUC as EventUsecase
+    participant SessionUC as EventSessionUsecase
+    participant DB as Database
+
+    Client->>API: POST /v2/internal/events
+    Note over Client,API: isRecurring: true<br/>recurrencePattern: {<br/>  frequency: "weekly",<br/>  weekDays: ["sunday"],<br/>  interval: 1,<br/>  count: 52,<br/>  excludeDates: ["2026-03-15"]<br/>}<br/>sessions: [Kids, Youth, Adult]
+
+    API->>EventUC: Create(ctx, request)
+    EventUC->>EventUC: validateRecurrencePattern()<br/>• isRecurring=true → pattern required<br/>• Validates frequency, weekDays, interval,<br/>  count/endDate, excludeDates format
+
+    EventUC->>DB: BEGIN TRANSACTION
+    EventUC->>DB: INSERT INTO events<br/>(recurrence_pattern stored as JSONB —<br/>no occurrence rows pre-generated)
+    DB-->>EventUC: event created
+
+    loop For each session
+        EventUC->>SessionUC: Create(ctx, sessions, nil, event)
+        SessionUC->>DB: INSERT INTO event_sessions
+        Note over SessionUC,DB: Session applies to all occurrences<br/>calculated on-demand when querying
+
+        DB-->>SessionUC: session created
+    end
+
+    EventUC->>DB: COMMIT TRANSACTION
+    EventUC-->>API: *models.Event { isRecurring: true }
+    API-->>Client: 201 Created
+    Note over Client,API: Result: 1 Event + 3 Sessions<br/>Occurrences computed at query time<br/>via RecurrencePattern.CalculateOccurrences()
 ```
 
 ---
@@ -886,12 +646,12 @@ For detailed database schema including all tables, indexes, constraints, trigger
 - `events` - Main event definitions with recurrence patterns
 - `event_sessions` - Sessions, services, tracks, breakouts (hierarchical)
 
-**Form System (Production-Ready):**
+**Form System:**
 
-- `forms` - Form definitions with ENUM types and status
-- `form_questions` - Questions with context-aware filtering (`mandatory_for`, `apply_for`)
-- `form_answers` - Answers with flexible identifiers (supports guests + authenticated users)
-- `form_associations` - Polymorphic many-to-many relationships
+- `forms` - Form definitions (form_type: `registration`, `survey`, `quiz`)
+- `form_questions` - Questions with context-aware filtering (`mandatory_for`, `apply_for`; context values: `parent`, `child`)
+- `form_answers` - Answers with flexible identifiers (`community_id` for members, `eventAttendance` for walk-ins)
+- `form_associations` - Many-to-many relationships between forms and entities (`event`, `event_session`)
 
 **Registration & Attendance:**
 
