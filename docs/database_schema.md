@@ -35,57 +35,65 @@ This document contains the complete database schema for the Event Management Sys
 ```sql
 CREATE TABLE events (
     id BIGSERIAL PRIMARY KEY,
-    code VARCHAR(20) UNIQUE NOT NULL,
+    code VARCHAR(50) UNIQUE NOT NULL,       -- matches varchar(50) in model
 
-    -- Basic Info
+    -- Core Info
     title VARCHAR(255) NOT NULL,
-    slug VARCHAR(255) UNIQUE NOT NULL,
-    description TEXT,
-    category VARCHAR(30) NOT NULL, -- registration, attendance, announcement, volunteer, hybrid
+    slug VARCHAR(255) UNIQUE NOT NULL,      -- slugified, URL-safe
+    pre_description TEXT,                   -- shown before registration
+    post_description JSONB,                 -- shown after registration (rich content)
+    terms_and_conditions TEXT,
+    category VARCHAR(30) NOT NULL,          -- announcement, registerable
 
     -- Media
-    image_url TEXT,
+    image_urls TEXT[],                      -- array of image URLs
     banner_url TEXT,
 
     -- Organization
-    creator_community_id VARCHAR(50) NOT NULL REFERENCES users(community_id),
+    creator_community_id VARCHAR(50) NOT NULL,
     organizer_community_ids TEXT[],
+    contact_community_ids TEXT[],
 
     -- Visibility & Access
-    visibility VARCHAR(30) NOT NULL DEFAULT 'public',
+    access_level VARCHAR(20) NOT NULL DEFAULT 'public',  -- public, private, members_only, etc.
     allowed_user_types TEXT[],
     allowed_roles TEXT[],
     allowed_campuses TEXT[],
     allowed_community_ids TEXT[],
 
-    -- Location (Default for all sessions)
-    location_type VARCHAR(20) NOT NULL, -- online, offline, hybrid
+    -- Location (defaults inherited by sessions)
+    location_type VARCHAR(20) NOT NULL,     -- online, offline, hybrid
+    physical_place_name TEXT,               -- venue name
     physical_address TEXT,
     virtual_link TEXT,
-    virtual_platform VARCHAR(50), -- youtube, zoom, meet, custom
+    virtual_platform TEXT,                  -- youtube, zoom, meet, etc.
     location_details TEXT,
+    location_visibility VARCHAR(30) NOT NULL DEFAULT 'all', -- all, pre-registration, post-registration
+    cta_text VARCHAR(100),                  -- call-to-action button label
+    cta_link TEXT,                          -- CTA target URL or "NORMAL_FLOW"
 
     -- Schedule
+    start_at TIMESTAMPTZ NOT NULL,
+    end_at TIMESTAMPTZ NOT NULL,
     timezone VARCHAR(50) NOT NULL DEFAULT 'Asia/Jakarta',
-    start_date TIMESTAMPTZ NOT NULL,
-    end_date TIMESTAMPTZ NOT NULL,
 
-    -- Recurrence (For Sunday Service type)
+    -- Recurrence (occurrences calculated on-demand, never pre-generated)
     is_recurring BOOLEAN DEFAULT FALSE,
-    recurrence_pattern JSONB, -- {type: "weekly", days: ["sunday"], interval: 1}
-    recurrence_end_date TIMESTAMPTZ,
+    recurrence_pattern JSONB,
+    -- Structure: { frequency, interval, weekDays, count, endDate,
+    --              monthlyPattern, excludeDates, additionalDates }
 
-    -- Template/Series
+    -- Template / Series
     is_template BOOLEAN DEFAULT FALSE,
-    template_id BIGINT REFERENCES events(id),
-    series_id BIGINT REFERENCES event_series(id),
+    template_id VARCHAR(255),               -- no FK — external or soft reference
+    series_id   VARCHAR(255),               -- no FK — external or soft reference
 
-    -- Notification Config
-    notification_channels TEXT[], -- email, sms, whatsapp
-    reminder_config JSONB, -- {enabled: true, intervals: ["24h", "1h"]}
+    -- Registration
+    session_per_user INTEGER DEFAULT 0,     -- 0 = unlimited
 
-    -- Terms & Conditions
-    terms_and_conditions TEXT,
+    -- Notifications
+    notification_channels TEXT[],           -- email, sms, whatsapp, push
+    reminder_config JSONB,                  -- { enabled, intervals: ["24h","1h"] }
 
     -- Metadata
     status VARCHAR(20) NOT NULL DEFAULT 'draft',
@@ -94,132 +102,15 @@ CREATE TABLE events (
     deleted_at TIMESTAMPTZ
 );
 
-CREATE INDEX idx_events_status_start ON events(status, start_date);
-CREATE INDEX idx_events_visibility ON events(visibility);
+-- Composite index used by event listing queries
+CREATE INDEX idx_events_status_start ON events(status, start_at);
+CREATE INDEX idx_events_access_level ON events(access_level);
 CREATE INDEX idx_events_category ON events(category);
-CREATE INDEX idx_events_creator ON events(creator_community_id);
+CREATE INDEX idx_events_creator ON events(creator_community_id) WHERE deleted_at IS NULL;
+CREATE INDEX idx_events_is_recurring ON events(is_recurring) WHERE is_recurring = TRUE AND deleted_at IS NULL;
 ```
 
-#### `event_sessions` - Unified Sessions/Classes/Tracks within an Event
 
-> [!TIP]
-> This table now handles all sub-event types: services, classes, tracks, breakouts/workshops. Use `session_type` to categorize and `parent_session_id` for hierarchical events like conferences.
-
-```sql
-CREATE TABLE event_sessions (
-    id BIGSERIAL PRIMARY KEY,
-    code VARCHAR(30) UNIQUE NOT NULL,
-    event_id BIGINT NOT NULL REFERENCES events(id) ON DELETE CASCADE,
-    parent_session_id BIGINT REFERENCES event_sessions(id) ON DELETE CASCADE, -- For hierarchy (e.g., Day 1 → Track A)
-
-    -- Basic Info
-    title VARCHAR(255) NOT NULL,
-    description TEXT,
-    session_type VARCHAR(30) NOT NULL, -- service, class, track, breakout, workshop, general, kids, youth, teen, adult
-
-    -- Instructor/Speaker (for workshops, tracks, classes)
-    instructor_name VARCHAR(255),
-    instructor_community_id VARCHAR(50),
-
-    -- Override Location (if different from event/parent)
-    location_type VARCHAR(20),
-    physical_address TEXT,
-    room_name VARCHAR(100),
-    virtual_link TEXT,
-    virtual_platform VARCHAR(50),
-    location_details TEXT,
-
-    -- Geolocation Validation (for physical attendance verification)
-    geolocation_config JSONB, -- {enabled, venue_latitude, venue_longitude, radius_meters, validation_rules, error_action}
-
-    -- Schedule
-    start_at TIMESTAMPTZ NOT NULL,
-    end_at TIMESTAMPTZ NOT NULL,
-    timezone VARCHAR(50),
-
-    -- Registration Window
-    registration_start_at TIMESTAMPTZ,
-    registration_end_at TIMESTAMPTZ,
-
-    -- Verification Window (Check-in)
-    check_in_start_at TIMESTAMPTZ,
-    check_in_end_at TIMESTAMPTZ,
-
-    -- Capacity
-    capacity INTEGER,
-    current_count INTEGER DEFAULT 0,
-    waitlist_enabled BOOLEAN DEFAULT FALSE,
-    waitlist_capacity INTEGER,
-
-    -- Registration Rules
-    require_approval BOOLEAN DEFAULT FALSE,
-
-    -- Group/Family Registration Config
-    registration_mode VARCHAR(30) DEFAULT 'self_and_others',
-    -- Values: 'self_only' (user can only register themselves)
-    --         'self_and_registered' (user can register themselves + other registered users)
-    --         'self_and_others' (user can register themselves + guests without accounts)
-
-    max_registrations_per_user INTEGER DEFAULT 1, -- How many people a user can register (including self)
-    one_session_per_event BOOLEAN DEFAULT FALSE, -- If true, user can only register for ONE session in this event
-
-    -- Check-in Configuration (Detailed)
-    check_in_enabled BOOLEAN DEFAULT TRUE,           -- Is check-in feature enabled?
-    check_in_required BOOLEAN DEFAULT FALSE,         -- Is check-in mandatory?
-    check_in_window_before INTEGER DEFAULT 30,       -- Minutes before event start
-    check_in_window_after INTEGER DEFAULT 15,        -- Minutes after event start
-    check_in_allow_late BOOLEAN DEFAULT TRUE,        -- Allow check-in after window?
-    check_in_late_threshold INTEGER DEFAULT 10,      -- Minutes to mark as "late"
-
-    -- Check-out Configuration (Detailed)
-    check_out_enabled BOOLEAN DEFAULT FALSE,         -- Is check-out feature enabled?
-    check_out_required BOOLEAN DEFAULT FALSE,        -- Is check-out mandatory?
-    check_out_window_before INTEGER DEFAULT 0,       -- Minutes before event end
-    check_out_window_after INTEGER DEFAULT 60,       -- Minutes after event end
-    check_out_allow_late BOOLEAN DEFAULT TRUE,       -- Allow check-out after window?
-    check_out_late_threshold INTEGER DEFAULT 30,     -- Minutes to mark as "late checkout"
-
-    -- Age/Eligibility (for kids, youth, etc.)
-    min_age INTEGER,
-    max_age INTEGER,
-    prerequisites TEXT[],
-
-    -- Custom Questions (for primary registrant)
-    registration_form_id BIGINT REFERENCES forms(id),
-
-    -- Identifier Configuration (JSONB for flexibility)
-    -- Separate configs for primary registrant and additional registrants
-    identifier_config JSONB DEFAULT '{
-        "primary": {
-            "name": {"visible": true, "required": true},
-            "email": {"visible": true, "required": true},
-            "phone": {"visible": true, "required": false},
-            "legal_id": {"visible": false, "required": false}
-        },
-        "additional": {
-            "name": {"visible": true, "required": true},
-            "email": {"visible": false, "required": false},
-            "phone": {"visible": false, "required": false},
-            "legal_id": {"visible": false, "required": false}
-        }
-    }',
-
-    -- Form Question Overrides (session-specific question visibility/requirements)
-    -- Use with form_questions.code as keys: {"question_code_uuid": {"visible": true, "required": true}}
-    form_field_overrides JSONB,
-
-    -- Status
-    status VARCHAR(20) NOT NULL DEFAULT 'draft',
-    created_at TIMESTAMPTZ DEFAULT NOW(),
-    updated_at TIMESTAMPTZ DEFAULT NOW(),
-    deleted_at TIMESTAMPTZ
-);
-
-CREATE INDEX idx_sessions_event ON event_sessions(event_id);
-CREATE INDEX idx_sessions_parent ON event_sessions(parent_session_id);
-CREATE INDEX idx_sessions_type ON event_sessions(session_type);
-CREATE INDEX idx_sessions_status_start ON event_sessions(status, start_at);
-```
 
 ### Recurrence Pattern Calculation
 

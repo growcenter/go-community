@@ -1,44 +1,44 @@
--- Drop all constraints
-ALTER TABLE events
-DROP CONSTRAINT IF EXISTS chk_occurrences_status;
+-- Drop trigger first (depends on function)
+DROP TRIGGER IF EXISTS trg_events_updated_at ON events;
 
-ALTER TABLE events
-DROP CONSTRAINT IF EXISTS chk_occurrences_dates;
-
-ALTER TABLE events
-DROP CONSTRAINT IF EXISTS chk_occurrences_checkin_window;
-
-ALTER TABLE events
-DROP CONSTRAINT IF EXISTS chk_occurrences_counts;
+DROP FUNCTION IF EXISTS update_events_updated_at ();
 
 -- Drop all indexes
-DROP INDEX IF EXISTS idx_events_event;
+DROP INDEX IF EXISTS idx_events_status_start;
 
-DROP INDEX IF EXISTS idx_events_session;
+DROP INDEX IF EXISTS idx_events_access_level_status;
 
-DROP INDEX IF EXISTS idx_events_event_date;
+DROP INDEX IF EXISTS idx_events_category_status;
 
-DROP INDEX IF EXISTS idx_events_event_status;
+DROP INDEX IF EXISTS idx_events_creator_status;
 
-DROP INDEX IF EXISTS idx_events_session_date;
+DROP INDEX IF EXISTS idx_events_creator;
 
 DROP INDEX IF EXISTS idx_events_date_range;
 
-DROP INDEX IF EXISTS idx_events_upcoming;
+DROP INDEX IF EXISTS idx_events_recurring;
 
-DROP INDEX IF EXISTS idx_events_modified;
-
-DROP INDEX IF EXISTS idx_events_cancelled;
-
-DROP INDEX IF EXISTS idx_events_checkin_window;
-
-DROP INDEX IF EXISTS idx_events_unique;
+DROP INDEX IF EXISTS idx_events_templates;
 
 DROP INDEX IF EXISTS idx_events_deleted_at;
 
-DROP INDEX IF EXISTS idx_events_form;
+DROP INDEX IF EXISTS idx_events_allowed_user_types;
 
-DROP INDEX IF EXISTS idx_events_form_field_overrides;
+DROP INDEX IF EXISTS idx_events_allowed_roles;
 
--- Drop table
+DROP INDEX IF EXISTS idx_events_allowed_campuses;
+
+DROP INDEX IF EXISTS idx_events_allowed_community_ids;
+
+DROP INDEX IF EXISTS idx_events_organizer_community_ids;
+
+DROP INDEX IF EXISTS idx_events_contact_community_ids;
+
+DROP INDEX IF EXISTS idx_events_recurrence_pattern;
+
+DROP INDEX IF EXISTS idx_events_reminder_config;
+
+DROP INDEX IF EXISTS idx_events_search;
+
+-- Drop table (constraints dropped automatically)
 DROP TABLE IF EXISTS events;
