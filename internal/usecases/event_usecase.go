@@ -10,13 +10,14 @@ import (
 	"go-community/internal/pkg/errorc"
 	"go-community/internal/pkg/generator"
 	"go-community/internal/pkg/logger"
+	"go-community/internal/pkg/stringc"
 	"go-community/internal/repositories/pgsql"
-	"strings"
 	"time"
 )
 
 type EventUsecase interface {
 	Create(ctx context.Context, request models.CreateEventRequest) (*models.Event, error)
+	GetAll(ctx context.Context) ([]models.Event, error)
 }
 
 type eventUsecase struct {
@@ -33,25 +34,15 @@ func NewEventUsecase(d *Dependencies) EventUsecase {
 // Returns pointer to created Event model
 func (eu *eventUsecase) Create(ctx context.Context, request models.CreateEventRequest) (*models.Event, error) {
 	// Enrich wide event with operation context
-	logger.EnrichContextWith(ctx, map[string]any{
-		"operation":      "event.create",
-		"event_category": request.Category,
-		"event_title":    request.Title,
-		"location_type":  request.Location.LocationType,
-		"access_level":   request.Access.AccessLevel,
+	logger.Add(ctx, map[string]any{
+		"operation": "event.create",
 	})
 
-	logger.EnrichContextMap(ctx,
-		map[string]any{
-			"category":      request.Category,
-			"location_type": request.Location.LocationType,
-		},
-	)
-
 	// Step 1: Extract creator community ID from context safely
-	creatorID, err := contextc.ExtractCommunityID(ctx)
+	logger.Add(ctx, "step", "extract_creator_id")
+	creatorCommunityID, err := contextc.ExtractCommunityID(ctx)
 	if err != nil {
-		logger.SetErrorContext(ctx, &logger.ErrorContext{
+		logger.AddError(ctx, &logger.ErrorContext{
 			Type:      "ContextError",
 			Code:      "CONTEXT_ERROR",
 			Message:   err.Error(),
@@ -59,26 +50,21 @@ func (eu *eventUsecase) Create(ctx context.Context, request models.CreateEventRe
 		})
 		return nil, errorc.Error(err)
 	}
-	logger.EnrichContext(ctx, "creator_community_id", creatorID)
+	logger.Add(ctx, "creator_community_id", creatorCommunityID)
 
 	// Step 2: Normalize request (set defaults, cleanup)
+	logger.Add(ctx, "step", "normalize_request")
 	normalizeEventRequest(&request)
+	logger.Add(ctx,
+		"normalized_status", request.Status,
+		"normalized_timezone", *request.Schedule.Timezone,
+	)
 
-	// Step 3: Early validation for announcement category
-	if err := validateAnnouncementCategory(request.Category, request.Location.LocationType); err != nil {
-		logger.SetErrorContext(ctx, &logger.ErrorContext{
-			Type:      "ValidationFailed",
-			Code:      "VALIDATION_FAILED",
-			Message:   err.Error(),
-			Retriable: false,
-		})
-		return nil, errorc.Error(err)
-	}
-
-	// Step 4: Generate unique event code with retry mechanism
+	// Step 3: Generate unique event code with retry mechanism
+	logger.Add(ctx, "step", "generate_event_code")
 	eventCode, err := generateUniqueEventCode(ctx, eu, constants.EventCodeMaxRetries)
 	if err != nil {
-		logger.SetErrorContext(ctx, &logger.ErrorContext{
+		logger.AddError(ctx, &logger.ErrorContext{
 			Type:      "GenerateEventCodeError",
 			Code:      "GENERATE_EVENT_CODE_ERROR",
 			Message:   err.Error(),
@@ -86,12 +72,14 @@ func (eu *eventUsecase) Create(ctx context.Context, request models.CreateEventRe
 		})
 		return nil, errorc.Error(err)
 	}
-	logger.EnrichContext(ctx, "event_code", eventCode)
+	logger.Add(ctx, "event_code", eventCode)
 
-	// Step 5: Generate or validate slug
-	slug, err := generateEventSlug(ctx, eu, request.Slug, eventCode)
+	// Step 4: Generate or validate slug
+	logger.Add(ctx, "step", "generate_slug")
+	logger.Add(ctx, "requested_slug", request.Slug)
+	slug, err := generateEventSlug(ctx, eu, request.Slug, *eventCode)
 	if err != nil {
-		logger.SetErrorContext(ctx, &logger.ErrorContext{
+		logger.AddError(ctx, &logger.ErrorContext{
 			Type:      "GenerateSlugError",
 			Code:      "GENERATE_SLUG_ERROR",
 			Message:   err.Error(),
@@ -99,11 +87,12 @@ func (eu *eventUsecase) Create(ctx context.Context, request models.CreateEventRe
 		})
 		return nil, errorc.Error(err)
 	}
-	logger.EnrichContext(ctx, "event_slug", slug)
+	logger.Add(ctx, "event_slug", slug)
 
-	// Step 6: Validate access control settings
+	// Step 5: Validate access control settings
+	logger.Add(ctx, "step", "validate_access_control")
 	if err := validateAccessControl(ctx, eu, &request.Access); err != nil {
-		logger.SetErrorContext(ctx, &logger.ErrorContext{
+		logger.AddError(ctx, &logger.ErrorContext{
 			Type:      "ValidationFailed",
 			Code:      "VALIDATION_FAILED",
 			Message:   err.Error(),
@@ -112,9 +101,10 @@ func (eu *eventUsecase) Create(ctx context.Context, request models.CreateEventRe
 		return nil, errorc.Error(err)
 	}
 
-	// Step 7: Validate organizer community IDs
-	if err := validateCommunityIDs(ctx, eu.d.Repository.User, request.OrganizerCommunityIDs, "organizer"); err != nil {
-		logger.SetErrorContext(ctx, &logger.ErrorContext{
+	// Step 6: Validate organizer community IDs
+	logger.Add(ctx, "step", "validate_organizers")
+	if err := validateOrganizers(ctx, eu, &request.Organizer); err != nil {
+		logger.AddError(ctx, &logger.ErrorContext{
 			Type:      "ValidationFailed",
 			Code:      "VALIDATION_FAILED",
 			Message:   err.Error(),
@@ -123,90 +113,294 @@ func (eu *eventUsecase) Create(ctx context.Context, request models.CreateEventRe
 		return nil, errorc.Error(err)
 	}
 
-	// Step 8: Validate contact community IDs
-	if err := validateCommunityIDs(ctx, eu.d.Repository.User, request.ContactCommunityIDs, "contact"); err != nil {
-		logger.SetErrorContext(ctx, &logger.ErrorContext{
+	// Step 7: Validate location by type
+	logger.Add(ctx, "step", "validate_location_type")
+	if err := request.Location.Validate(&request.Category); err != nil {
+		logger.AddError(ctx, &logger.ErrorContext{
 			Type:      "ValidationFailed",
-			Code:      "VALIDATION_FAILED",
+			Code:      "LOCATION_VALIDATION_FAILED",
+			Message:   err.Error(),
+			Retriable: false,
+		})
+		return nil, errorc.Error(errorc.ErrorValidation, err.Error())
+	}
+
+	// Step 7: Validate click to action
+	logger.Add(ctx, "step", "validate_click_to_action")
+	if request.Location.ClickToAction.TextNotEmpty() && !request.Location.ClickToAction.LinkNotEmpty() {
+		request.Location.ClickToAction.Link = stringc.Pointer("NORMAL_FLOW")
+	} else if !request.Location.ClickToAction.TextNotEmpty() && request.Location.ClickToAction.LinkNotEmpty() {
+		request.Location.ClickToAction.Text = stringc.Pointer("Register Here!")
+	} else if !request.Location.ClickToAction.TextNotEmpty() && !request.Location.ClickToAction.LinkNotEmpty() {
+		request.Location.ClickToAction.Link = stringc.Pointer("NORMAL_FLOW")
+		request.Location.ClickToAction.Text = stringc.Pointer("Register Here!")
+	}
+
+	// Step 8: Validate schedule
+	logger.Add(ctx, "step", "validate_schedule")
+	if err := validateSchedule(&request.Schedule); err != nil {
+		logger.AddError(ctx, &logger.ErrorContext{
+			Type:      "ValidationFailed",
+			Code:      "SCHEDULE_VALIDATION_FAILED",
 			Message:   err.Error(),
 			Retriable: false,
 		})
 		return nil, errorc.Error(err)
 	}
 
-	// Step 9: Build event model from request
-	event := models.NewEventFromRequest(request, eventCode, slug, creatorID)
+	// Step 10: Validate recurrence pattern if recurring
+	if request.Recurrence.IsRecurring {
+		logger.Add(ctx, "step", "validate_recurrence_pattern")
+		if err := validateRecurrencePattern(&request.Recurrence); err != nil {
+			logger.AddError(ctx, &logger.ErrorContext{
+				Type:      "ValidationFailed",
+				Code:      "RECURRENCE_VALIDATION_FAILED",
+				Message:   err.Error(),
+				Retriable: false,
+			})
+			return nil, errorc.Error(err)
+		}
+	}
 
-	// Step 10: Create event in database within transaction
+	// Step 10: Validate notification
+	logger.Add(ctx, "step", "validate_notification")
+	if err := validateNotification(&request.Notification); err != nil {
+		logger.AddError(ctx, &logger.ErrorContext{
+			Type:      "ValidationFailed",
+			Code:      "NOTIFICATION_VALIDATION_FAILED",
+			Message:   err.Error(),
+			Retriable: false,
+		})
+		return nil, errorc.Error(err)
+	}
+
+	// Step 11: Prepare Event Model (Transform DTO to Model)
+	logger.Add(ctx, "step", "prepare_event_model")
+	event := &models.Event{
+		Code:               *eventCode,
+		Title:              request.Title,
+		Slug:               slug,
+		PreDescription:     &request.PreDescription,
+		PostDescription:    request.PostDescription,
+		TermsAndConditions: &request.TermsAndConditions,
+		Category:           request.Category,
+		Status:             request.Status,
+
+		// Images
+		ImageURLs: request.Images.ImageLinks,
+
+		// Organization
+		CreatorCommunityID:    creatorCommunityID,
+		OrganizerCommunityIDs: request.Organizer.OrganizerCommunityIDs,
+		ContactCommunityIDs:   request.Organizer.ContactCommunityIDs,
+
+		// Access
+		AccessLevel:         *request.Access.AccessLevel,
+		AllowedUserTypes:    request.Access.AllowedUserTypes,
+		AllowedRoles:        request.Access.AllowedRoles,
+		AllowedCampuses:     request.Access.AllowedCampuses,
+		AllowedCommunityIDs: request.Access.AllowedCommunityIDs,
+
+		// Location
+		LocationType:       *request.Location.LocationType,
+		PhysicalAddress:    request.Location.PhysicalAddress,
+		PhysicalPlaceName:  request.Location.PhysicalPlaceName,
+		VirtualLink:        request.Location.VirtualLink,
+		VirtualPlatform:    request.Location.VirtualPlatform,
+		LocationDetails:    request.Location.LocationDetails,
+		LocationVisibility: *request.Location.LocationVisibility,
+		CTAText:            request.Location.ClickToAction.Text,
+		CTALink:            request.Location.ClickToAction.Link,
+
+		// Schedule
+		StartAt:  *request.Schedule.StartAt,
+		EndAt:    *request.Schedule.EndAt,
+		Timezone: *request.Schedule.Timezone,
+
+		// Recurrence
+		IsRecurring: request.Recurrence.IsRecurring,
+		// RecurrencePattern will be set below if not nil
+
+		// Template
+		IsTemplate: request.Template.IsTemplate,
+		TemplateID: *request.Template.TemplateID,
+		SeriesID:   *request.Template.SeriesID,
+
+		// Notification
+		NotificationChannels: request.Notification.NotificationChannels,
+		// ReminderConfig will be set below if not nil
+	}
+
+	// Handle optional string pointers
+	if request.Images.BannerLink != nil {
+		event.BannerURL = *request.Images.BannerLink
+		logger.Add(ctx, "has_banner", true)
+	}
+	if request.Template.TemplateID != nil {
+		event.TemplateID = *request.Template.TemplateID
+		logger.Add(ctx, "template_id", *request.Template.TemplateID)
+	}
+	if request.Template.SeriesID != nil {
+		event.SeriesID = *request.Template.SeriesID
+		logger.Add(ctx, "series_id", *request.Template.SeriesID)
+	}
+
+	// Convert structs to JSONB for RecurrencePattern and ReminderConfig
+	logger.Add(ctx, "step", "marshal_jsonb")
+	if request.Recurrence.RecurrencePattern != nil {
+		if err := event.RecurrencePattern.Marshal(request.Recurrence.RecurrencePattern); err != nil {
+			logger.AddError(ctx, &logger.ErrorContext{
+				Type:      "MarshalError",
+				Code:      "MARSHAL_RECURRENCE_FAILED",
+				Message:   "failed to marshal recurrence pattern",
+				Retriable: false,
+			})
+			return nil, errorc.Error(errorc.ErrorInternalServer, "failed to marshal recurrence pattern")
+		}
+		logger.Add(ctx, "recurrence_frequency", request.Recurrence.RecurrencePattern.Frequency)
+	}
+	if request.Notification.ReminderConfig != nil {
+		if err := event.ReminderConfig.Marshal(request.Notification.ReminderConfig); err != nil {
+			logger.AddError(ctx, &logger.ErrorContext{
+				Type:      "MarshalError",
+				Code:      "MARSHAL_REMINDER_FAILED",
+				Message:   "failed to marshal reminder config",
+				Retriable: false,
+			})
+			return nil, errorc.Error(errorc.ErrorInternalServer, "failed to marshal reminder config")
+		}
+		logger.Add(ctx, "reminder_enabled", request.Notification.ReminderConfig.Enabled)
+	}
+
+	if request.Category == string("announcement") && request.Sessions != nil {
+		return nil, errorc.Error(errorc.ErrorValidation, "instances is not required for announcement category")
+	}
+
+	// Step 12: Create event in database within transaction
+	logger.Add(ctx, "step", "database_transaction")
 	if err := eu.d.Repository.Transaction.Atomic(ctx, func(ctx context.Context, r *pgsql.PostgreRepositories) error {
 		if err := r.Event.Create(ctx, event); err != nil {
-			return errorc.Error(errorc.ErrorDatabase, "failed to create event: %v", err)
+			logger.AddError(ctx, &logger.ErrorContext{
+				Type:      "DatabaseError",
+				Code:      "EVENT_CREATE_FAILED",
+				Message:   err.Error(),
+				Retriable: true,
+			})
+			return errorc.Error(errorc.ErrorDatabase, "failed to create event: %s", err)
+		}
+		logger.Add(ctx, "event_id", event.ID)
+
+		// Create sessions atomically with the event — both succeed or both roll back.
+		// CreateWithRepos accepts the transactional repos `r` so every INSERT
+		// (sessions + optional event schedule update via IsUpdateEvent) shares
+		// the same GORM transaction that also holds the event INSERT above.
+		if request.Sessions != nil {
+			logger.Add(ctx, "creating_sessions", true)
+			logger.Add(ctx, "sessions_requested", len(request.Sessions))
+			// ctx already has the transactional DB embedded by Atomic; Create will
+			// pick it up via BaseRepository.db(ctx) — no special repo arg needed.
+			if _, err := eu.d.EventSession.Create(ctx, request.Sessions, nil, event); err != nil {
+				logger.AddError(ctx, &logger.ErrorContext{
+					Type:      "DatabaseError",
+					Code:      "SESSIONS_CREATE_FAILED",
+					Message:   err.Error(),
+					Retriable: true,
+				})
+				return errorc.Error(err, "failed to create event sessions: %s", err)
+			}
+			logger.Add(ctx, "sessions_created", len(request.Sessions))
 		}
 
-		// Create event instances if provided in request
-		// GORM automatically uses the transaction context
-		if request.Instances != nil {
-			_, err := eu.d.EventInstance.Create(ctx, event, *request.Instances)
-			if err != nil {
-				return errorc.Error(err, "failed to create event instances")
+		// Note: For recurring events, occurrences are calculated on-demand
+		// based on the recurrence_pattern JSONB field when querying events.
+		// No pre-generation needed.
+
+		if request.Questions != nil {
+			logger.Add(ctx, "creating_questions", true)
+
+			form := models.CreateFormRequest{
+				Name: event.Title,
+				Entity: models.FormEntityRequest{
+					Type: "event",
+					Code: event.Code,
+				},
+				Questions: request.Questions,
 			}
+
+			logger.Add(ctx, "questions_requested", len(request.Questions))
+			if _, err := eu.d.Form.Create(ctx, &form); err != nil {
+				logger.AddError(ctx, &logger.ErrorContext{
+					Type:      "DatabaseError",
+					Code:      "QUESTIONS_CREATE_FAILED",
+					Message:   err.Error(),
+					Retriable: true,
+				})
+				return errorc.Error(err, "failed to create event questions: %s", err)
+			}
+			logger.Add(ctx, "questions_created", len(request.Questions))
 		}
 
 		return nil
 	}); err != nil {
-		logger.SetErrorContext(ctx, &logger.ErrorContext{
+		logger.AddError(ctx, &logger.ErrorContext{
 			Type:      "DatabaseError",
 			Code:      "DATABASE_ATOMIC_ERROR",
 			Message:   err.Error(),
 			Retriable: true,
 		})
-		return nil, errorc.Error(err)
+		return nil, errorc.Error(err, "failed to create event: %s", err)
 	}
 
 	// Final enrichment with success metrics
-	logger.EnrichContextWith(ctx, map[string]any{
-		"event_created":    true,
-		"organizers_count": len(request.OrganizerCommunityIDs),
-		"contacts_count":   len(request.ContactCommunityIDs),
-		"has_recurrence":   request.Schedule.Recurrence != "",
+	instanceCount := 0
+	if request.Sessions != nil {
+		instanceCount = len(request.Sessions)
+	}
+
+	logger.Add(ctx, map[string]any{
+		"event_created":      true,
+		"step":               "completed",
+		"instances_count":    instanceCount,
+		"notification_count": len(request.Notification.NotificationChannels),
+		"final_status":       event.Status,
 	})
 
 	return event, nil
 }
 
 // generateUniqueEventCode generates a unique event code with retry mechanism
-func generateUniqueEventCode(ctx context.Context, eu *eventUsecase, maxRetries int) (string, error) {
+func generateUniqueEventCode(ctx context.Context, eu *eventUsecase, maxRetries int) (*string, error) {
 	for attempt := 0; attempt < maxRetries; attempt++ {
 		code, err := generator.IdentifierCode(ctx, eu.d.Config.Event.EncodeCode, time.Now(), constants.EventCodePrefix)
 		if err != nil {
-			return "", errorc.Error(err, "failed to generate event code")
+			return nil, errorc.Error(err, "failed to generate event code")
 		}
 
 		// Check if code already exists
-		exists, err := eu.d.Repository.Event.CheckEventByCodeOrSlug(ctx, code, "")
+		isCodeExist, err := eu.d.Repository.Event.CheckByCode(ctx, code)
 		if err != nil {
-			return "", errorc.Error(err, "failed to check event code uniqueness")
+			return nil, errorc.Error(err, "failed to check event code uniqueness")
 		}
 
-		if !exists {
-			logger.EnrichContext(ctx, "code_generation_attempts", attempt+1)
-			return code, nil
+		if !isCodeExist {
+			logger.Add(ctx, "code_generation_attempts", attempt+1)
+			return &code, nil
 		}
 
 		// Code collision detected, retry
-		logger.EnrichContextWith(ctx, map[string]any{
+		logger.Add(ctx, map[string]any{
 			"code_collision":    true,
 			"collision_attempt": attempt + 1,
 			"colliding_code":    code,
 		})
 
 		if attempt < maxRetries-1 {
-			time.Sleep(time.Millisecond * time.Duration(10*(attempt+1))) // Exponential backoff
+			time.Sleep(time.Duration(eu.d.Config.Event.Backoff.CodeGeneration) * time.Millisecond * time.Duration(attempt+1)) // Exponential backoff
 		}
 	}
 
-	logger.EnrichContext(ctx, "code_generation_failed", true)
-	return "", errorc.Error(errorc.ErrorInternalServer, "failed to generate unique event code after %d attempts", maxRetries)
+	logger.Add(ctx, "code_generation_failed", true)
+	return nil, errorc.Error(errorc.ErrorInternalServer, "failed to generate unique event code after %d attempts", maxRetries)
 }
 
 // generateEventSlug generates or validates the event slug
@@ -227,7 +421,7 @@ func generateEventSlug(ctx context.Context, eu *eventUsecase, requestSlug, event
 	}
 
 	// Check if slug already exists
-	exists, err := eu.d.Repository.Event.CheckEventByCodeOrSlug(ctx, "", slug)
+	exists, err := eu.d.Repository.Event.CheckBySlug(ctx, slug)
 	if err != nil {
 		return "", errorc.Error(err, "failed to check slug uniqueness")
 	}
@@ -242,7 +436,7 @@ func generateEventSlug(ctx context.Context, eu *eventUsecase, requestSlug, event
 // validateAccessControl validates all access control settings
 func validateAccessControl(ctx context.Context, eu *eventUsecase, access *models.EventAccess) error {
 	// Public events don't need access restrictions
-	if access.AccessLevel == string(constants.AccessLevelPublic) {
+	if *access.AccessLevel == string(constants.AccessLevelPublic) {
 		access.AllowedCampuses = nil
 		access.AllowedRoles = nil
 		access.AllowedUserTypes = nil
@@ -251,7 +445,7 @@ func validateAccessControl(ctx context.Context, eu *eventUsecase, access *models
 	}
 
 	// Log private event access control validation
-	logger.EnrichContextWith(ctx, map[string]any{
+	logger.Add(ctx, map[string]any{
 		"validating_access_control": true,
 		"campuses_count":            len(access.AllowedCampuses),
 		"roles_count":               len(access.AllowedRoles),
@@ -263,7 +457,7 @@ func validateAccessControl(ctx context.Context, eu *eventUsecase, access *models
 	if access.AllowedCampuses != nil && len(access.AllowedCampuses) > 0 {
 		lowerCampuses := make([]string, len(access.AllowedCampuses))
 		for i, c := range access.AllowedCampuses {
-			lowerCampuses[i] = strings.ToLower(c)
+			lowerCampuses[i] = stringc.LowerAndTrimSpace(c)
 		}
 
 		if !common.CheckAllDataMapStructure(eu.d.Config.Campus, lowerCampuses) {
@@ -325,6 +519,65 @@ func validateAccessControl(ctx context.Context, eu *eventUsecase, access *models
 	return nil
 }
 
+func validateOrganizers(ctx context.Context, eu *eventUsecase, organizers *models.EventOrganizer) error {
+	if organizers == nil {
+		return nil
+	}
+
+	// Log private event access control validation
+	logger.Add(ctx, map[string]any{
+		"validating_organizers": true,
+		"organizer_count":       len(organizers.OrganizerCommunityIDs),
+		"contact_count":         len(organizers.ContactCommunityIDs),
+	})
+
+	if organizers.ContactCommunityIDs != nil && len(organizers.ContactCommunityIDs) > 0 {
+		cacheKey := cache.RolesCacheKey(organizers.ContactCommunityIDs)
+
+		// Try to get from cache or fetch from database
+		result, err := eu.d.Cache.GetOrSet(cacheKey, func() (interface{}, error) {
+			count, err := eu.d.Repository.Role.CheckMultiple(ctx, organizers.ContactCommunityIDs)
+			if err != nil {
+				return nil, errorc.Error(err, "failed to validate roles")
+			}
+			return count, nil
+		})
+
+		if err != nil {
+			return err
+		}
+
+		count := result.(int64)
+		if count != int64(len(organizers.ContactCommunityIDs)) {
+			return errorc.Error(errorc.ErrorDataNotFound, "one or more contact community IDs do not exist")
+		}
+	}
+
+	if organizers.OrganizerCommunityIDs != nil && len(organizers.OrganizerCommunityIDs) > 0 {
+		cacheKey := cache.RolesCacheKey(organizers.OrganizerCommunityIDs)
+
+		// Try to get from cache or fetch from database
+		result, err := eu.d.Cache.GetOrSet(cacheKey, func() (interface{}, error) {
+			count, err := eu.d.Repository.Role.CheckMultiple(ctx, organizers.OrganizerCommunityIDs)
+			if err != nil {
+				return nil, errorc.Error(err, "failed to validate roles")
+			}
+			return count, nil
+		})
+
+		if err != nil {
+			return err
+		}
+
+		count := result.(int64)
+		if count != int64(len(organizers.OrganizerCommunityIDs)) {
+			return errorc.Error(errorc.ErrorDataNotFound, "one or more organizer community IDs do not exist")
+		}
+	}
+
+	return nil
+}
+
 // validateCommunityIDs validates that all provided community IDs exist in the database
 func validateCommunityIDs(ctx context.Context, repo pgsql.UserRepository, ids []string, entityType string) error {
 	if ids == nil || len(ids) == 0 {
@@ -333,29 +586,21 @@ func validateCommunityIDs(ctx context.Context, repo pgsql.UserRepository, ids []
 
 	count, err := repo.CheckMultiple(ctx, ids)
 	if err != nil {
-		return errorc.Error(err, "failed to validate %s community IDs", entityType)
+		return errorc.Error(errorc.ErrorDatabase, "failed to validate %s community IDs for the event", entityType)
 	}
 
 	if count != int64(len(ids)) {
-		return errorc.Error(errorc.ErrorDataNotFound, "one or more %s community IDs do not exist", entityType)
+		return errorc.Error(errorc.ErrorDataNotFound, "one or more %s community IDs for the event do not exist", entityType)
 	}
 
-	return nil
-}
-
-// validateAnnouncementCategory validates that announcement events must be online
-func validateAnnouncementCategory(category, locationType string) error {
-	if category == string(constants.CategoryAnnouncement) && locationType != string(constants.LocationTypeOnline) {
-		return errorc.Error(errorc.ErrorInvalidInput, "announcement events must have online location type")
-	}
 	return nil
 }
 
 // normalizeEventRequest sets default values and normalizes the request
 func normalizeEventRequest(req *models.CreateEventRequest) {
 	// Set default location visibility
-	if req.Location.LocationVisibility == "" {
-		req.Location.LocationVisibility = string(constants.LocationVisibilityAll)
+	if *req.Location.LocationVisibility == "" {
+		*req.Location.LocationVisibility = string(constants.LocationVisibilityAll)
 	}
 
 	// Set default status
@@ -365,8 +610,130 @@ func normalizeEventRequest(req *models.CreateEventRequest) {
 
 	// If draft, set all instances to draft
 	if req.Status == string(constants.EventStatusDraft) {
-		for i := range req.Instances.InstanceRequest {
-			req.Instances.InstanceRequest[i].Status = string(constants.EventStatusDraft)
+		for _, session := range req.Sessions {
+			session.Status = string(constants.EventStatusDraft)
 		}
 	}
+
+	// Set default timezone if not provided
+	if req.Schedule.Timezone == nil {
+		tz := common.DefaultTimeZone
+		req.Schedule.Timezone = &tz
+	}
+
+	if req.Location.ClickToAction.Link == nil {
+		*req.Location.ClickToAction.Link = "NORMAL_FLOW"
+	}
+
+	if req.Location.ClickToAction.Text == nil {
+		*req.Location.ClickToAction.Text = "Register Here!"
+	}
+
+}
+
+// validateSchedule validates that the event schedule is valid
+func validateSchedule(schedule *models.EventSchedule) error {
+	if schedule.StartAt == nil {
+		return errorc.Error(errorc.ErrorValidation, "start time is required")
+	}
+	if schedule.EndAt == nil {
+		return errorc.Error(errorc.ErrorValidation, "end time is required")
+	}
+
+	// Explicit check: EndAt must be after StartAt
+	if !schedule.EndAt.After(*schedule.StartAt) {
+		return errorc.Error(errorc.ErrorValidation, "end time must be after start time")
+	}
+
+	// Check that the event is not too far in the past (more than 1 day)
+	oneDayAgo := time.Now().AddDate(0, 0, -1)
+	if schedule.StartAt.Before(oneDayAgo) {
+		return errorc.Error(errorc.ErrorValidation, "event start time cannot be more than 1 day in the past")
+	}
+
+	return nil
+}
+
+// validateRecurrencePattern validates the recurrence pattern
+func validateRecurrencePattern(recurrence *models.EventRecurrence) error {
+	if !recurrence.IsRecurring {
+		return nil
+	}
+
+	if recurrence.RecurrencePattern == nil {
+		return errorc.Error(errorc.ErrorValidation, "recurrence pattern is required when event is recurring")
+	}
+
+	// Use the existing validation function from models
+	if err := models.ValidateRecurrencePattern(recurrence.RecurrencePattern); err != nil {
+		return errorc.Error(errorc.ErrorValidation, "invalid recurrence pattern: %v", err)
+	}
+
+	return nil
+}
+
+// getNthWeekdayOfMonth gets the nth occurrence of a weekday in a month
+func getNthWeekdayOfMonth(year int, month time.Month, nth string, weekday time.Weekday, template time.Time) time.Time {
+	// Start at the first day of the month
+	firstDay := time.Date(year, month, 1, template.Hour(), template.Minute(), template.Second(), 0, template.Location())
+
+	// Find the first occurrence of the target weekday
+	daysUntilWeekday := int(weekday - firstDay.Weekday())
+	if daysUntilWeekday < 0 {
+		daysUntilWeekday += 7
+	}
+
+	firstOccurrence := firstDay.AddDate(0, 0, daysUntilWeekday)
+
+	// Calculate the nth occurrence
+	var offset int
+	switch nth {
+	case "first":
+		offset = 0
+	case "second":
+		offset = 7
+	case "third":
+		offset = 14
+	case "fourth":
+		offset = 21
+	case "last":
+		// Find the last occurrence by going to the 5th and checking if it's in the same month
+		fifthOccurrence := firstOccurrence.AddDate(0, 0, 28)
+		if fifthOccurrence.Month() == month {
+			return fifthOccurrence
+		}
+		return firstOccurrence.AddDate(0, 0, 21)
+	default:
+		offset = 0
+	}
+
+	return firstOccurrence.AddDate(0, 0, offset)
+}
+
+// isExcluded checks if a date is in the exclusion list
+func isExcluded(date time.Time, excludeDates []time.Time) bool {
+	for _, excluded := range excludeDates {
+		if date.Year() == excluded.Year() &&
+			date.Month() == excluded.Month() &&
+			date.Day() == excluded.Day() {
+			return true
+		}
+	}
+	return false
+}
+
+func validateNotification(notification *models.EventNotification) error {
+	if notification == nil {
+		return nil
+	}
+
+	if notification.ReminderConfig != nil && (notification.NotificationChannels == nil || len(notification.NotificationChannels) == 0) {
+		return errorc.Error(errorc.ErrorValidation, "notification channels is required when reminder config is set")
+	}
+
+	return nil
+}
+
+func (eu *eventUsecase) GetAll(ctx context.Context) ([]models.Event, error) {
+	return eu.d.Repository.Event.GetDummy(ctx)
 }

@@ -117,16 +117,15 @@ func (c ConfirmationMethod) String() string {
 type EventStatus string
 
 const (
-	EventStatusDraft     EventStatus = "draft"
-	EventStatusPublished EventStatus = "published"
-	EventStatusCancelled EventStatus = "cancelled"
-	EventStatusCompleted EventStatus = "completed"
+	EventStatusDraft    EventStatus = "draft"
+	EventStatusActive   EventStatus = "active"
+	EventStatusInactive EventStatus = "inactive"
 )
 
 // IsValid checks if the event status is valid
 func (e EventStatus) IsValid() bool {
 	switch e {
-	case EventStatusDraft, EventStatusPublished, EventStatusCancelled, EventStatusCompleted:
+	case EventStatusDraft, EventStatusActive, EventStatusInactive:
 		return true
 	}
 	return false
@@ -162,10 +161,13 @@ func (r RecurrenceType) String() string {
 	return string(r)
 }
 
-// Event code configuration
+// Event / Session code configuration
 const (
 	EventCodePrefix     = "EVT"
 	EventCodeMaxRetries = 5
+
+	SessionCodePrefix     = "SES"
+	SessionCodeMaxRetries = 5
 )
 
 // Event type constant

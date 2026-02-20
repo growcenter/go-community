@@ -25,6 +25,7 @@ type Contract struct {
 func New(config *config.Configuration) *Contract {
 	// Initialize Echo Framework
 	var e = echo.New()
+	e.HideBanner = true
 
 	// Initialize logger
 	logger.Initialize()

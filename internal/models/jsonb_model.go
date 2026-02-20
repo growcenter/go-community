@@ -104,6 +104,6 @@ func (j JSONB) Bytes() []byte {
 }
 
 // IsNull checks if the JSONB is null.
-func (j JSONB) IsNull() bool {
-	return j == nil || len(j) == 0
+func (j *JSONB) IsNull() bool {
+	return j == nil || len(*j) == 0
 }

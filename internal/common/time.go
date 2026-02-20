@@ -5,7 +5,7 @@ import (
 )
 
 const (
-	defaultTimeZone    = "Asia/Jakarta"
+	DefaultTimeZone    = "Asia/Jakarta"
 	DateFormatYYYYMMDD = "2006-01-02"
 )
 
@@ -22,7 +22,7 @@ func YesterdayTime() *time.Time {
 }
 
 func Now() time.Time {
-	loc, err := time.LoadLocation(defaultTimeZone)
+	loc, err := time.LoadLocation(DefaultTimeZone)
 	if err != nil {
 		return time.Now()
 	}
@@ -30,7 +30,7 @@ func Now() time.Time {
 }
 
 func GetLocation() *time.Location {
-	loc, err := time.LoadLocation(defaultTimeZone)
+	loc, err := time.LoadLocation(DefaultTimeZone)
 	if err != nil {
 		return Now().Location()
 	}

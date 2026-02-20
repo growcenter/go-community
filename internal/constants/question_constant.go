@@ -11,4 +11,5 @@ const (
 	QuestionTypeTime      QuestionType = "time"
 	QuestionTypeEmail     QuestionType = "email"
 	QuestionTypePhone     QuestionType = "phone"
+	QuestionTypeNumber    QuestionType = "number"
 )

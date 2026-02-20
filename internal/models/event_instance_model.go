@@ -25,8 +25,8 @@ type EventInstance struct {
 	InstanceType string `gorm:"type:varchar(30);not null;default:'registration'" json:"instance_type"` // registration, announcement, volunteer-attendance
 
 	// Registration Identifier Configuration
-	ParentIdentifierFields JSONB `gorm:"type:jsonb" json:"parent_identifier_fields"` // Fields required from parent/guardian
-	ChildIdentifierFields  JSONB `gorm:"type:jsonb" json:"child_identifier_fields"`  // Fields required from child/participant
+	ParentIdentifierFields JSONB `gorm:"type:jsonb" json:"parent_identifier_fields" swaggertype:"object"` // Fields required from parent/guardian
+	ChildIdentifierFields  JSONB `gorm:"type:jsonb" json:"child_identifier_fields" swaggertype:"object"`  // Fields required from child/participant
 
 	// Registration Enforcement Rules
 	EnforceCommunityId      bool     `gorm:"default:false" json:"enforce_community_id"`      // One registration per community_id
@@ -79,7 +79,6 @@ func (EventInstance) TableName() string {
 }
 
 // Helper Methods - Simple getters, NO validation, NO business logic
-
 // IsActive returns true if the instance is in active status
 func (ei *EventInstance) IsActive() bool {
 	return ei.Status == "active"
@@ -233,12 +232,14 @@ func (ei *EventInstance) ToCreateResponse() CreateInstanceResponse {
 			Timezone:        ei.Timezone,
 		},
 		Location: EventLocation{
-			LocationType:       ei.LocationType,
-			PhysicalAddress:    *ei.PhysicalAddress,
-			VirtualLink:        *ei.VirtualLink,
-			MeetingCTAText:     *ei.MeetingCTAText,
-			LocationDetails:    *ei.LocationDetails,
-			LocationVisibility: ei.LocationVisibility,
+			LocationType:    &ei.LocationType,
+			PhysicalAddress: ei.PhysicalAddress,
+			VirtualLink:     ei.VirtualLink,
+			ClickToAction: ClickToAction{
+				Text: ei.MeetingCTAText,
+			},
+			LocationDetails:    ei.LocationDetails,
+			LocationVisibility: &ei.LocationVisibility,
 		},
 		RegistrationConfig: InstanceRegistrationConfigResponse{
 			Capacity:                ei.Capacity,
@@ -286,12 +287,12 @@ func NewInstanceFromRequest(
 		EnforceSelfRegistration: req.RegistrationConfig.EnforceSelfRegistration,
 		EnforceUniqueness:       req.RegistrationConfig.EnforceUniqueness,
 		Methods:                 req.RegistrationConfig.Methods,
-		LocationType:            req.Location.LocationType,
-		PhysicalAddress:         &req.Location.PhysicalAddress,
-		VirtualLink:             &req.Location.VirtualLink,
-		MeetingCTAText:          &req.Location.MeetingCTAText,
-		LocationDetails:         &req.Location.LocationDetails,
-		LocationVisibility:      req.Location.LocationVisibility,
+		LocationType:            *req.Location.LocationType,
+		PhysicalAddress:         req.Location.PhysicalAddress,
+		VirtualLink:             req.Location.VirtualLink,
+		MeetingCTAText:          req.Location.ClickToAction.Text,
+		LocationDetails:         req.Location.LocationDetails,
+		LocationVisibility:      *req.Location.LocationVisibility,
 		StartAt:                 req.Schedule.StartAt,
 		EndAt:                   req.Schedule.EndAt,
 		RegisterStartAt:         req.Schedule.RegisterStartAt,
@@ -307,7 +308,6 @@ func NewInstanceFromRequest(
 		Flow:                    req.RegistrationConfig.Flow,
 		QuotaPerUser:            req.RegistrationConfig.QuotaPerUser,
 		Capacity:                req.RegistrationConfig.Capacity,
-		PostRegistrationDetails: event.PostRegistrationDetails,
 		Status:                  req.Status,
 	}
 }

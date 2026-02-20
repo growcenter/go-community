@@ -62,9 +62,14 @@ type (
 		ClientId        map[string]bool   `mapstructure:"client_id"`
 	}
 	Event struct {
-		EncodeCode               string `mapstructure:"encode_code"`
-		MinSlug                  int    `mapstructure:"min_slug"`
-		AutoRequireParentInfoAge int    `mapstructure:"auto_require_parent_info_age"` // Age threshold for auto-requiring parent info
+		EncodeCode               string       `mapstructure:"encode_code"`
+		MinSlug                  int          `mapstructure:"min_slug"`
+		AutoRequireParentInfoAge int          `mapstructure:"auto_require_parent_info_age"` // Age threshold for auto-requiring parent info
+		Backoff                  EventBackoff `mapstructure:"backoff"`
+	}
+
+	EventBackoff struct {
+		CodeGeneration int `mapstructure:"code_generation"`
 	}
 	Cache struct {
 		TTLMinutes int `mapstructure:"ttl_minutes"` // Cache TTL in minutes for validation lookups

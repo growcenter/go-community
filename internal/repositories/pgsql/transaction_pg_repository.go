@@ -8,6 +8,18 @@ import (
 	"gorm.io/gorm"
 )
 
+// txKey is an unexported type used as a context key for the transactional *gorm.DB.
+// Using a dedicated type (instead of a plain string) prevents collisions with other
+// packages that also store values in context.
+type txKey struct{}
+
+// TxFromContext returns the transactional *gorm.DB stored by Atomic, and whether one
+// was found. Repositories call this to transparently participate in the active transaction.
+func TxFromContext(ctx context.Context) (*gorm.DB, bool) {
+	tx, ok := ctx.Value(txKey{}).(*gorm.DB)
+	return tx, ok
+}
+
 type TransactionRepository interface {
 	Transaction(fc func(dtx *gorm.DB) error) error
 	Atomic(ctx context.Context, fc func(ctx context.Context, r *PostgreRepositories) error) error
@@ -29,17 +41,13 @@ func (tr *transactionRepository) Transaction(fc func(dtx *gorm.DB) error) error 
 		return dtx.Error
 	}
 
-	logger.EnrichContextMap(context.Background(), map[string]interface{}{
-		"type":    "TransactionBegin",
-		"code":    "DATABASE_TRANSACTION_BEGIN",
-		"message": "[DATABASE-TRX-BEGIN]",
-	})
+	logger.Add(context.Background(), "transaction_begin", true)
 
 	defer func() {
 		if r := recover(); r != nil {
 			dtx.Rollback()
 			err := fmt.Errorf("[DATABASE-ERROR] panic happened because: " + fmt.Sprintf("%v", r))
-			logger.LogError(context.Background(), logger.ErrorContext{
+			logger.AddError(context.Background(), &logger.ErrorContext{
 				Type:      "PanicError",
 				Code:      "DATABASE_TRANSACTION_PANIC",
 				Message:   err.Error(),
@@ -50,7 +58,7 @@ func (tr *transactionRepository) Transaction(fc func(dtx *gorm.DB) error) error 
 
 	if err := fc(dtx); err != nil {
 		dtx.Rollback()
-		logger.LogError(context.Background(), logger.ErrorContext{
+		logger.AddError(context.Background(), &logger.ErrorContext{
 			Type:      "RollbackError",
 			Code:      "DATABASE_TRANSACTION_ROLLBACK",
 			Message:   err.Error(),
@@ -103,7 +111,7 @@ func (tr *transactionRepository) Atomic(ctx context.Context, fc func(ctx context
 			// Log the panic with rich error context
 			// Note: The updated context from LogError won't propagate from defer,
 			// but the middleware will still pick it up from the original context
-			logger.LogError(ctx, logger.ErrorContext{
+			logger.AddError(ctx, &logger.ErrorContext{
 				Type:      "PanicError",
 				Code:      "DATABASE_TRANSACTION_PANIC",
 				Message:   err.Error(),
@@ -117,7 +125,7 @@ func (tr *transactionRepository) Atomic(ctx context.Context, fc func(ctx context
 				// If rollback itself fails, wrap both errors for debugging
 				err = fmt.Errorf("failed to rollback transaction (original error: %w): %v", err, rbErr)
 
-				logger.LogError(ctx, logger.ErrorContext{
+				logger.AddError(ctx, &logger.ErrorContext{
 					Type:      "RollbackError",
 					Code:      "DATABASE_TRANSACTION_ROLLBACK",
 					Message:   err.Error(),
@@ -131,7 +139,7 @@ func (tr *transactionRepository) Atomic(ctx context.Context, fc func(ctx context
 				// If commit fails, update err so it's returned to caller
 				err = fmt.Errorf("failed to commit transaction: %w", commitErr)
 
-				logger.LogError(ctx, logger.ErrorContext{
+				logger.AddError(ctx, &logger.ErrorContext{
 					Type:      "CommitError",
 					Code:      "DATABASE_TRANSACTION_COMMIT",
 					Message:   err.Error(),
@@ -144,6 +152,9 @@ func (tr *transactionRepository) Atomic(ctx context.Context, fc func(ctx context
 	// Step 3: Execute the user-provided function with a new repository instance
 	// The repository uses the transaction (tx) instead of the main DB connection
 	// This ensures all operations within the function are part of the same transaction
+	// Embed the transactional DB in context so repositories can pick it up without
+	// needing the caller to explicitly pass *PostgreRepositories through every call.
+	ctx = context.WithValue(ctx, txKey{}, tx)
 	err = fc(ctx, New(tx))
 	if err != nil {
 		// Error will be handled by the defer block above (Step 2b)

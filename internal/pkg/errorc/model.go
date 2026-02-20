@@ -26,4 +26,6 @@ var (
 	ErrorDatabase       = wrap(models.ErrorResponse{Code: http.StatusInternalServerError, Status: "DATABASE_ERROR", Message: "Database error occurred."})
 	ErrorMissingFields  = wrap(models.ErrorResponse{Code: http.StatusBadRequest, Status: "MISSING_FIELDS", Message: "Missing required fields."})
 	ErrorEmptyInput     = wrap(models.ErrorResponse{Code: http.StatusBadRequest, Status: "EMPTY_INPUT", Message: "Input cannot be empty."})
+	ErrorInvalidDate    = wrap(models.ErrorResponse{Code: http.StatusBadRequest, Status: "INVALID_DATE", Message: "Invalid date."})
+	ErrorStartDateLater = wrap(models.ErrorResponse{Code: http.StatusBadRequest, Status: "INVALID_VALUES", Message: "Start Time cannot be later than date."})
 )

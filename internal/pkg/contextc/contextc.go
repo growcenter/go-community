@@ -3,6 +3,7 @@ package contextc
 import (
 	"context"
 	"go-community/internal/pkg/errorc"
+	"go-community/internal/pkg/validator"
 )
 
 // ExtractCommunityID safely extracts the community_id from context
@@ -20,6 +21,10 @@ func ExtractCommunityID(ctx context.Context) (string, error) {
 
 	if communityID == "" {
 		return "", errorc.Error(errorc.ErrorUnauthorized, "community_id is empty in context")
+	}
+
+	if !validator.LuhnAccountNumber(communityID) {
+		return "", errorc.Error(errorc.ErrorInvalidInput, "community_id is invalid")
 	}
 
 	return communityID, nil
