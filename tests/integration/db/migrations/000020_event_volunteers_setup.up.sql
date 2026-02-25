@@ -14,6 +14,8 @@ CREATE TABLE event_volunteers (
     role VARCHAR(50) NOT NULL, -- scanner, usher, coordinator
     assigned_at TIMESTAMPTZ DEFAULT NOW (),
     assigned_by_community_id VARCHAR(50) NOT NULL,
+    created_at TIMESTAMPTZ DEFAULT NOW (),
+    updated_at TIMESTAMPTZ DEFAULT NOW (),
     UNIQUE (event_id, session_id, community_id)
 );
 
