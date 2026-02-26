@@ -56,7 +56,7 @@ type (
 		QuestionType  constants.QuestionType   `json:"type" validate:"required,questionType"`
 		MandatoryFor  []string                 `json:"mandatoryFor" validate:"required,dive,oneof=parent child"`
 		ApplyFor      []string                 `json:"applyFor" validate:"required,dive,oneof=parent child"`
-		Options       *QuestionOptions         `json:"options" validate:"omitempty,dive"`
+		Options       *QuestionOptions         `json:"options" validate:"omitempty"`
 		Rules         *QuestionValidationRules `json:"rules"`
 		CorrectAnswer *string                  `json:"correctAnswer,omitempty"`
 		DisplayOrder  int                      `json:"displayOrder" validate:"omitempty,min=0"`

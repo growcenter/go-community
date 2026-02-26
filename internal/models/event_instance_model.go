@@ -106,7 +106,7 @@ func (ei *EventInstance) IsHybrid() bool {
 
 type (
 	CreateInstanceRequest struct {
-		EventConfiguration EventConfiguration `json:"eventConfiguration" validate:"omitempty,dive"`
+		EventConfiguration EventConfiguration `json:"eventConfiguration" validate:"omitempty"`
 		InstanceRequest    []InstanceRequest  `json:"instanceRequest" validate:"required"`
 	}
 	EventConfiguration struct {
@@ -119,7 +119,7 @@ type (
 		InstanceType           string                     `json:"instanceType" validate:"required,oneof=registration announcement volunteer-attendance"`
 		RegistrationConfig     InstanceRegistrationConfig `json:"registrationConfig" validate:"required"`
 		Schedule               InstanceSchedule           `json:"schedule" validate:"required"`
-		RegistrationIdentifier InstanceIdentifierConfig   `json:"registrationIdentifier" validate:"omitempty,dive"`
+		RegistrationIdentifier InstanceIdentifierConfig   `json:"registrationIdentifier" validate:"omitempty"`
 		Location               EventLocation              `json:"location" validate:"required"`
 		IsUpdateEventTime      bool                       `json:"isUpdateEventTime"`
 		Status                 string                     `json:"status" validate:"required"`

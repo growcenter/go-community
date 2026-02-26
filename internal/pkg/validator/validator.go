@@ -263,13 +263,16 @@ func registerCampusCode() {
 
 func registerCampusCodes() {
 	valid.RegisterValidation("campusCodes", func(fl v10.FieldLevel) bool {
-		campusCodes := fl.Field().Interface().([]string)
-
-		for _, campusCode := range campusCodes {
-			return campusCode == "" || len(campusCode) == 3
+		val := fl.Field().Interface()
+		if campusCodes, ok := val.([]string); ok {
+			for _, campusCode := range campusCodes {
+				if campusCode != "" && len(campusCode) != 3 {
+					return false
+				}
+			}
+			return true
 		}
-
-		return true
+		return false
 	})
 }
 
@@ -291,6 +294,12 @@ func registerBannerRequiresImages() {
 		if bannerLinkField.Kind() == reflect.Ptr && !bannerLinkField.IsNil() {
 			bannerStr := bannerLinkField.Elem().String()
 			if bannerStr == "" {
+				return true
+			}
+		}
+
+		if bannerLinkField.Kind() == reflect.String {
+			if bannerLinkField.String() == "" {
 				return true
 			}
 		}

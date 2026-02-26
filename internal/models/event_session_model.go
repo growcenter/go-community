@@ -112,9 +112,9 @@ type (
 	}
 
 	SessionTimeConfiguration struct {
-		Registration EventSchedule         `json:"registration" validate:"omitempty,dive"`
-		CheckIn      SessionCheckInConfig  `json:"checkIn" validate:"omitempty,dive"`
-		CheckOut     SessionCheckOutConfig `json:"checkOut" validate:"omitempty,dive"`
+		Registration EventSchedule         `json:"registration" validate:"omitempty"`
+		CheckIn      SessionCheckInConfig  `json:"checkIn" validate:"omitempty"`
+		CheckOut     SessionCheckOutConfig `json:"checkOut" validate:"omitempty"`
 	}
 
 	SessionCapacity struct {
@@ -137,8 +137,8 @@ type (
 	SessionCheckInConfig struct {
 		Enabled       bool       `json:"enabled"`                                                                                         // Is check-in feature enabled?
 		Required      bool       `json:"required"`                                                                                        // Is check-in mandatory?
-		StartAt       *time.Time `gorm:"type:timestamptz" json:"start_at"`                                                                // Check-in start time
-		EndAt         *time.Time `gorm:"type:timestamptz" json:"end_at"`                                                                  // Check-in end time
+		StartAt       *time.Time `gorm:"type:timestamptz" json:"startAt"`                                                                 // Check-in start time
+		EndAt         *time.Time `gorm:"type:timestamptz" json:"endAt"`                                                                   // Check-in end time
 		AllowLate     bool       `json:"allowLate"`                                                                                       // Allow check-in after window?
 		TrackLate     bool       `json:"trackLate"`                                                                                       // Whether to track/flag late check-ins
 		LatePolicy    string     `json:"latePolicy" validate:"omitempty,oneof=reject warn allow"`                                         // How to handle late check-ins: reject (hard cutoff), warn (accept but flag), allow (accept silently)
@@ -148,8 +148,8 @@ type (
 	SessionCheckOutConfig struct {
 		Enabled       bool       `json:"enabled"`                                                                                         // Is check-out feature enabled?
 		Required      bool       `json:"required"`                                                                                        // Is check-out mandatory?
-		StartAt       *time.Time `gorm:"type:timestamptz" json:"start_at"`                                                                // Check-out start time
-		EndAt         *time.Time `gorm:"type:timestamptz" json:"end_at"`                                                                  // Check-out end time
+		StartAt       *time.Time `gorm:"type:timestamptz" json:"startAt"`                                                                 // Check-out start time
+		EndAt         *time.Time `gorm:"type:timestamptz" json:"endAt"`                                                                   // Check-out end time
 		AllowLate     bool       `json:"allowLate"`                                                                                       // Allow check-out after window?
 		TrackLate     bool       `json:"trackLate"`                                                                                       // Whether to track/flag late check-outs
 		LatePolicy    string     `json:"latePolicy" validate:"omitempty,oneof=reject warn allow"`                                         // How to handle late check-outs: reject (hard cutoff), warn (accept but flag), allow (accept silently)
@@ -157,22 +157,22 @@ type (
 	}
 
 	SessionIdentifierConfig struct {
-		Primary    PrimaryIdentifierConfig    `json:"primary" validate:"omitempty,dive"`
-		Additional AdditionalIdentifierConfig `json:"additional" validate:"omitempty,dive"`
+		Primary    PrimaryIdentifierConfig    `json:"primary" validate:"omitempty"`
+		Additional AdditionalIdentifierConfig `json:"additional" validate:"omitempty"`
 	}
 
 	PrimaryIdentifierConfig struct {
-		Name        FieldConfig `json:"name" validate:"omitempty,dive"`
-		Email       FieldConfig `json:"email" validate:"omitempty,dive"`
-		Phone       FieldConfig `json:"phone" validate:"omitempty,dive"`
-		CommunityID FieldConfig `json:"communityId" validate:"omitempty,dive"`
+		Name        FieldConfig `json:"name" validate:"omitempty"`
+		Email       FieldConfig `json:"email" validate:"omitempty"`
+		Phone       FieldConfig `json:"phone" validate:"omitempty"`
+		CommunityID FieldConfig `json:"communityId" validate:"omitempty"`
 	}
 
 	AdditionalIdentifierConfig struct {
-		Name        FieldConfig `json:"name" validate:"omitempty,dive"`
-		Email       FieldConfig `json:"email" validate:"omitempty,dive"`
-		Phone       FieldConfig `json:"phone" validate:"omitempty,dive"`
-		CommunityID FieldConfig `json:"communityId" validate:"omitempty,dive"`
+		Name        FieldConfig `json:"name" validate:"omitempty"`
+		Email       FieldConfig `json:"email" validate:"omitempty"`
+		Phone       FieldConfig `json:"phone" validate:"omitempty"`
+		CommunityID FieldConfig `json:"communityId" validate:"omitempty"`
 	}
 
 	FieldConfig struct {
@@ -189,12 +189,12 @@ type (
 		SessionType       string                          `json:"sessionType" validate:"required,oneof=service class track breakout workshop general kids youth teen adult"`
 		Status            string                          `json:"status" validate:"required,oneof=draft active inactive"`
 		IsUpdateEvent     bool                            `json:"isUpdateEvent"`
-		Location          EventLocation                   `json:"location" validate:"omitempty,dive"`
-		Geolocation       *GeolocationConfiguration       `json:"geolocation" validate:"omitempty,dive"`
-		Schedule          EventSchedule                   `json:"schedule" validate:"omitempty,dive"`
-		Times             SessionTimeConfiguration        `json:"times" validate:"omitempty,dive"`
-		SessionCapacity   SessionCapacity                 `json:"sessionCapacity" validate:"required,dive"`
-		SessionRules      SessionRules                    `json:"sessionRules" validate:"required,dive"`
+		Location          EventLocation                   `json:"location" validate:"omitempty"`
+		Geolocation       *GeolocationConfiguration       `json:"geolocation" validate:"omitempty"`
+		Schedule          EventSchedule                   `json:"schedule" validate:"omitempty"`
+		Times             SessionTimeConfiguration        `json:"times" validate:"omitempty"`
+		SessionCapacity   SessionCapacity                 `json:"sessionCapacity" validate:"required"`
+		SessionRules      SessionRules                    `json:"sessionRules" validate:"required"`
 		Questions         []BulkCreateFormQuestionRequest `json:"questions" validate:"omitempty,dive"`
 	}
 

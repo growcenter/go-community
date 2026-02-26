@@ -62,7 +62,9 @@ build-prod: ## Build optimized production binary into bin/
 	@echo "✅ Production build complete: bin/$(BINARY_NAME)"
 	@ls -lh bin/$(BINARY_NAME)
 
-dev: docs ## Run with hot-reload (requires air)
+dev:
+	@echo "Create or Update swagger documentation"
+	@$(MAKE) docs
 	@echo "🔥 Starting hot-reload development server..."
 	@if ! command -v air > /dev/null; then \
 		echo "⚠️  'air' not found. Run 'make install-tools'"; \
