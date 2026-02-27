@@ -9,7 +9,7 @@ import (
 // ExtractCommunityID safely extracts the community_id from context
 // Returns an error if the value is missing or not a string
 func ExtractCommunityID(ctx context.Context) (string, error) {
-	value := ctx.Value("community_id")
+	value := ctx.Value("id")
 	if value == nil {
 		return "", errorc.Error(errorc.ErrorUnauthorized, "community_id not found in context")
 	}

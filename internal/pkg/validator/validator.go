@@ -2,6 +2,7 @@ package validator
 
 import (
 	"errors"
+	"go-community/internal/constants"
 	"go-community/internal/models"
 	"reflect"
 	"regexp"
@@ -31,6 +32,8 @@ func init() {
 	registerCampusCode()
 	registerCampusCodes()
 	registerBannerRequiresImages()
+	registerURLFormat()
+	registerQuestionType()
 }
 
 func Validate(request interface{}) error {
@@ -276,6 +279,34 @@ func registerCampusCodes() {
 	})
 }
 
+// registerURLFormat validates that a field is a valid URL, but skips validation
+// for nil pointers and empty strings. This is necessary because the built-in `url`
+// tag does not respect *string fields pointing to "": omitempty only skips when the
+// pointer itself is nil, so an explicit empty string still gets validated by `url`
+// and incorrectly fails. Use `urlFormat` instead of `url` on optional *string URL fields.
+func registerURLFormat() {
+	valid.RegisterValidation("urlFormat", func(fl v10.FieldLevel) bool {
+		field := fl.Field()
+
+		// Handle *string: skip if nil or points to empty string
+		if field.Kind() == reflect.Ptr {
+			if field.IsNil() {
+				return true
+			}
+			field = field.Elem()
+		}
+
+		// Skip validation for empty strings
+		str := field.String()
+		if str == "" {
+			return true
+		}
+
+		// Delegate to built-in URL validator
+		return v10.New().Var(str, "url") == nil
+	})
+}
+
 // registerBannerRequiresImages validates that BannerLink can only have a value if ImageLinks is not empty
 // Business Rule:
 //   - If ImageLinks is empty → BannerLink MUST be empty (nil or empty string)
@@ -321,5 +352,14 @@ func registerBannerRequiresImages() {
 
 		// ImageLinks is not empty, so BannerLink can have a value
 		return true
+	})
+}
+
+func registerQuestionType() {
+	valid.RegisterValidation("questionType", func(fl v10.FieldLevel) bool {
+		value := fl.Field().String()
+		// Check if the field's value exists as a key in the map of valid types.
+		_, ok := constants.MapQuestionType[value]
+		return ok
 	})
 }

@@ -350,7 +350,7 @@ func (e *Event) NotificationChannelCount() int {
 //   - bannerRequiresImages: BannerLink can only have a value if ImageLinks is not empty
 type EventImages struct {
 	ImageLinks []string `json:"imageLinks" validate:"omitempty,max=10,dive,url,max=2048" example:"https://example.com/image1.jpg,https://example.com/image2.jpg"`
-	BannerLink *string  `json:"bannerLink" validate:"omitempty,bannerRequiresImages,url,max=2048" example:"https://example.com/banner.jpg"`
+	BannerLink *string  `json:"bannerLink" validate:"omitempty,bannerRequiresImages,urlFormat,max=2048" example:"https://example.com/banner.jpg"`
 }
 
 // HasImages returns true if at least one image is present
@@ -456,7 +456,7 @@ type EventLocation struct {
 	LocationVisibility *string       `json:"locationVisibility" validate:"required,oneof=pre-registration post-registration all"`
 	PhysicalPlaceName  *string       `json:"physicalPlaceName" validate:"omitempty,required_if=LocationType offline,required_if=LocationType hybrid,min=1,max=255"`
 	PhysicalAddress    *string       `json:"physicalAddress" validate:"omitempty,required_if=LocationType offline,required_if=LocationType hybrid,min=1,max=500"`
-	VirtualLink        *string       `json:"virtualLink" validate:"omitempty,required_if=LocationType online,required_if=LocationType hybrid,url,max=2048"`
+	VirtualLink        *string       `json:"virtualLink" validate:"omitempty,required_if=LocationType online,required_if=LocationType hybrid,urlFormat,max=2048"`
 	VirtualPlatform    *string       `json:"virtualPlatform" validate:"omitempty,required_if=LocationType online,required_if=LocationType hybrid,min=1,max=50"`
 	ClickToAction      ClickToAction `json:"clickToAction" validate:"omitempty"`
 	LocationDetails    *string       `json:"locationDetails" validate:"omitempty,max=1000"`
