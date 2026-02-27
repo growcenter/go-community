@@ -13,3 +13,15 @@ const (
 	QuestionTypePhone     QuestionType = "phone"
 	QuestionTypeNumber    QuestionType = "number"
 )
+
+var MapQuestionType = map[string]QuestionType{
+	"short_text":      QuestionTypeShortText,
+	"long_text":       QuestionTypeLongText,
+	"single_choice":   QuestionTypeSingle,
+	"multiple_choice": QuestionTypeMultiple,
+	"date":            QuestionTypeDate,
+	"time":            QuestionTypeTime,
+	"email":           QuestionTypeEmail,
+	"phone":           QuestionTypePhone,
+	"number":          QuestionTypeNumber,
+}

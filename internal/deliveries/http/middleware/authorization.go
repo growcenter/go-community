@@ -1,8 +1,8 @@
 package middleware
 
 import (
+	"context"
 	"encoding/base64"
-	"github.com/google/uuid"
 	"go-community/internal/common"
 	"go-community/internal/config"
 	"go-community/internal/deliveries/http/common/response"
@@ -10,9 +10,28 @@ import (
 	"go-community/internal/usecases"
 	"time"
 
+	"github.com/google/uuid"
+
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/labstack/echo/v4"
 )
+
+// setClaimsToContext writes JWT claim values into both Echo's internal store
+// (accessible via ctx.Get) and Go's standard context.Context on the request
+// (accessible via ctx.Value in usecase/service layers).
+// This is necessary because echo.Context.Set and context.Context are two
+// completely separate storage mechanisms that do not share data.
+func setClaimsToContext(ctx echo.Context, id string, userTypes []string, roles []string) {
+	ctx.Set("id", id)
+	ctx.Set("userTypes", userTypes)
+	ctx.Set("roles", roles)
+
+	reqCtx := ctx.Request().Context()
+	reqCtx = context.WithValue(reqCtx, "id", id)
+	reqCtx = context.WithValue(reqCtx, "userTypes", userTypes)
+	reqCtx = context.WithValue(reqCtx, "roles", roles)
+	ctx.SetRequest(ctx.Request().WithContext(reqCtx))
+}
 
 type jwtClaim struct {
 	UserTypes       []string `json:"userTypes"`
@@ -76,9 +95,7 @@ func UserMiddleware(config *config.Configuration, usecase *usecases.Usecases, al
 			if allowedRoles != nil {
 				for _, userType := range claims.UserTypes {
 					if userType == "superadmin" {
-						ctx.Set("id", claims.Subject)
-						ctx.Set("userTypes", claims.UserTypes)
-						ctx.Set("roles", claims.Roles)
+						setClaimsToContext(ctx, claims.Subject, claims.UserTypes, claims.Roles)
 						return next(ctx)
 					}
 				}
@@ -87,9 +104,7 @@ func UserMiddleware(config *config.Configuration, usecase *usecases.Usecases, al
 				for _, allowedRole := range allowedRoles {
 					for _, userRole := range claims.Roles {
 						if userRole == allowedRole {
-							ctx.Set("id", claims.Subject)
-							ctx.Set("userTypes", claims.UserTypes)
-							ctx.Set("roles", claims.Roles)
+							setClaimsToContext(ctx, claims.Subject, claims.UserTypes, claims.Roles)
 							return next(ctx)
 						}
 					}
@@ -98,9 +113,7 @@ func UserMiddleware(config *config.Configuration, usecase *usecases.Usecases, al
 				return response.Error(ctx, models.ErrorForbiddenRole)
 			}
 
-			ctx.Set("id", claims.Subject)
-			ctx.Set("userTypes", claims.UserTypes)
-			ctx.Set("roles", claims.Roles)
+			setClaimsToContext(ctx, claims.Subject, claims.UserTypes, claims.Roles)
 
 			return next(ctx)
 		}

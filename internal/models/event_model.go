@@ -350,7 +350,7 @@ func (e *Event) NotificationChannelCount() int {
 //   - bannerRequiresImages: BannerLink can only have a value if ImageLinks is not empty
 type EventImages struct {
 	ImageLinks []string `json:"imageLinks" validate:"omitempty,max=10,dive,url,max=2048" example:"https://example.com/image1.jpg,https://example.com/image2.jpg"`
-	BannerLink *string  `json:"bannerLink" validate:"bannerRequiresImages,omitempty,url,max=2048" example:"https://example.com/banner.jpg"`
+	BannerLink *string  `json:"bannerLink" validate:"omitempty,bannerRequiresImages,urlFormat,max=2048" example:"https://example.com/banner.jpg"`
 }
 
 // HasImages returns true if at least one image is present
@@ -414,7 +414,7 @@ type EventAccess struct {
 	AccessLevel         *string  `json:"accessLevel" validate:"required,oneof=public private"`
 	AllowedUserTypes    []string `json:"allowedUserTypes" validate:"omitempty,max=20,dive,min=1,max=50"`
 	AllowedRoles        []string `json:"allowedRoles" validate:"omitempty,max=20,dive,min=1,max=50"`
-	AllowedCampuses     []string `json:"allowedCampuses" validate:"omitempty,max=50,dive,campusCodes"`
+	AllowedCampuses     []string `json:"allowedCampuses" validate:"omitempty,max=50,dive,campusCode"`
 	AllowedCommunityIDs []string `json:"allowedCommunityIds" validate:"omitempty,max=100,dive,uuid4"`
 }
 
@@ -456,9 +456,9 @@ type EventLocation struct {
 	LocationVisibility *string       `json:"locationVisibility" validate:"required,oneof=pre-registration post-registration all"`
 	PhysicalPlaceName  *string       `json:"physicalPlaceName" validate:"omitempty,required_if=LocationType offline,required_if=LocationType hybrid,min=1,max=255"`
 	PhysicalAddress    *string       `json:"physicalAddress" validate:"omitempty,required_if=LocationType offline,required_if=LocationType hybrid,min=1,max=500"`
-	VirtualLink        *string       `json:"virtualLink" validate:"omitempty,required_if=LocationType online,required_if=LocationType hybrid,url,max=2048"`
+	VirtualLink        *string       `json:"virtualLink" validate:"omitempty,required_if=LocationType online,required_if=LocationType hybrid,urlFormat,max=2048"`
 	VirtualPlatform    *string       `json:"virtualPlatform" validate:"omitempty,required_if=LocationType online,required_if=LocationType hybrid,min=1,max=50"`
-	ClickToAction      ClickToAction `json:"clickToAction" validate:"omitempty,dive"`
+	ClickToAction      ClickToAction `json:"clickToAction" validate:"omitempty"`
 	LocationDetails    *string       `json:"locationDetails" validate:"omitempty,max=1000"`
 }
 
@@ -608,7 +608,7 @@ func (es *EventSchedule) IsValid() bool {
 //   - If IsRecurring is false, RecurrencePattern should be nil
 type EventRecurrence struct {
 	IsRecurring       bool               `json:"isRecurring" example:"true"`
-	RecurrencePattern *RecurrencePattern `json:"recurrencePattern" validate:"omitempty,dive"`
+	RecurrencePattern *RecurrencePattern `json:"recurrencePattern" validate:"omitempty"`
 	RecurrenceEndDate *time.Time         `json:"recurrenceEndDate" validate:"omitempty" example:"2027-12-31T23:59:59Z"`
 }
 
@@ -655,7 +655,7 @@ func (et *EventTemplate) IsPartOfSeries() bool {
 //   - sms: SMS notifications (if configured)
 type EventNotification struct {
 	NotificationChannels []string        `json:"notificationChannels" validate:"omitempty,max=5,dive,oneof=email whatsapp sms push" example:"email,whatsapp"`
-	ReminderConfig       *ReminderConfig `json:"reminderConfig" validate:"omitempty,dive"`
+	ReminderConfig       *ReminderConfig `json:"reminderConfig" validate:"omitempty"`
 }
 
 // HasNotifications returns true if any notification channels are configured
@@ -706,14 +706,14 @@ type (
 		TermsAndConditions string                          `json:"termsAndConditions" example:"Event Terms and Conditions"`
 		Category           string                          `json:"category" validate:"required,oneof=registration internal-attendance announcement external-attendance"`
 		Status             string                          `json:"status" validate:"required,oneof=draft active inactive"`
-		Images             EventImages                     `json:"images" validate:"omitempty,dive"`
-		Organizer          EventOrganizer                  `json:"organizer" validate:"omitempty,dive"`
-		Access             EventAccess                     `json:"access" validate:"omitempty,dive"`
-		Location           EventLocation                   `json:"location" validate:"omitempty,dive"`
-		Schedule           EventSchedule                   `json:"schedule" validate:"omitempty,dive"`
-		Recurrence         EventRecurrence                 `json:"recurrence" validate:"omitempty,dive"`
-		Template           EventTemplate                   `json:"template" validate:"omitempty,dive"`
-		Notification       EventNotification               `json:"notification" validate:"omitempty,dive"`
+		Images             EventImages                     `json:"images" validate:"omitempty"`
+		Organizer          EventOrganizer                  `json:"organizer" validate:"omitempty"`
+		Access             EventAccess                     `json:"access" validate:"omitempty"`
+		Location           EventLocation                   `json:"location" validate:"omitempty"`
+		Schedule           EventSchedule                   `json:"schedule" validate:"omitempty"`
+		Recurrence         EventRecurrence                 `json:"recurrence" validate:"omitempty"`
+		Template           EventTemplate                   `json:"template" validate:"omitempty"`
+		Notification       EventNotification               `json:"notification" validate:"omitempty"`
 		Sessions           []CreateEventSessionRequest     `json:"sessions" validate:"omitempty,dive"`
 		Questions          []BulkCreateFormQuestionRequest `json:"questions" validate:"omitempty,dive"`
 	}
@@ -855,14 +855,14 @@ type UpdateEventRequest struct {
 	TermsAndConditions *string            `json:"termsAndConditions" example:"Event Terms and Conditions"`
 	Category           *string            `json:"category" validate:"required,oneof=registration attendance announcement volunteer hybrid"`
 	Status             *string            `json:"status" validate:"required,oneof=draft active inactive"`
-	Images             *EventImages       `json:"images" validate:"omitempty,dive"`
-	Organizer          *EventOrganizer    `json:"organizer" validate:"omitempty,dive"`
-	Access             *EventAccess       `json:"access" validate:"omitempty,dive"`
-	Location           *EventLocation     `json:"location" validate:"omitempty,dive"`
-	Schedule           *EventSchedule     `json:"schedule" validate:"omitempty,dive"`
-	Recurrence         *EventRecurrence   `json:"recurrence" validate:"omitempty,dive"`
-	Template           *EventTemplate     `json:"template" validate:"omitempty,dive"`
-	Notification       *EventNotification `json:"notification" validate:"omitempty,dive"`
+	Images             *EventImages       `json:"images" validate:"omitempty"`
+	Organizer          *EventOrganizer    `json:"organizer" validate:"omitempty"`
+	Access             *EventAccess       `json:"access" validate:"omitempty"`
+	Location           *EventLocation     `json:"location" validate:"omitempty"`
+	Schedule           *EventSchedule     `json:"schedule" validate:"omitempty"`
+	Recurrence         *EventRecurrence   `json:"recurrence" validate:"omitempty"`
+	Template           *EventTemplate     `json:"template" validate:"omitempty"`
+	Notification       *EventNotification `json:"notification" validate:"omitempty"`
 }
 
 // ToUpdateMap converts the UpdateEventRequest to a map for GORM Updates

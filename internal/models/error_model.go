@@ -6,6 +6,8 @@ import (
 	"fmt"
 	"net/http"
 	"strings"
+
+	"github.com/labstack/echo/v4"
 )
 
 var (
@@ -93,6 +95,33 @@ var (
 )
 
 func ErrorMapping(err error) Response {
+	// Check if this is an echo.HTTPError
+	if he, ok := err.(*echo.HTTPError); ok {
+		var msg string
+		if s, ok := he.Message.(string); ok {
+			msg = s
+		} else {
+			msg = fmt.Sprintf("%v", he.Message)
+		}
+
+		status := "BAD_REQUEST"
+		if he.Code == http.StatusUnauthorized {
+			status = "UNAUTHORIZED"
+		} else if he.Code == http.StatusForbidden {
+			status = "FORBIDDEN"
+		} else if he.Code == http.StatusNotFound {
+			status = "NOT_FOUND"
+		} else if he.Code >= 500 {
+			status = "INTERNAL_SERVER_ERROR"
+		}
+
+		return Response{
+			Code:    he.Code,
+			Status:  status,
+			Message: msg,
+		}
+	}
+
 	switch err {
 	case ErrorUserNotFound:
 		return Response{
@@ -396,7 +425,6 @@ func ErrorMapping(err error) Response {
 			Status:  "INVALID_FORMAT",
 			Message: err.Error(),
 		}
-
 	default:
 		return Response{
 			Code:    http.StatusInternalServerError,

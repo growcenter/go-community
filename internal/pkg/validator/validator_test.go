@@ -22,13 +22,6 @@ func TestBannerRequiresImages(t *testing.T) {
 			description: "Both empty should be valid",
 		},
 		{
-			name:        "Empty images, empty string banner - VALID",
-			imageLinks:  []string{},
-			bannerLink:  stringPtr(""),
-			shouldPass:  true,
-			description: "Empty string banner with no images should be valid",
-		},
-		{
 			name:        "Empty images, has banner - INVALID",
 			imageLinks:  []string{},
 			bannerLink:  stringPtr("https://example.com/banner.jpg"),

@@ -2,6 +2,7 @@ package validator
 
 import (
 	"errors"
+	"go-community/internal/constants"
 	"go-community/internal/models"
 	"reflect"
 	"regexp"
@@ -31,6 +32,8 @@ func init() {
 	registerCampusCode()
 	registerCampusCodes()
 	registerBannerRequiresImages()
+	registerURLFormat()
+	registerQuestionType()
 }
 
 func Validate(request interface{}) error {
@@ -263,13 +266,44 @@ func registerCampusCode() {
 
 func registerCampusCodes() {
 	valid.RegisterValidation("campusCodes", func(fl v10.FieldLevel) bool {
-		campusCodes := fl.Field().Interface().([]string)
+		val := fl.Field().Interface()
+		if campusCodes, ok := val.([]string); ok {
+			for _, campusCode := range campusCodes {
+				if campusCode != "" && len(campusCode) != 3 {
+					return false
+				}
+			}
+			return true
+		}
+		return false
+	})
+}
 
-		for _, campusCode := range campusCodes {
-			return campusCode == "" || len(campusCode) == 3
+// registerURLFormat validates that a field is a valid URL, but skips validation
+// for nil pointers and empty strings. This is necessary because the built-in `url`
+// tag does not respect *string fields pointing to "": omitempty only skips when the
+// pointer itself is nil, so an explicit empty string still gets validated by `url`
+// and incorrectly fails. Use `urlFormat` instead of `url` on optional *string URL fields.
+func registerURLFormat() {
+	valid.RegisterValidation("urlFormat", func(fl v10.FieldLevel) bool {
+		field := fl.Field()
+
+		// Handle *string: skip if nil or points to empty string
+		if field.Kind() == reflect.Ptr {
+			if field.IsNil() {
+				return true
+			}
+			field = field.Elem()
 		}
 
-		return true
+		// Skip validation for empty strings
+		str := field.String()
+		if str == "" {
+			return true
+		}
+
+		// Delegate to built-in URL validator
+		return v10.New().Var(str, "url") == nil
 	})
 }
 
@@ -295,6 +329,12 @@ func registerBannerRequiresImages() {
 			}
 		}
 
+		if bannerLinkField.Kind() == reflect.String {
+			if bannerLinkField.String() == "" {
+				return true
+			}
+		}
+
 		// BannerLink has a non-empty value - check if ImageLinks is also non-empty
 		parent := fl.Parent()
 		imageLinksField := parent.FieldByName("ImageLinks")
@@ -312,5 +352,14 @@ func registerBannerRequiresImages() {
 
 		// ImageLinks is not empty, so BannerLink can have a value
 		return true
+	})
+}
+
+func registerQuestionType() {
+	valid.RegisterValidation("questionType", func(fl v10.FieldLevel) bool {
+		value := fl.Field().String()
+		// Check if the field's value exists as a key in the map of valid types.
+		_, ok := constants.MapQuestionType[value]
+		return ok
 	})
 }

@@ -25,14 +25,20 @@ func New(ttl time.Duration) *MemoryCache {
 		ttl:   ttl,
 	}
 
-	// Start cleanup goroutine
-	go cache.startCleanup()
+	// Start cleanup goroutine only if TTL is positive
+	if ttl > 0 {
+		go cache.startCleanup()
+	}
 
 	return cache
 }
 
 // Set stores a value in the cache with TTL
 func (c *MemoryCache) Set(key string, value interface{}) {
+	if c.ttl <= 0 {
+		return
+	}
+
 	c.mu.Lock()
 	defer c.mu.Unlock()
 
@@ -46,6 +52,10 @@ func (c *MemoryCache) Set(key string, value interface{}) {
 // Get retrieves a value from the cache
 // Returns (value, true) if found and not expired, (nil, false) otherwise
 func (c *MemoryCache) Get(key string) (interface{}, bool) {
+	if c.ttl <= 0 {
+		return nil, false
+	}
+
 	c.mu.RLock()
 	defer c.mu.RUnlock()
 
@@ -88,6 +98,10 @@ func (c *MemoryCache) Count() int {
 
 // startCleanup runs a background goroutine to remove expired items
 func (c *MemoryCache) startCleanup() {
+	if c.ttl <= 0 {
+		return
+	}
+
 	ticker := time.NewTicker(c.ttl)
 	defer ticker.Stop()
 

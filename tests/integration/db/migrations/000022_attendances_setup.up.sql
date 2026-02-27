@@ -13,7 +13,6 @@ CREATE TABLE attendances (
     -- Or Direct Attendance (for walk-ins or attendance-only events)
     event_id BIGINT NOT NULL REFERENCES events (id),
     session_id BIGINT REFERENCES event_sessions (id), -- Can be parent or child session
-    occurrence_id BIGINT REFERENCES event_occurrences (id),
     -- Attendee Info
     attendee_community_id VARCHAR(50),
     attendee_name VARCHAR(255) NOT NULL,
@@ -61,10 +60,6 @@ CREATE INDEX idx_attendances_session ON attendances (session_id)
 WHERE
     session_id IS NOT NULL;
 
-CREATE INDEX idx_attendances_occurrence ON attendances (occurrence_id)
-WHERE
-    occurrence_id IS NOT NULL;
-
 CREATE INDEX idx_attendances_attendee ON attendances (attendee_community_id)
 WHERE
     attendee_community_id IS NOT NULL;
@@ -95,7 +90,7 @@ WHERE
 
 -- Time-based indexes
 -- Pattern: Daily attendance reports
-CREATE INDEX idx_attendances_check_in_date ON attendances (DATE(check_in_at), event_id)
+CREATE INDEX idx_attendances_check_in_date ON attendances (check_in_at, event_id)
 WHERE
     check_in_at IS NOT NULL;
 
@@ -221,8 +216,6 @@ COMMENT ON COLUMN attendances.registration_id IS 'Reference to registration reco
 COMMENT ON COLUMN attendances.event_id IS 'Reference to parent event (required)';
 
 COMMENT ON COLUMN attendances.session_id IS 'Reference to specific session within event (optional, can be parent or child session)';
-
-COMMENT ON COLUMN attendances.occurrence_id IS 'Reference to specific occurrence for recurring events (optional)';
 
 -- Column comments: Attendee Info
 COMMENT ON COLUMN attendances.attendee_community_id IS 'Community ID of attendee if they are a registered user. NULL for guest attendees';

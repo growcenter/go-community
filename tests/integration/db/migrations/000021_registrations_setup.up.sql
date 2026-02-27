@@ -12,7 +12,6 @@ CREATE TABLE registrations (
     -- Event Reference
     event_id BIGINT NOT NULL REFERENCES events (id),
     session_id BIGINT REFERENCES event_sessions (id), -- Can be parent or child session
-    occurrence_id BIGINT REFERENCES event_occurrences (id),
     -- Registrant Info
     registrant_community_id VARCHAR(50), -- NULL for guests
     registrant_name VARCHAR(255) NOT NULL,
@@ -25,8 +24,8 @@ CREATE TABLE registrations (
     -- For Family/Group Registration
     is_primary_registrant BOOLEAN DEFAULT TRUE,
     group_registration_id UUID REFERENCES registrations (id),
-    -- Custom Form Submission
-    form_submission_id UUID REFERENCES form_submissions (id),
+    -- Custom Form Answers
+    form_answers JSONB,
     -- Status Flow
     status VARCHAR(30) NOT NULL DEFAULT 'pending', -- pending, confirmed, waitlisted, cancelled, expired
     waitlist_position INTEGER,
@@ -62,11 +61,6 @@ WHERE
 CREATE INDEX idx_registrations_session ON registrations (session_id)
 WHERE
     session_id IS NOT NULL
-    AND deleted_at IS NULL;
-
-CREATE INDEX idx_registrations_occurrence ON registrations (occurrence_id)
-WHERE
-    occurrence_id IS NOT NULL
     AND deleted_at IS NULL;
 
 CREATE INDEX idx_registrations_registrant ON registrations (registrant_community_id)
@@ -241,8 +235,6 @@ COMMENT ON COLUMN registrations.code IS 'Unique registration code for QR ticket 
 COMMENT ON COLUMN registrations.event_id IS 'Reference to parent event (required)';
 
 COMMENT ON COLUMN registrations.session_id IS 'Reference to specific session within event (optional, can be parent or child session)';
-
-COMMENT ON COLUMN registrations.occurrence_id IS 'Reference to specific occurrence for recurring events (optional)';
 
 -- Column comments: Registrant Info
 COMMENT ON COLUMN registrations.registrant_community_id IS 'Community ID of registrant if they are a registered user. NULL for guest registrations';

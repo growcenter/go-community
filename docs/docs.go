@@ -3862,7 +3862,7 @@ const docTemplate = `{
                     "description": "Is check-in feature enabled?",
                     "type": "boolean"
                 },
-                "end_at": {
+                "endAt": {
                     "description": "Check-in end time",
                     "type": "string"
                 },
@@ -3884,7 +3884,7 @@ const docTemplate = `{
                     "description": "Is check-in mandatory?",
                     "type": "boolean"
                 },
-                "start_at": {
+                "startAt": {
                     "description": "Check-in start time",
                     "type": "string"
                 },
@@ -3905,7 +3905,7 @@ const docTemplate = `{
                     "description": "Is check-out feature enabled?",
                     "type": "boolean"
                 },
-                "end_at": {
+                "endAt": {
                     "description": "Check-out end time",
                     "type": "string"
                 },
@@ -3927,7 +3927,7 @@ const docTemplate = `{
                     "description": "Is check-out mandatory?",
                     "type": "boolean"
                 },
-                "start_at": {
+                "startAt": {
                     "description": "Check-out start time",
                     "type": "string"
                 },
