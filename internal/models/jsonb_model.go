@@ -11,13 +11,15 @@ import (
 // It implements driver.Valuer, sql.Scanner, json.Marshaler, and json.Unmarshaler.
 type JSONB json.RawMessage
 
-// Value returns the raw bytes to be stored in the database.
+// Value returns the JSON string to be stored in the database.
 // Implements driver.Valuer interface for database/sql.
+// NOTE: Must return string (not []byte) — lib/pq treats []byte as bytea,
+// which PostgreSQL cannot cast to json/jsonb, causing "invalid input syntax for type json".
 func (j JSONB) Value() (driver.Value, error) {
 	if j == nil {
 		return nil, nil
 	}
-	return []byte(j), nil
+	return string(j), nil
 }
 
 // Scan reads the raw bytes from the database.

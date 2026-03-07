@@ -230,10 +230,9 @@ func EventSessionWithFormQuestions(questions []FormQuestionResponse) CreateEvent
 }
 
 func (es *EventSession) ToResponse(options ...CreateEventSessionResponseOption) CreateEventSessionResponse {
-	var geo *GeolocationConfiguration
+	var geo GeolocationConfiguration
 	if !es.Geolocation.IsNull() {
-		geo = &GeolocationConfiguration{}
-		_ = es.Geolocation.Unmarshal(geo)
+		_ = es.Geolocation.Unmarshal(&geo)
 	}
 
 	var ic *SessionIdentifierConfig
@@ -241,6 +240,7 @@ func (es *EventSession) ToResponse(options ...CreateEventSessionResponseOption) 
 		ic = &SessionIdentifierConfig{}
 		_ = es.IdentifierConfig.Unmarshal(ic)
 	}
+	_ = ic // reserved for future use
 
 	response := CreateEventSessionResponse{
 		Type:              TYPE_EVENT_SESSION,
@@ -263,7 +263,7 @@ func (es *EventSession) ToResponse(options ...CreateEventSessionResponseOption) 
 			LocationDetails:    es.LocationDetails,
 			LocationVisibility: &es.LocationVisibility,
 		},
-		Geolocation: *geo,
+		Geolocation: geo,
 		Schedule: EventSchedule{
 			StartAt:  &es.StartAt,
 			EndAt:    &es.EndAt,

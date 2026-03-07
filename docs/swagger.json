@@ -1813,18 +1813,12 @@
         "models.BulkCreateFormQuestionRequest": {
             "type": "object",
             "required": [
-                "applyFor",
-                "mandatoryFor",
+                "requiredFor",
                 "text",
-                "type"
+                "type",
+                "visibleFor"
             ],
             "properties": {
-                "applyFor": {
-                    "type": "array",
-                    "items": {
-                        "type": "string"
-                    }
-                },
                 "correctAnswer": {
                     "type": "string"
                 },
@@ -1832,14 +1826,14 @@
                     "type": "integer",
                     "minimum": 0
                 },
-                "mandatoryFor": {
+                "options": {
+                    "$ref": "#/definitions/models.QuestionOptions"
+                },
+                "requiredFor": {
                     "type": "array",
                     "items": {
                         "type": "string"
                     }
-                },
-                "options": {
-                    "$ref": "#/definitions/models.QuestionOptions"
                 },
                 "rules": {
                     "$ref": "#/definitions/models.QuestionValidationRules"
@@ -1849,6 +1843,12 @@
                 },
                 "type": {
                     "$ref": "#/definitions/constants.QuestionType"
+                },
+                "visibleFor": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
                 }
             }
         },
@@ -2702,7 +2702,6 @@
                 },
                 "allowedCommunityIds": {
                     "type": "array",
-                    "maxItems": 100,
                     "items": {
                         "type": "string"
                     }
@@ -2822,7 +2821,6 @@
             "properties": {
                 "contactCommunityIds": {
                     "type": "array",
-                    "maxItems": 50,
                     "items": {
                         "type": "string"
                     },
@@ -2832,8 +2830,6 @@
                 },
                 "organizerCommunityIds": {
                     "type": "array",
-                    "maxItems": 50,
-                    "minItems": 1,
                     "items": {
                         "type": "string"
                     },
@@ -3086,12 +3082,6 @@
         "models.FormQuestionResponse": {
             "type": "object",
             "properties": {
-                "applyFor": {
-                    "type": "array",
-                    "items": {
-                        "type": "string"
-                    }
-                },
                 "code": {
                     "type": "string"
                 },
@@ -3104,17 +3094,17 @@
                 "formCode": {
                     "type": "string"
                 },
-                "mandatoryFor": {
-                    "type": "array",
-                    "items": {
-                        "type": "string"
-                    }
-                },
                 "options": {
                     "$ref": "#/definitions/models.QuestionOptions"
                 },
                 "questionType": {
                     "type": "string"
+                },
+                "requiredFor": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
                 },
                 "rules": {
                     "$ref": "#/definitions/models.QuestionValidationRules"
@@ -3124,6 +3114,12 @@
                 },
                 "type": {
                     "type": "string"
+                },
+                "visibleFor": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
                 }
             }
         },

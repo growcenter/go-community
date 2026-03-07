@@ -29,15 +29,20 @@ func (fu *formUsecase) Create(ctx context.Context, request *models.CreateFormReq
 		LogService(ctx, err)
 	}()
 
+	code, err := uuid.NewV7()
+	if err != nil {
+		return nil, errorc.Error(err)
+	}
+
 	form := models.Form{
-		Code:        uuid.New(),
+		Code:        code,
 		Name:        request.Name,
 		Description: request.Description,
 		FormType:    string(constants.FormTypeRegistration),
 		Status:      constants.StatusActive,
 	}
 
-	formAssociation := models.FormAssociation{
+	formAssociation := &models.CreateFormAssociationRequest{
 		FormCode:   form.Code,
 		EntityCode: request.Entity.Code,
 		EntityType: request.Entity.Type,
@@ -49,7 +54,7 @@ func (fu *formUsecase) Create(ctx context.Context, request *models.CreateFormReq
 			return errorc.Error(err)
 		}
 
-		if err = r.FormAssociation.Create(ctx, &formAssociation); err != nil {
+		if _, err = fu.d.FormAssociation.Create(ctx, formAssociation); err != nil {
 			return errorc.Error(err)
 		}
 

@@ -1,34 +1,49 @@
 package response
 
 import (
+	"errors"
+	"go-community/internal/common"
+	"go-community/internal/models"
+	"go-community/internal/pkg/errorc"
+	"net/http"
+	"time"
+
 	"github.com/google/uuid"
 	"github.com/hashicorp/go-multierror"
 	"github.com/labstack/echo/v4"
-	"go-community/internal/common"
-	"go-community/internal/models"
-	"net/http"
-	"time"
 )
 
 func Error(ctx echo.Context, err error) error {
-	response := models.ErrorMapping(err)
-	requestID, _ := ctx.Get("X-Request-Id").(string)
+	requestID, _ := ctx.Get("X-Request-ID").(string)
 	if requestID == "" {
 		requestID = uuid.New().String()
 	}
-	response.Metadata.RequestId = requestID
 
 	timestamp, _ := ctx.Get("X-Timestamp").(string)
 	if timestamp == "" {
 		timestamp = common.Now().Format(time.RFC3339)
 	}
+
+	// Short-circuit for *errorc.HTTPError: use its embedded Response directly.
+	// models.ErrorMapping only handles old-style models sentinel errors via switch/case
+	// and would incorrectly fall through to 500 for any *errorc.HTTPError value.
+	var customErr *errorc.HTTPError
+	if errors.As(err, &customErr) {
+		resp := errorc.GetResponse(err)
+		resp.Metadata.RequestId = requestID
+		resp.Metadata.Timestamp = timestamp
+		return ctx.JSON(resp.Code, resp)
+	}
+
+	response := models.ErrorMapping(err)
+	response.Metadata.RequestId = requestID
 	response.Metadata.Timestamp = timestamp
 
 	return ctx.JSON(response.Code, response)
 }
 
 func ErrorValidation(ctx echo.Context, errors interface{}) error {
-	requestID, _ := ctx.Get("X-Request-Id").(string)
+	requestID, _ := ctx.Get("X-Request-ID").(string)
 	if requestID == "" {
 		requestID = uuid.New().String()
 	}
@@ -106,7 +121,7 @@ func SuccessDownload(ctx echo.Context, code int, contentType string, fileName st
 }
 
 func SuccessV2(ctx echo.Context, code int, message string, data interface{}) error {
-	requestID, _ := ctx.Get("X-Request-Id").(string)
+	requestID, _ := ctx.Get("X-Request-ID").(string)
 	if requestID == "" {
 		requestID = uuid.New().String()
 	}
@@ -133,7 +148,7 @@ func SuccessV2(ctx echo.Context, code int, message string, data interface{}) err
 }
 
 func SuccessListV2(ctx echo.Context, code int, message string, data interface{}) error {
-	requestID, _ := ctx.Get("X-Request-Id").(string)
+	requestID, _ := ctx.Get("X-Request-ID").(string)
 	if requestID == "" {
 		requestID = uuid.New().String()
 	}
@@ -174,7 +189,7 @@ func SuccessListV2(ctx echo.Context, code int, message string, data interface{})
 }
 
 func SuccessPaginationV2(ctx echo.Context, code int, message string, cursorInfo models.CursorInfo, data interface{}) error {
-	requestID, _ := ctx.Get("X-Request-Id").(string)
+	requestID, _ := ctx.Get("X-Request-ID").(string)
 	if requestID == "" {
 		requestID = uuid.New().String()
 	}

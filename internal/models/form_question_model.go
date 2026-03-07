@@ -54,8 +54,8 @@ type (
 	BulkCreateFormQuestionRequest struct {
 		Text          string                   `json:"text" validate:"required"`
 		QuestionType  constants.QuestionType   `json:"type" validate:"required,questionType"`
-		MandatoryFor  []string                 `json:"mandatoryFor" validate:"required,dive,oneof=parent child"`
-		ApplyFor      []string                 `json:"applyFor" validate:"required,dive,oneof=parent child"`
+		RequiredFor   []string                 `json:"requiredFor" validate:"required,dive,oneof=parent child"`
+		VisibleFor    []string                 `json:"visibleFor" validate:"required,dive,oneof=parent child"`
 		Options       *QuestionOptions         `json:"options" validate:"omitempty"`
 		Rules         *QuestionValidationRules `json:"rules"`
 		CorrectAnswer *string                  `json:"correctAnswer,omitempty"`
@@ -68,8 +68,8 @@ type (
 		FormCode      string                   `json:"formCode"`
 		Text          string                   `json:"text"`
 		QuestionType  string                   `json:"questionType"`
-		MandatoryFor  []string                 `json:"mandatoryFor"`
-		ApplyFor      []string                 `json:"applyFor"`
+		RequiredFor   []string                 `json:"requiredFor"`
+		VisibleFor    []string                 `json:"visibleFor"`
 		Options       *QuestionOptions         `json:"options"`
 		Rules         *QuestionValidationRules `json:"rules"`
 		CorrectAnswer *string                  `json:"correctAnswer,omitempty"`
@@ -99,8 +99,8 @@ func (fq *FormQuestion) ToResponse() *FormQuestionResponse {
 		FormCode:      fq.FormCode.String(),
 		Text:          fq.Text,
 		QuestionType:  fq.Category,
-		MandatoryFor:  fq.RequiredFor,
-		ApplyFor:      fq.VisibleFor,
+		RequiredFor:   fq.RequiredFor,
+		VisibleFor:    fq.VisibleFor,
 		Options:       options,
 		Rules:         rules,
 		CorrectAnswer: correctAnswer,

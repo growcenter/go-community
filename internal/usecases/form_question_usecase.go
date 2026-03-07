@@ -85,16 +85,16 @@ func (fqu *formQuestionUsecase) BulkCreate(ctx context.Context, formCode string,
 			}
 		}
 
-		// Every value in mandatoryFor must be present in applyFor:
-		// a question cannot be mandatory for a group it doesn't apply to.
-		applySet := make(map[string]struct{}, len(q.ApplyFor))
-		for _, t := range q.ApplyFor {
-			applySet[t] = struct{}{}
+		// Every value in requiredFor must be present in visibleFor:
+		// a question cannot be required for a group it doesn't apply to.
+		visibleSet := make(map[string]struct{}, len(q.VisibleFor))
+		for _, t := range q.VisibleFor {
+			visibleSet[t] = struct{}{}
 		}
-		for _, mandatory := range q.MandatoryFor {
-			if _, ok := applySet[mandatory]; !ok {
+		for _, required := range q.RequiredFor {
+			if _, ok := visibleSet[required]; !ok {
 				return nil, errorc.Error(errorc.ErrorInvalidInput,
-					"question is mandatory for '%s' but does not apply to them", mandatory)
+					"question is required for '%s' but not visible to them", required)
 			}
 		}
 
@@ -149,8 +149,8 @@ func (fqu *formQuestionUsecase) BulkCreate(ctx context.Context, formCode string,
 			FormCode:      formCodeUUID,
 			Text:          q.Text,
 			Category:      string(q.QuestionType),
-			RequiredFor:   q.MandatoryFor,
-			VisibleFor:    q.ApplyFor,
+			RequiredFor:   q.RequiredFor,
+			VisibleFor:    q.VisibleFor,
 			Options:       optionsJSON,
 			Rules:         rulesJSON,
 			CorrectAnswer: correctAnswer,
