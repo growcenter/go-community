@@ -71,6 +71,14 @@ func (eu *eventUsecase) Create(ctx context.Context, request models.CreateEventRe
 		return nil, errorc.Error(err)
 	}
 
+	// Seed the "event" group with all server-generated identifiers known at
+	// this point. One call, one mutex acquisition, zero redundancy.
+	logger.Add(ctx, "event", map[string]any{
+		"code":   *eventCode,
+		"slug":   slug,
+		"status": request.Status,
+	})
+
 	if err := validateAccessControl(ctx, eu, &request.Access); err != nil {
 		logger.AddError(ctx, &logger.ErrorContext{
 			Type:      "ValidationFailed",
@@ -196,29 +204,18 @@ func (eu *eventUsecase) Create(ctx context.Context, request models.CreateEventRe
 		// ReminderConfig will be set below if not nil
 	}
 
-	// eventLog accumulates all server-generated event fields into one grouped
-	// object. Fields known before the DB insert go in now; event.ID is appended
-	// after the insert inside the transaction closure below.
-	//
-	// Grouped into one slot on the WideEvent rather than ~10 flat slots.
-	eventLog := map[string]any{
-		"code":   *eventCode,
-		"slug":   slug,
-		"status": request.Status,
-	}
-
-	// Optional template / banner fields — only present when supplied.
+	// Optional fields — only appended to the group when they're present.
 	if request.Images.BannerLink != nil {
 		event.BannerURL = *request.Images.BannerLink
-		eventLog["has_banner"] = true
+		logger.AddToKey(ctx, "event", "has_banner", true)
 	}
 	if request.Template.TemplateID != nil {
 		event.TemplateID = *request.Template.TemplateID
-		eventLog["template_id"] = *request.Template.TemplateID
+		logger.AddToKey(ctx, "event", "template_id", *request.Template.TemplateID)
 	}
 	if request.Template.SeriesID != nil {
 		event.SeriesID = *request.Template.SeriesID
-		eventLog["series_id"] = *request.Template.SeriesID
+		logger.AddToKey(ctx, "event", "series_id", *request.Template.SeriesID)
 	}
 
 	// Marshal JSONB fields; surface the scalar summaries that are queryable.
@@ -232,7 +229,7 @@ func (eu *eventUsecase) Create(ctx context.Context, request models.CreateEventRe
 			})
 			return nil, errorc.Error(errorc.ErrorInternalServer, "failed to marshal recurrence pattern")
 		}
-		eventLog["recurrence_frequency"] = request.Recurrence.RecurrencePattern.Frequency
+		logger.AddToKey(ctx, "event", "recurrence_frequency", request.Recurrence.RecurrencePattern.Frequency)
 	}
 	if request.Notification.ReminderConfig != nil {
 		if err := event.ReminderConfig.Marshal(request.Notification.ReminderConfig); err != nil {
@@ -244,7 +241,7 @@ func (eu *eventUsecase) Create(ctx context.Context, request models.CreateEventRe
 			})
 			return nil, errorc.Error(errorc.ErrorInternalServer, "failed to marshal reminder config")
 		}
-		eventLog["reminder_enabled"] = request.Notification.ReminderConfig.Enabled
+		logger.AddToKey(ctx, "event", "reminder_enabled", request.Notification.ReminderConfig.Enabled)
 	}
 
 	if request.Category == string("announcement") && request.Sessions != nil {
@@ -262,8 +259,8 @@ func (eu *eventUsecase) Create(ctx context.Context, request models.CreateEventRe
 			return errorc.Error(errorc.ErrorDatabase, "failed to create event: %s", err)
 		}
 
-		// event.ID is assigned by the DB — append it to the group now that it's known.
-		eventLog["id"] = event.ID
+		// event.ID is assigned by the DB — append it to the "event" group now.
+		logger.AddToKey(ctx, "event", "id", event.ID)
 
 		if request.Sessions != nil {
 			if _, err := eu.d.EventSession.Create(ctx, request.Sessions, nil, event); err != nil {
@@ -275,8 +272,9 @@ func (eu *eventUsecase) Create(ctx context.Context, request models.CreateEventRe
 				})
 				return errorc.Error(err, "failed to create event sessions: %s", err)
 			}
-			// "sessions" lives under "event" — it describes the event's sub-resources.
-			eventLog["sessions_created"] = len(request.Sessions)
+			// sessions_created belongs to the event group — it describes how many
+			// sub-resources were attached to this event in the same transaction.
+			logger.AddToKey(ctx, "event", "sessions_created", len(request.Sessions))
 		}
 
 		if request.Questions != nil {
@@ -300,14 +298,13 @@ func (eu *eventUsecase) Create(ctx context.Context, request models.CreateEventRe
 				return errorc.Error(err, "failed to create event questions: %s", err)
 			}
 
-			// Collect the server-generated question codes — these are invisible
-			// in both the request and response bodies. Group everything under
-			// "form" so it's easy to cross-reference the form rows in the DB.
 			questionCodes := make([]string, len(formResp.Questions))
 			for i, q := range formResp.Questions {
 				questionCodes[i] = q.Code
 			}
-			logger.Add(ctx, "form", map[string]any{
+			// All three fields are server-generated and invisible in request/response.
+			// AddToKey with a map writes them all into the "form" group in one call.
+			logger.AddToKey(ctx, "form", map[string]any{
 				"code":              formResp.Code,
 				"questions_created": len(formResp.Questions),
 				"question_codes":    questionCodes,
@@ -324,10 +321,6 @@ func (eu *eventUsecase) Create(ctx context.Context, request models.CreateEventRe
 		})
 		return nil, errorc.Error(err, "failed to create event: %s", err)
 	}
-
-	// Emit the complete event group as one wide-event field.
-	// This costs 1 BusinessData slot regardless of how many fields are inside.
-	logger.Add(ctx, "event", eventLog)
 
 	return event, nil
 }
