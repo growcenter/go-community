@@ -10,15 +10,15 @@ import (
 )
 
 type ErrorResponse struct {
-	Status			string
-	Code			string
-	Message			string
+	Status  string
+	Code    string
+	Message string
 }
 
 type ErrorMapping struct {
-	Status		 	int
-	Code         	error
-	Response		ErrorResponse
+	Status   int
+	Code     error
+	Response ErrorResponse
 }
 
 func (e *ErrorMapping) Error() string {
@@ -30,29 +30,29 @@ func (e *ErrorMapping) Builder() *ErrorMapping {
 }
 
 const (
-	ERROR_STATUS = "error"
-	ERROR_DATA_NOT_UNIQUE = "Data inputted is not unique"
-	ERROR_NOT_FOUND = "Data not found"
-	ERROR_BAD_REQUEST = "Bad request"
+	ERROR_STATUS                = "error"
+	ERROR_DATA_NOT_UNIQUE       = "Data inputted is not unique"
+	ERROR_NOT_FOUND             = "Data not found"
+	ERROR_BAD_REQUEST           = "Bad request"
 	ERROR_INTERNAL_SERVER_ERROR = "Internal Server Error"
-	ERROR_UNAUTHORIZED = "Unauthorized"
-	ERROR_UNPROCESSABLE_ENTITY = "ERROR"
+	ERROR_UNAUTHORIZED          = "Unauthorized"
+	ERROR_UNPROCESSABLE_ENTITY  = "ERROR"
 )
 
 var (
 	ErrorDataNotUnique = ErrorMapping{
 		Status: http.StatusConflict,
 		Response: ErrorResponse{
-			Status: ERROR_STATUS,
-			Code: ERROR_DATA_NOT_UNIQUE,
+			Status:  ERROR_STATUS,
+			Code:    ERROR_DATA_NOT_UNIQUE,
 			Message: ERROR_DATA_NOT_UNIQUE,
 		},
 	}
 	ErrorInternalServer = ErrorMapping{
 		Status: http.StatusInternalServerError,
 		Response: ErrorResponse{
-			Status: ERROR_STATUS,
-			Code: ERROR_INTERNAL_SERVER_ERROR,
+			Status:  ERROR_STATUS,
+			Code:    ERROR_INTERNAL_SERVER_ERROR,
 			Message: ERROR_INTERNAL_SERVER_ERROR,
 		},
 	}
@@ -67,8 +67,8 @@ func ErrorBuilderCustom(code int, err string, message string) error {
 	return &ErrorMapping{
 		Status: code,
 		Response: ErrorResponse{
-			Status: ERROR_STATUS,
-			Code: err,
+			Status:  ERROR_STATUS,
+			Code:    err,
 			Message: message,
 		},
 	}
@@ -79,20 +79,18 @@ func Success(ctx echo.Context, status int, data interface{}) error {
 }
 
 func Error(ctx echo.Context, err error) error {
-	requestBody, er := io.ReadAll(ctx.Request().Body)
+	_, er := io.ReadAll(ctx.Request().Body)
 	if er != nil {
 		return er
 	}
 
-	requestHeader, er := json.Marshal(ctx.Request().Header)
+	_, er = json.Marshal(ctx.Request().Header)
 	if er != nil {
 		return er
 	}
 
 	response, ok := err.(*ErrorMapping)
 	if ok {
-		fmt.Println(requestBody)
-		fmt.Println(requestHeader)
 
 		return ctx.JSON(response.Builder().Status, response.Builder().Response)
 	} else {

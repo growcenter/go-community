@@ -70,6 +70,7 @@ func New(db *gorm.DB) *PostgreRepositories {
 		Role:                    NewRoleRepository(db, NewTransactionRepository(db)),
 		UserType:                NewUserTypeRepository(db, NewTransactionRepository(db)),
 		Event:                   NewEventRepository(db),
+		EventSession:            NewEventSessionRepository(db),
 		EventInstance:           NewEventInstanceRepository(db),
 		EventRegistrationRecord: NewEventRegistrationRecordRepository(db, NewTransactionRepository(db)),
 		FeatureFlag:             NewFeatureFlagRepository(db),

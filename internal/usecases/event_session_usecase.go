@@ -33,34 +33,25 @@ func NewEventSessionUsecase(d *Dependencies) EventSessionUsecase {
 // Create validates and persists sessions using the usecase's own repository set.
 // Suitable for direct (non-atomic) calls from the API layer.
 func (es *eventSessionUsecase) Create(ctx context.Context, requests []models.CreateEventSessionRequest, eventCode *string, event *models.Event) (*models.EventSession, error) {
-	logger.Add(ctx, "operation", "event_session.create")
+	logger.Add(ctx, "session", map[string]any{
+		"operation": "create",
+	})
 
 	event, err := es.resolveAndValidateEvent(ctx, event, eventCode)
 	if err != nil {
 		return nil, err
 	}
 
-	logger.Add(ctx, "event_code", event.Code)
-
 	var created *models.EventSession
 
 	for i := range requests {
 		req := &requests[i]
 
-		logger.Add(ctx, map[string]any{
-			"step":          "process_session",
-			"session_index": i,
-			"session_title": req.Title,
-			"session_type":  req.SessionType,
-		})
-
 		// ── 1. Location inheritance: Event → Session ──────────────────────────
-		logger.Add(ctx, "step", "inherit_location_event")
 		es.inheritLocationFromEvent(req, event)
 
 		// ── 2. Location inheritance: Parent Session → Child Session ───────────
 		if req.ParentSessionCode != "" {
-			logger.Add(ctx, "step", "inherit_location_parent_session")
 			parentSession, err := es.d.Repository.EventSession.GetByCode(ctx, req.ParentSessionCode)
 			if err != nil {
 				return nil, errorc.Error(err)
@@ -72,25 +63,21 @@ func (es *eventSessionUsecase) Create(ctx context.Context, requests []models.Cre
 		}
 
 		// ── 3. Location validation ─────────────────────────────────────────────
-		logger.Add(ctx, "step", "validate_location")
 		if err := req.Location.Validate(nil); err != nil {
 			return nil, errorc.Error(err)
 		}
 
 		// ── 4. Geolocation config validation ────────────────────────────────────
 		if req.Geolocation != nil && req.Geolocation.Enabled {
-			logger.Add(ctx, "step", "validate_geolocation")
 			if err := req.Geolocation.Validate(); err != nil {
 				return nil, errorc.Error(err)
 			}
 		}
 
 		// ── 5. Normalize defaults ────────────────────────────────────────────────
-		logger.Add(ctx, "step", "normalize_session_request")
 		normalizeSessionRequest(req, event)
 
 		// ── 6. Schedule validation ────────────────────────────────────────────────
-		logger.Add(ctx, "step", "validate_main_schedule")
 		if err := validateSchedule(&req.Schedule); err != nil {
 			logger.AddError(ctx, &logger.ErrorContext{
 				Type: "ValidationFailed", Code: "SESSION_SCHEDULE_INVALID",
@@ -100,7 +87,6 @@ func (es *eventSessionUsecase) Create(ctx context.Context, requests []models.Cre
 		}
 
 		// ── 7. Time windows (registration, check-in, check-out) ───────────────
-		logger.Add(ctx, "step", "validate_time_configuration")
 		if err := validateSessionTimeConfiguration(&req.Times); err != nil {
 			logger.AddError(ctx, &logger.ErrorContext{
 				Type: "ValidationFailed", Code: "SESSION_TIME_CONFIG_INVALID",
@@ -110,7 +96,6 @@ func (es *eventSessionUsecase) Create(ctx context.Context, requests []models.Cre
 		}
 
 		// ── 8. Capacity ───────────────────────────────────────────────────────────
-		logger.Add(ctx, "step", "validate_capacity")
 		if err := validateSessionCapacity(&req.SessionCapacity, &req.SessionRules); err != nil {
 			logger.AddError(ctx, &logger.ErrorContext{
 				Type: "ValidationFailed", Code: "SESSION_CAPACITY_INVALID",
@@ -120,7 +105,6 @@ func (es *eventSessionUsecase) Create(ctx context.Context, requests []models.Cre
 		}
 
 		// ── 9. Rules ──────────────────────────────────────────────────────────────
-		logger.Add(ctx, "step", "validate_rules")
 		if err := validateSessionRules(req, event); err != nil {
 			logger.AddError(ctx, &logger.ErrorContext{
 				Type: "ValidationFailed", Code: "SESSION_RULES_INVALID",
@@ -130,13 +114,11 @@ func (es *eventSessionUsecase) Create(ctx context.Context, requests []models.Cre
 		}
 
 		// ── 11. Status gate ───────────────────────────────────────────────────────
-		logger.Add(ctx, "step", "validate_status")
 		if event.Status != constants.EventStatusActive.String() && req.Status == constants.EventStatusActive.String() {
 			return nil, errorc.Error(errorc.ErrorInvalidInput, "session cannot be active when the parent event is not active")
 		}
 
 		// ── 12. Generate unique session code ──────────────────────────────────────
-		logger.Add(ctx, "step", "generate_session_code")
 		sessionCode, err := generateUniqueSessionCode(ctx, es, constants.SessionCodeMaxRetries)
 		if err != nil {
 			logger.AddError(ctx, &logger.ErrorContext{
@@ -145,10 +127,17 @@ func (es *eventSessionUsecase) Create(ctx context.Context, requests []models.Cre
 			})
 			return nil, errorc.Error(err)
 		}
-		logger.Add(ctx, "session_code", *sessionCode)
+
+		// Seed the "session" group with identifiers known at this point.
+		// One call, one mutex acquisition, zero redundancy.
+		logger.Add(ctx, "session", map[string]any{
+			"code":         *sessionCode,
+			"event_code":   event.Code,
+			"status":       req.Status,
+			"session_type": req.SessionType,
+		})
 
 		// ── 13. Map request → model ───────────────────────────────────────────────
-		logger.Add(ctx, "step", "build_session_model")
 		session := buildSessionModel(req, event.Code, *sessionCode)
 
 		if req.Geolocation != nil {
@@ -160,7 +149,6 @@ func (es *eventSessionUsecase) Create(ctx context.Context, requests []models.Cre
 		// ── 14. Persist ─────────────────────────────────────────────────────────
 		// ctx carries the active Atomic transaction (if any); the repository picks
 		// it up transparently via BaseRepository.db(ctx).
-		logger.Add(ctx, "step", "persist_session")
 		if err := es.d.Repository.EventSession.Create(ctx, session); err != nil {
 			logger.AddError(ctx, &logger.ErrorContext{
 				Type: "DatabaseError", Code: "SESSION_CREATE_FAILED",
@@ -170,8 +158,6 @@ func (es *eventSessionUsecase) Create(ctx context.Context, requests []models.Cre
 		}
 
 		if req.Questions != nil {
-			logger.Add(ctx, "creating_questions", true)
-
 			form := models.CreateFormRequest{
 				Name: session.Title,
 				Entity: models.FormEntityRequest{
@@ -181,8 +167,8 @@ func (es *eventSessionUsecase) Create(ctx context.Context, requests []models.Cre
 				Questions: req.Questions,
 			}
 
-			logger.Add(ctx, "questions_requested", len(req.Questions))
-			if _, err := es.d.Form.Create(ctx, &form); err != nil {
+			formResp, err := es.d.Form.Create(ctx, &form)
+			if err != nil {
 				logger.AddError(ctx, &logger.ErrorContext{
 					Type:      "DatabaseError",
 					Code:      "QUESTIONS_CREATE_FAILED",
@@ -191,7 +177,18 @@ func (es *eventSessionUsecase) Create(ctx context.Context, requests []models.Cre
 				})
 				return nil, errorc.Error(err, "failed to create event questions: %s", err)
 			}
-			logger.Add(ctx, "questions_created", len(req.Questions))
+
+			questionCodes := make([]string, len(formResp.Questions))
+			for i, q := range formResp.Questions {
+				questionCodes[i] = q.Code
+			}
+
+			// Group form creation details neatly under 'form'
+			logger.AddToKey(ctx, "form", map[string]any{
+				"code":              formResp.Code,
+				"questions_created": len(formResp.Questions),
+				"question_codes":    questionCodes,
+			})
 		}
 
 		// ── 15. Optionally update parent event schedule ───────────────────────────
@@ -203,17 +200,10 @@ func (es *eventSessionUsecase) Create(ctx context.Context, requests []models.Cre
 			return nil, errorc.Error(err)
 		}
 
-		logger.Add(ctx, map[string]any{
-			"session_created": true,
-			"session_id":      session.ID,
-			"session_code":    session.Code,
-		})
-
 		created = session
 	}
 
-	logger.Add(ctx, map[string]any{
-		"step":             "completed",
+	logger.Add(ctx, "session", map[string]any{
 		"sessions_created": len(requests),
 	})
 
@@ -266,10 +256,11 @@ func generateUniqueSessionCode(ctx context.Context, es *eventSessionUsecase, max
 			return &code, nil
 		}
 
-		logger.Add(ctx, map[string]any{
-			"code_collision":    true,
-			"collision_attempt": attempt + 1,
-			"colliding_code":    code,
+		// Code collision — rare, but worth knowing about. Log under its own group
+		// so it doesn't pollute top-level fields.
+		logger.Add(ctx, "code_collision", map[string]any{
+			"attempt": attempt + 1,
+			"code":    code,
 		})
 
 		if attempt < maxRetries-1 {
@@ -315,14 +306,18 @@ func normalizeSessionRequest(request *models.CreateEventSessionRequest, event *m
 		request.Location.ClickToAction.Link = stringc.Pointer("NORMAL_FLOW")
 	}
 
-	// Check-in is enabled by default per spec §4.2:
-	// "Set defaults: check_in_enabled: true"
-	// Only force-enable if not explicitly set to false.
-	// We leave the struct value as-is (false is the zero value),
-	// but the spec default of "true" is enforced here.
+	// Check-in default per spec §4.2: enabled by default only when times are provided.
+	// If the caller provides check-in times, honour their Enabled flag as-is.
+	// If no check-in times are present, leave Enabled as false to avoid a
+	// validation failure (validateCheckInConfig requires StartAt/EndAt when Enabled=true).
 	if !request.Times.CheckIn.Enabled && !request.Times.CheckIn.Required {
-		// No check-in config provided at all — apply spec default: enabled but not required
-		request.Times.CheckIn.Enabled = true
+		if request.Times.CheckIn.StartAt != nil && request.Times.CheckIn.EndAt != nil {
+			// Times were provided but Enabled was not explicitly set — default to true.
+			request.Times.CheckIn.Enabled = true
+		}
+		// If no times provided, leave Enabled=false so the session is created
+		// without a check-in window (the spec default "enabled" only applies when
+		// the operator actually configures a window).
 	}
 
 	// MaxRegistrationsPerUser default: 1
@@ -385,9 +380,14 @@ func validateSessionRules(req *models.CreateEventSessionRequest, event *models.E
 // buildSessionModel maps a validated CreateEventSessionRequest to a models.EventSession.
 func buildSessionModel(req *models.CreateEventSessionRequest, eventCode, sessionCode string) *models.EventSession {
 	session := &models.EventSession{
-		Code:              sessionCode,
-		EventCode:         eventCode,
-		ParentSessionCode: req.ParentSessionCode,
+		Code:      sessionCode,
+		EventCode: eventCode,
+		ParentSessionCode: func() *string {
+			if req.ParentSessionCode == "" {
+				return nil
+			}
+			return stringc.Pointer(req.ParentSessionCode)
+		}(),
 
 		Title:       req.Title,
 		Description: req.Description,
@@ -671,7 +671,14 @@ func (es *eventSessionUsecase) updateEvent(ctx context.Context, request *models.
 		return nil
 	}
 
-	logger.Add(ctx, "is_update_event", true)
+	logger.AddToKey(ctx, "event", "updated_by_session", true)
+
+	// Guard against nil schedule pointers — these should have been validated by
+	// validateSchedule earlier in the loop, but we defend here explicitly because
+	// dereferencing a nil *time.Time causes a panic that crashes the transaction.
+	if request.Schedule.StartAt == nil || request.Schedule.EndAt == nil || request.Schedule.Timezone == nil {
+		return errorc.Error(errorc.ErrorValidation, "schedule.startAt, schedule.endAt, and schedule.timezone are required when isUpdateEvent is true")
+	}
 
 	event.StartAt = *request.Schedule.StartAt
 	event.EndAt = *request.Schedule.EndAt

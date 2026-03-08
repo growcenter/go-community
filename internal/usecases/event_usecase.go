@@ -250,12 +250,6 @@ func (eu *eventUsecase) Create(ctx context.Context, request models.CreateEventRe
 
 	if err := eu.d.Repository.Transaction.Atomic(ctx, func(ctx context.Context, r *pgsql.PostgreRepositories) error {
 		if err := r.Event.Create(ctx, event); err != nil {
-			logger.AddError(ctx, &logger.ErrorContext{
-				Type:      "DatabaseError",
-				Code:      "EVENT_CREATE_FAILED",
-				Message:   err.Error(),
-				Retriable: true,
-			})
 			return errorc.Error(errorc.ErrorDatabase, "failed to create event: %s", err)
 		}
 
@@ -264,12 +258,6 @@ func (eu *eventUsecase) Create(ctx context.Context, request models.CreateEventRe
 
 		if request.Sessions != nil {
 			if _, err := eu.d.EventSession.Create(ctx, request.Sessions, nil, event); err != nil {
-				logger.AddError(ctx, &logger.ErrorContext{
-					Type:      "DatabaseError",
-					Code:      "SESSIONS_CREATE_FAILED",
-					Message:   err.Error(),
-					Retriable: true,
-				})
 				return errorc.Error(err, "failed to create event sessions: %s", err)
 			}
 			// sessions_created belongs to the event group — it describes how many
@@ -289,12 +277,6 @@ func (eu *eventUsecase) Create(ctx context.Context, request models.CreateEventRe
 
 			formResp, err := eu.d.Form.Create(ctx, &formReq)
 			if err != nil {
-				logger.AddError(ctx, &logger.ErrorContext{
-					Type:      "DatabaseError",
-					Code:      "QUESTIONS_CREATE_FAILED",
-					Message:   err.Error(),
-					Retriable: true,
-				})
 				return errorc.Error(err, "failed to create event questions: %s", err)
 			}
 
@@ -313,12 +295,6 @@ func (eu *eventUsecase) Create(ctx context.Context, request models.CreateEventRe
 
 		return nil
 	}); err != nil {
-		logger.AddError(ctx, &logger.ErrorContext{
-			Type:      "DatabaseError",
-			Code:      "DATABASE_ATOMIC_ERROR",
-			Message:   err.Error(),
-			Retriable: true,
-		})
 		return nil, errorc.Error(err, "failed to create event: %s", err)
 	}
 

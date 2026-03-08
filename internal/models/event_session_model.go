@@ -11,10 +11,10 @@ var (
 )
 
 type EventSession struct {
-	ID                int    `gorm:"type:integer;primarykey"`
-	Code              string `gorm:"type:varchar(50);not null"`
-	EventCode         string `gorm:"type:varchar(50);not null"`
-	ParentSessionCode string `gorm:"type:varchar(50);not null"`
+	ID                int     `gorm:"type:integer;primarykey"`
+	Code              string  `gorm:"type:varchar(50);not null"`
+	EventCode         string  `gorm:"type:varchar(50);not null"`
+	ParentSessionCode *string `gorm:"type:varchar(50)"` // NULL = top-level session
 
 	Title       string `gorm:"type:text;not null"`
 	Description string `gorm:"type:text"`
@@ -229,6 +229,14 @@ func EventSessionWithFormQuestions(questions []FormQuestionResponse) CreateEvent
 	}
 }
 
+// derefString safely dereferences a *string, returning "" for nil.
+func derefString(s *string) string {
+	if s == nil {
+		return ""
+	}
+	return *s
+}
+
 func (es *EventSession) ToResponse(options ...CreateEventSessionResponseOption) CreateEventSessionResponse {
 	var geo GeolocationConfiguration
 	if !es.Geolocation.IsNull() {
@@ -246,7 +254,7 @@ func (es *EventSession) ToResponse(options ...CreateEventSessionResponseOption) 
 		Type:              TYPE_EVENT_SESSION,
 		Code:              es.Code,
 		EventCode:         es.EventCode,
-		ParentSessionCode: es.ParentSessionCode,
+		ParentSessionCode: derefString(es.ParentSessionCode),
 		Title:             es.Title,
 		Description:       es.Description,
 		SessionType:       es.SessionType,
