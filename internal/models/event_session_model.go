@@ -11,10 +11,10 @@ var (
 )
 
 type EventSession struct {
-	ID                int    `gorm:"type:integer;primarykey"`
-	Code              string `gorm:"type:varchar(50);not null"`
-	EventCode         string `gorm:"type:varchar(50);not null"`
-	ParentSessionCode string `gorm:"type:varchar(50);not null"`
+	ID                int     `gorm:"type:integer;primarykey"`
+	Code              string  `gorm:"type:varchar(50);not null"`
+	EventCode         string  `gorm:"type:varchar(50);not null"`
+	ParentSessionCode *string `gorm:"type:varchar(50)"` // NULL = top-level session
 
 	Title       string `gorm:"type:text;not null"`
 	Description string `gorm:"type:text"`
@@ -229,11 +229,18 @@ func EventSessionWithFormQuestions(questions []FormQuestionResponse) CreateEvent
 	}
 }
 
+// derefString safely dereferences a *string, returning "" for nil.
+func derefString(s *string) string {
+	if s == nil {
+		return ""
+	}
+	return *s
+}
+
 func (es *EventSession) ToResponse(options ...CreateEventSessionResponseOption) CreateEventSessionResponse {
-	var geo *GeolocationConfiguration
+	var geo GeolocationConfiguration
 	if !es.Geolocation.IsNull() {
-		geo = &GeolocationConfiguration{}
-		_ = es.Geolocation.Unmarshal(geo)
+		_ = es.Geolocation.Unmarshal(&geo)
 	}
 
 	var ic *SessionIdentifierConfig
@@ -241,12 +248,13 @@ func (es *EventSession) ToResponse(options ...CreateEventSessionResponseOption) 
 		ic = &SessionIdentifierConfig{}
 		_ = es.IdentifierConfig.Unmarshal(ic)
 	}
+	_ = ic // reserved for future use
 
 	response := CreateEventSessionResponse{
 		Type:              TYPE_EVENT_SESSION,
 		Code:              es.Code,
 		EventCode:         es.EventCode,
-		ParentSessionCode: es.ParentSessionCode,
+		ParentSessionCode: derefString(es.ParentSessionCode),
 		Title:             es.Title,
 		Description:       es.Description,
 		SessionType:       es.SessionType,
@@ -263,7 +271,7 @@ func (es *EventSession) ToResponse(options ...CreateEventSessionResponseOption) 
 			LocationDetails:    es.LocationDetails,
 			LocationVisibility: &es.LocationVisibility,
 		},
-		Geolocation: *geo,
+		Geolocation: geo,
 		Schedule: EventSchedule{
 			StartAt:  &es.StartAt,
 			EndAt:    &es.EndAt,

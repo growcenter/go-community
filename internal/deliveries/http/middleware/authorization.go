@@ -198,7 +198,7 @@ func GeneralMiddleware(config *config.Configuration, usecase *usecases.Usecases)
 			}
 
 			// Extract or generate X-Request-Id
-			requestId := ctx.Request().Header.Get("X-Request-Id")
+			requestId := ctx.Request().Header.Get("X-Request-ID")
 			if requestId == "" {
 				requestId = uuid.New().String() // Generate a new UUID if missing
 			}
@@ -231,10 +231,10 @@ func GeneralMiddleware(config *config.Configuration, usecase *usecases.Usecases)
 			}
 
 			// Store in context for later use
-			ctx.Set("X-Request-Id", requestId)
+			ctx.Set("X-Request-ID", requestId)
 			ctx.Set("X-Timestamp", timestamp)
 
-			ctx.Response().Header().Set("X-Request-Id", requestId)
+			ctx.Response().Header().Set("X-Request-ID", requestId)
 			ctx.Response().Header().Set("X-Timestamp", timestamp)
 
 			return next(ctx) // Continue to the next middleware

@@ -377,8 +377,8 @@ func (ei *EventImages) ImageCount() int {
 //   - At least one organizer is required for event accountability
 //   - Contacts are optional and used for event inquiries
 type EventOrganizer struct {
-	OrganizerCommunityIDs []string `json:"organizerCommunityIds" validate:"required,min=1,max=50,dive,uuid4" example:"550e8400-e29b-41d4-a716-446655440000"`
-	ContactCommunityIDs   []string `json:"contactCommunityIds" validate:"omitempty,max=50,dive,uuid4" example:"550e8400-e29b-41d4-a716-446655440001"`
+	OrganizerCommunityIDs []string `json:"organizerCommunityIds" validate:"required,dive,communityId" example:"550e8400-e29b-41d4-a716-446655440000"`
+	ContactCommunityIDs   []string `json:"contactCommunityIds" validate:"omitempty,dive,communityId" example:"550e8400-e29b-41d4-a716-446655440001"`
 }
 
 // HasContacts returns true if contact community IDs are provided
@@ -415,7 +415,7 @@ type EventAccess struct {
 	AllowedUserTypes    []string `json:"allowedUserTypes" validate:"omitempty,max=20,dive,min=1,max=50"`
 	AllowedRoles        []string `json:"allowedRoles" validate:"omitempty,max=20,dive,min=1,max=50"`
 	AllowedCampuses     []string `json:"allowedCampuses" validate:"omitempty,max=50,dive,campusCode"`
-	AllowedCommunityIDs []string `json:"allowedCommunityIds" validate:"omitempty,max=100,dive,uuid4"`
+	AllowedCommunityIDs []string `json:"allowedCommunityIds" validate:"omitempty,dive,communityId"`
 }
 
 // IsPublic returns true if access level is public
@@ -770,14 +770,23 @@ func (e *Event) ToCreateResponse(opts ...CreateEventResponseOption) *CreateEvent
 		_ = e.ReminderConfig.Unmarshal(rc)
 	}
 
+	// Safe helpers for nullable *string fields — GORM may leave these nil
+	// when the column is NULL in Postgres even if we set them before insert.
+	derefStr := func(s *string) string {
+		if s == nil {
+			return ""
+		}
+		return *s
+	}
+
 	response := &CreateEventResponse{
 		Type:               TYPE_EVENT,
 		Code:               e.Code,
 		Title:              e.Title,
 		Slug:               e.Slug,
-		PreDescription:     *e.PreDescription,
+		PreDescription:     derefStr(e.PreDescription),
 		PostDescription:    e.PostDescription,
-		TermsAndConditions: *e.TermsAndConditions,
+		TermsAndConditions: derefStr(e.TermsAndConditions),
 		Category:           e.Category,
 		Status:             e.Status,
 		Images: EventImages{

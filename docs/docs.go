@@ -1824,18 +1824,12 @@ const docTemplate = `{
         "models.BulkCreateFormQuestionRequest": {
             "type": "object",
             "required": [
-                "applyFor",
-                "mandatoryFor",
+                "requiredFor",
                 "text",
-                "type"
+                "type",
+                "visibleFor"
             ],
             "properties": {
-                "applyFor": {
-                    "type": "array",
-                    "items": {
-                        "type": "string"
-                    }
-                },
                 "correctAnswer": {
                     "type": "string"
                 },
@@ -1843,14 +1837,14 @@ const docTemplate = `{
                     "type": "integer",
                     "minimum": 0
                 },
-                "mandatoryFor": {
+                "options": {
+                    "$ref": "#/definitions/models.QuestionOptions"
+                },
+                "requiredFor": {
                     "type": "array",
                     "items": {
                         "type": "string"
                     }
-                },
-                "options": {
-                    "$ref": "#/definitions/models.QuestionOptions"
                 },
                 "rules": {
                     "$ref": "#/definitions/models.QuestionValidationRules"
@@ -1860,6 +1854,12 @@ const docTemplate = `{
                 },
                 "type": {
                     "$ref": "#/definitions/constants.QuestionType"
+                },
+                "visibleFor": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
                 }
             }
         },
@@ -2713,7 +2713,6 @@ const docTemplate = `{
                 },
                 "allowedCommunityIds": {
                     "type": "array",
-                    "maxItems": 100,
                     "items": {
                         "type": "string"
                     }
@@ -2833,7 +2832,6 @@ const docTemplate = `{
             "properties": {
                 "contactCommunityIds": {
                     "type": "array",
-                    "maxItems": 50,
                     "items": {
                         "type": "string"
                     },
@@ -2843,8 +2841,6 @@ const docTemplate = `{
                 },
                 "organizerCommunityIds": {
                     "type": "array",
-                    "maxItems": 50,
-                    "minItems": 1,
                     "items": {
                         "type": "string"
                     },
@@ -3097,12 +3093,6 @@ const docTemplate = `{
         "models.FormQuestionResponse": {
             "type": "object",
             "properties": {
-                "applyFor": {
-                    "type": "array",
-                    "items": {
-                        "type": "string"
-                    }
-                },
                 "code": {
                     "type": "string"
                 },
@@ -3115,17 +3105,17 @@ const docTemplate = `{
                 "formCode": {
                     "type": "string"
                 },
-                "mandatoryFor": {
-                    "type": "array",
-                    "items": {
-                        "type": "string"
-                    }
-                },
                 "options": {
                     "$ref": "#/definitions/models.QuestionOptions"
                 },
                 "questionType": {
                     "type": "string"
+                },
+                "requiredFor": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
                 },
                 "rules": {
                     "$ref": "#/definitions/models.QuestionValidationRules"
@@ -3135,6 +3125,12 @@ const docTemplate = `{
                 },
                 "type": {
                     "type": "string"
+                },
+                "visibleFor": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
                 }
             }
         },

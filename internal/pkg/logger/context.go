@@ -1,9 +1,10 @@
-// Package logger provides structured logging with wide events support.
-// This file contains context-based utilities for thread-safe wide event management.
 package logger
 
 import (
 	"context"
+	"fmt"
+	"runtime"
+	"strings"
 	"sync"
 )
 
@@ -143,6 +144,89 @@ func (w *WideEvent) addMap(data map[string]any) {
 
 		w.BusinessData[k] = v
 		w.businessDataLen++
+	}
+}
+
+// getOrCreateGroup returns the map[string]interface{} stored at groupKey,
+// creating it (and consuming one BusinessData slot) if it does not yet exist.
+// If a non-map value is already stored at groupKey it is replaced with a new map.
+//
+// MUST be called with w.mu held.
+// Returns nil if MaxBusinessDataSize has been reached and no slot is available.
+func (w *WideEvent) getOrCreateGroup(groupKey string) map[string]interface{} {
+	existing, exists := w.BusinessData[groupKey]
+	if !exists {
+		if w.businessDataLen >= MaxBusinessDataSize {
+			return nil
+		}
+		group := make(map[string]interface{})
+		w.BusinessData[groupKey] = group
+		w.businessDataLen++
+		return group
+	}
+
+	if group, ok := existing.(map[string]interface{}); ok {
+		return group
+	}
+
+	// Existing value is a scalar — replace it with a proper group.
+	// The slot was already counted, so businessDataLen stays the same.
+	group := make(map[string]interface{})
+	w.BusinessData[groupKey] = group
+	return group
+}
+
+// addToKey merges one or more fields into a named group within BusinessData.
+//
+// The group is created lazily on the first call (consuming exactly one slot).
+// Every subsequent call to the same groupKey reuses that slot at zero cost.
+//
+// Accepts the same argument forms as Add:
+//   - Single k/v pair:   addToKey("event", "code", eventCode)
+//   - Map:               addToKey("event", map[string]any{"code": ..., "slug": ...})
+//   - Multiple k/v:      addToKey("event", "code", eventCode, "slug", slug)
+//
+// The mutex is acquired exactly once per call regardless of how many fields
+// are written, making this more efficient than multiple individual Add calls.
+//
+// Thread-safe: can be called concurrently from multiple goroutines.
+func (w *WideEvent) addToKey(groupKey string, args ...interface{}) {
+	if len(args) == 0 {
+		return
+	}
+
+	w.mu.Lock()
+	defer w.mu.Unlock()
+
+	group := w.getOrCreateGroup(groupKey)
+	if group == nil {
+		return // MaxBusinessDataSize reached
+	}
+
+	// Single map argument — bulk-merge all fields.
+	if len(args) == 1 {
+		if m, ok := args[0].(map[string]any); ok {
+			for k, v := range m {
+				group[k] = v
+			}
+			return
+		}
+		if m, ok := args[0].(map[string]interface{}); ok {
+			for k, v := range m {
+				group[k] = v
+			}
+			return
+		}
+	}
+
+	// Variadic key-value pairs.
+	if len(args)%2 != 0 {
+		args = args[:len(args)-1] // drop trailing unpaired arg
+	}
+	for i := 0; i < len(args); i += 2 {
+		if fieldKey, ok := args[i].(string); ok {
+			group[fieldKey] = args[i+1]
+		}
 	}
 }
 
@@ -324,6 +408,57 @@ func Add(ctx context.Context, args ...interface{}) {
 	}
 }
 
+// AddToKey merges one or more fields into a named group within the wide event.
+//
+// The group is created automatically on the first call (consuming 1 slot).
+// Every subsequent call to the same groupKey merges into the existing group
+// at zero additional slot cost, regardless of how many fields are written.
+//
+// Accepts the same argument forms as Add, but scoped to a named group:
+//   - Single k/v:   AddToKey(ctx, "event", "code", eventCode)
+//   - Multiple k/v: AddToKey(ctx, "event", "code", eventCode, "slug", slug)
+//   - Map:          AddToKey(ctx, "form", map[string]any{"code": ..., "count": 3})
+//
+// The mutex is acquired exactly once per call regardless of how many fields
+// are written — more efficient than multiple individual Add calls.
+//
+// Thread-safe: can be called from any layer, even concurrently.
+//
+// Example usage:
+//
+//	// Seed the group the moment the values are known
+//	logger.AddToKey(ctx, "event", "code", eventCode)
+//	logger.AddToKey(ctx, "event", "slug", slug)
+//
+//	// Enrich later from inside a transaction closure
+//	logger.AddToKey(ctx, "event", "id", event.ID)
+//
+//	// Bulk-merge a form group in one call
+//	logger.AddToKey(ctx, "form", map[string]any{
+//	    "code":             formResp.Code,
+//	    "questions_created": len(formResp.Questions),
+//	})
+func AddToKey(ctx context.Context, groupKey string, args ...interface{}) {
+	if event := GetWideEvent(ctx); event != nil {
+		event.addToKey(groupKey, args...)
+	}
+}
+
+// AddTo adds a single field to a named group within the wide event.
+//
+// Deprecated: Use AddToKey which accepts the same variadic args as Add
+// and handles both single fields and maps uniformly.
+func AddTo(ctx context.Context, groupKey, fieldKey string, value interface{}) {
+	AddToKey(ctx, groupKey, fieldKey, value)
+}
+
+// MergeTo bulk-merges multiple fields into a named group within the wide event.
+//
+// Deprecated: Use AddToKey(ctx, groupKey, map[string]any{...}) instead.
+func MergeTo(ctx context.Context, groupKey string, fields map[string]any) {
+	AddToKey(ctx, groupKey, fields)
+}
+
 // AddMap adds multiple fields to the wide event from a map.
 // Thread-safe: can be called from any layer, even concurrently.
 //
@@ -431,9 +566,39 @@ func SetUserContext(ctx context.Context, user *UserContext) {
 	}
 }
 
+// captureStack returns a condensed, human-readable call stack string.
+// It skips internal logger frames so the first line shown is the actual
+// caller of AddError (e.g. your usecase or repository).
+// depth controls how many frames to capture (excluding logger internals).
+func captureStack(skip, depth int) string {
+	pcs := make([]uintptr, depth)
+	// skip: runtime.Callers itself + captureStack + AddError + SetError
+	n := runtime.Callers(skip, pcs)
+	if n == 0 {
+		return ""
+	}
+
+	var sb strings.Builder
+	frames := runtime.CallersFrames(pcs[:n])
+	for {
+		f, more := frames.Next()
+		// Skip runtime internals and logger package itself
+		if !strings.Contains(f.Function, "runtime.") &&
+			!strings.Contains(f.Function, "go-community/internal/pkg/logger") {
+			fmt.Fprintf(&sb, "%s\n\t%s:%d\n", f.Function, f.File, f.Line)
+		}
+		if !more {
+			break
+		}
+	}
+	return sb.String()
+}
+
 // AddError stores error context in the wide event.
 // This should be called from service/repository layers when errors occur.
 // The middleware will pick this up and include it in the canonical log line.
+// If ErrorContext.Stack is empty, a call stack is automatically captured at
+// this call site — pointing back to your usecase or repository.
 //
 // Example usage:
 //
@@ -444,6 +609,12 @@ func SetUserContext(ctx context.Context, user *UserContext) {
 //	    Retriable: true,
 //	})
 func AddError(ctx context.Context, errCtx *ErrorContext) {
+	if errCtx != nil && errCtx.Stack == "" {
+		// Frame chain: runtime.Callers(1) → captureStack(2) → AddError(3) → caller(4+).
+		// skip=4 lands us at the usecase/repository that called AddError.
+		// Capture up to 20 frames so we see the full usecase → handler chain.
+		errCtx.Stack = captureStack(4, 20)
+	}
 	if event := GetWideEvent(ctx); event != nil {
 		event.SetError(errCtx)
 	}

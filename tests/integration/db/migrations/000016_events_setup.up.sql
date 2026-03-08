@@ -118,7 +118,7 @@ CREATE INDEX idx_events_search ON events USING GIN(
 -- ============================================================================
 
 ALTER TABLE events ADD CONSTRAINT chk_events_category
-    CHECK (category IN ('announcement', 'registerable'));
+    CHECK (category IN ('registration', 'attendance', 'announcement', 'volunteer', 'hybrid'));
 
 ALTER TABLE events ADD CONSTRAINT chk_events_access_level
     CHECK (access_level IN ('public', 'private', 'members_only', 'volunteer_only', 'campus_specific'));

@@ -23,32 +23,32 @@ definitions:
     - QuestionTypeNumber
   models.BulkCreateFormQuestionRequest:
     properties:
-      applyFor:
-        items:
-          type: string
-        type: array
       correctAnswer:
         type: string
       displayOrder:
         minimum: 0
         type: integer
-      mandatoryFor:
+      options:
+        $ref: '#/definitions/models.QuestionOptions'
+      requiredFor:
         items:
           type: string
         type: array
-      options:
-        $ref: '#/definitions/models.QuestionOptions'
       rules:
         $ref: '#/definitions/models.QuestionValidationRules'
       text:
         type: string
       type:
         $ref: '#/definitions/constants.QuestionType'
+      visibleFor:
+        items:
+          type: string
+        type: array
     required:
-    - applyFor
-    - mandatoryFor
+    - requiredFor
     - text
     - type
+    - visibleFor
     type: object
   models.CampusesResponse:
     properties:
@@ -652,7 +652,6 @@ definitions:
       allowedCommunityIds:
         items:
           type: string
-        maxItems: 100
         type: array
       allowedRoles:
         items:
@@ -740,15 +739,12 @@ definitions:
         - 550e8400-e29b-41d4-a716-446655440001
         items:
           type: string
-        maxItems: 50
         type: array
       organizerCommunityIds:
         example:
         - 550e8400-e29b-41d4-a716-446655440000
         items:
           type: string
-        maxItems: 50
-        minItems: 1
         type: array
     required:
     - organizerCommunityIds
@@ -929,10 +925,6 @@ definitions:
     type: object
   models.FormQuestionResponse:
     properties:
-      applyFor:
-        items:
-          type: string
-        type: array
       code:
         type: string
       correctAnswer:
@@ -941,20 +933,24 @@ definitions:
         type: integer
       formCode:
         type: string
-      mandatoryFor:
-        items:
-          type: string
-        type: array
       options:
         $ref: '#/definitions/models.QuestionOptions'
       questionType:
         type: string
+      requiredFor:
+        items:
+          type: string
+        type: array
       rules:
         $ref: '#/definitions/models.QuestionValidationRules'
       text:
         type: string
       type:
         type: string
+      visibleFor:
+        items:
+          type: string
+        type: array
     type: object
   models.GeolocationConfiguration:
     properties:

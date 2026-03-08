@@ -41,13 +41,13 @@ CREATE TABLE form_questions (
 
     -- Question content
     text TEXT NOT NULL,
-    type VARCHAR(50) NOT NULL,       -- question_type: short_text, long_text, number, email, phone, single_choice, multiple_choice, date, time
+    category VARCHAR(50) NOT NULL,       -- question_type: short_text, long_text, number, email, phone, single_choice, multiple_choice, date, time
 
     -- Context-aware filtering
-    -- mandatory_for: contexts where this question is required. Values: 'parent', 'child'
-    mandatory_for TEXT[] DEFAULT ARRAY[]::TEXT[],
-    -- apply_for: contexts where this question is shown. Values: 'parent', 'child'
-    apply_for TEXT[] DEFAULT ARRAY[]::TEXT[],
+    -- required_for: contexts where this question is required. Values: 'parent', 'child'
+    required_for TEXT[] DEFAULT ARRAY[]::TEXT[],
+    -- visible_for: contexts where this question is shown. Values: 'parent', 'child'
+    visible_for TEXT[] DEFAULT ARRAY[]::TEXT[],
 
     -- Options for single_choice / multiple_choice
     -- Structure: {"choices": ["Option A", "Option B", ...]}
@@ -68,8 +68,8 @@ CREATE TABLE form_questions (
 
     CONSTRAINT form_questions_text_not_empty CHECK (LENGTH(TRIM(text)) > 0),
     CONSTRAINT form_questions_display_order_non_negative CHECK (display_order >= 0),
-    CONSTRAINT chk_form_questions_type CHECK (
-        type IN (
+    CONSTRAINT chk_form_questions_category CHECK (
+        category IN (
             'short_text', 'long_text', 'number',
             'email', 'phone',
             'single_choice', 'multiple_choice',
