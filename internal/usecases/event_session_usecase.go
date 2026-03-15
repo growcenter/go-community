@@ -2,6 +2,7 @@ package usecases
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	"go-community/internal/common"
@@ -130,11 +131,14 @@ func (es *eventSessionUsecase) Create(ctx context.Context, requests []models.Cre
 
 		// Seed the "session" group with identifiers known at this point.
 		// One call, one mutex acquisition, zero redundancy.
-		logger.Add(ctx, "session", map[string]any{
-			"code":         *sessionCode,
-			"event_code":   event.Code,
-			"status":       req.Status,
-			"session_type": req.SessionType,
+		sessionKey := fmt.Sprintf("session_create_%d", i+1)
+		logger.AddToKey(ctx, "session", map[string]any{
+			sessionKey: map[string]any{
+				"code":         *sessionCode,
+				"event_code":   event.Code,
+				"status":       req.Status,
+				"session_type": req.SessionType,
+			},
 		})
 
 		// ── 13. Map request → model ───────────────────────────────────────────────
@@ -184,10 +188,13 @@ func (es *eventSessionUsecase) Create(ctx context.Context, requests []models.Cre
 			}
 
 			// Group form creation details neatly under 'form'
-			logger.AddToKey(ctx, "form", map[string]any{
-				"code":              formResp.Code,
-				"questions_created": len(formResp.Questions),
-				"question_codes":    questionCodes,
+			formKey := fmt.Sprintf("form_session_create_%d", i+1)
+			logger.AddToKey(ctx, "session", map[string]any{
+				formKey: map[string]any{
+					"code":              formResp.Code,
+					"questions_created": len(formResp.Questions),
+					"question_codes":    questionCodes,
+				},
 			})
 		}
 
@@ -203,7 +210,7 @@ func (es *eventSessionUsecase) Create(ctx context.Context, requests []models.Cre
 		created = session
 	}
 
-	logger.Add(ctx, "session", map[string]any{
+	logger.AddToKey(ctx, "session", map[string]any{
 		"sessions_created": len(requests),
 	})
 
@@ -252,13 +259,13 @@ func generateUniqueSessionCode(ctx context.Context, es *eventSessionUsecase, max
 			return nil, errorc.Error(err, "failed to check session code uniqueness")
 		}
 		if !exists {
-			logger.Add(ctx, "code_generation_attempts", attempt+1)
+			logger.AddToKey(ctx, "session", "code_generation_attempts", attempt+1)
 			return &code, nil
 		}
 
 		// Code collision — rare, but worth knowing about. Log under its own group
 		// so it doesn't pollute top-level fields.
-		logger.Add(ctx, "code_collision", map[string]any{
+		logger.AddToKey(ctx, "session", "code_collision", map[string]any{
 			"attempt": attempt + 1,
 			"code":    code,
 		})
@@ -668,10 +675,11 @@ func validateCheckOutConfig(config *models.SessionCheckOutConfig) error {
 // transparently via BaseRepository.db(ctx) so both writes share the same connection.
 func (es *eventSessionUsecase) updateEvent(ctx context.Context, request *models.CreateEventSessionRequest, event *models.Event) error {
 	if !request.IsUpdateEvent {
+		logger.AddToKey(ctx, "session", "is_update_event", false)
 		return nil
 	}
 
-	logger.AddToKey(ctx, "event", "updated_by_session", true)
+	logger.AddToKey(ctx, "session", "is_update_event", true)
 
 	// Guard against nil schedule pointers — these should have been validated by
 	// validateSchedule earlier in the loop, but we defend here explicitly because

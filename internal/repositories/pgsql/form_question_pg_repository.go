@@ -29,7 +29,7 @@ func NewFormQuestionRepository(db *gorm.DB) FormQuestionRepository {
 // Create creates a new form question
 // Returns error if the question could not be created
 func (r *formQuestionRepository) Create(ctx context.Context, formQuestion *models.FormQuestion) error {
-	logger.Add(ctx, "db_operation", "form_question.create")
+	logger.AddProcess(ctx, "db_operation", "form_question.create")
 	err := r.db(ctx).Create(formQuestion).Error
 	if err != nil {
 		logger.AddError(ctx, &logger.ErrorContext{
@@ -52,10 +52,8 @@ func (r *formQuestionRepository) BulkCreate(ctx context.Context, formQuestions *
 		return nil
 	}
 
-	logger.Add(ctx, map[string]any{
-		"db_operation": "form_question.bulk_create",
-		"record_count": len(*formQuestions),
-	})
+	logger.AddProcess(ctx, "db_operation", "form_question.bulk_create")
+	logger.Add(ctx, "record_count", len(*formQuestions))
 
 	err := r.db(ctx).CreateInBatches(formQuestions, 100).Error
 	if err != nil {
@@ -74,10 +72,8 @@ func (r *formQuestionRepository) BulkCreate(ctx context.Context, formQuestions *
 // GetByFormCode retrieves questions for a specific form
 // Returns a list of form questions or an error
 func (r *formQuestionRepository) GetByFormCode(ctx context.Context, formCode string) (formQuestions []models.FormQuestion, err error) {
-	logger.Add(ctx, map[string]any{
-		"db_operation": "form_question.get_by_form_code",
-		"form_code":    formCode,
-	})
+	logger.AddProcess(ctx, "db_operation", "form_question.get_by_form_code")
+	logger.Add(ctx, "form_code", formCode)
 
 	err = r.db(ctx).Where("form_code = ?", formCode).Find(&formQuestions).Error
 	if err != nil {
@@ -101,10 +97,8 @@ func (r *formQuestionRepository) GetByFormCodes(ctx context.Context, formCodes [
 		return []models.FormQuestion{}, nil
 	}
 
-	logger.Add(ctx, map[string]any{
-		"db_operation": "form_question.get_by_form_codes",
-		"code_count":   len(formCodes),
-	})
+	logger.AddProcess(ctx, "db_operation", "form_question.get_by_form_codes")
+	logger.Add(ctx, "code_count", len(formCodes))
 
 	err = r.db(ctx).Where("form_code IN ?", formCodes).Find(&formQuestions).Error
 	if err != nil {
@@ -129,10 +123,8 @@ func (r *formQuestionRepository) GetByAssociationEntity(ctx context.Context, ent
 		return []models.FormQuestion{}, nil
 	}
 
-	logger.Add(ctx, map[string]any{
-		"db_operation": "form_question.get_by_association_entity",
-		"entity_count": len(entities),
-	})
+	logger.AddProcess(ctx, "db_operation", "form_question.get_by_association_entity")
+	logger.Add(ctx, "entity_count", len(entities))
 
 	query, args := BuildGetFormQuestionsByEntitiesQuery(entities)
 	err = r.db(ctx).Raw(query, args...).Scan(&formQuestions).Error

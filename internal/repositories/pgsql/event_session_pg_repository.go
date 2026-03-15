@@ -38,7 +38,7 @@ func NewEventSessionRepository(db *gorm.DB) EventSessionRepository {
 // Create creates a new event instance
 // Returns error if the event instance could not be created
 func (es *eventSessionRepository) Create(ctx context.Context, event *models.EventSession) (err error) {
-	logger.Add(ctx, "db_operation", "event_session.create")
+	logger.AddProcess(ctx, "db_operation", "event_session.create")
 
 	err = es.db(ctx).Create(&event).Error
 	if err != nil {
@@ -63,10 +63,7 @@ func (es *eventSessionRepository) BulkCreate(ctx context.Context, events []model
 		return nil
 	}
 
-	logger.Add(ctx, map[string]any{
-		"db_operation": "event_session.bulk_create",
-		"record_count": len(events),
-	})
+	logger.AddProcess(ctx, "db_operation", "event_session.bulk_create")
 
 	// Use CreateInBatches for better performance with large datasets
 	// Batch size of 100 is a good balance between performance and memory
@@ -94,10 +91,7 @@ func (es *eventSessionRepository) BulkCreate(ctx context.Context, events []model
 // GetByCode retrieves an event instance by its code
 // Returns the event instance if found, or an error if not found or on database error
 func (es *eventSessionRepository) GetByCode(ctx context.Context, code string) (*models.EventSession, error) {
-	logger.Add(ctx, map[string]any{
-		"db_operation": "event_session.get_by_code",
-		"lookup_code":  code,
-	})
+	logger.AddProcess(ctx, "db_operation", "event_session.get_by_code")
 
 	var event models.EventSession
 	err := es.db(ctx).Where("code = ?", code).First(&event).Error
@@ -121,10 +115,7 @@ func (es *eventSessionRepository) GetByCode(ctx context.Context, code string) (*
 // GetByEventCode retrieves an event instance by its event code
 // Returns the event instance if found, or an error if not found or on database error
 func (es *eventSessionRepository) GetByEventCode(ctx context.Context, eventCode string) ([]models.EventSession, error) {
-	logger.Add(ctx, map[string]any{
-		"db_operation": "event_session.get_by_event_code",
-		"lookup_code":  eventCode,
-	})
+	logger.AddProcess(ctx, "db_operation", "event_session.get_by_event_code")
 
 	var events []models.EventSession
 	err := es.db(ctx).Where("event_code = ?", eventCode).Find(&events).Error
@@ -149,10 +140,7 @@ func (es *eventSessionRepository) GetByEventCode(ctx context.Context, eventCode 
 // Uses PostgreSQL EXISTS for optimal performance - stops at first match instead of counting all rows
 // Returns true if the code exists, false otherwise
 func (es *eventSessionRepository) CheckByCode(ctx context.Context, code string) (bool, error) {
-	logger.Add(ctx, map[string]any{
-		"db_operation": "event_session.check_by_code",
-		"lookup_code":  code,
-	})
+	logger.AddProcess(ctx, "db_operation", "event_session.check_by_code")
 
 	var exists bool
 	err := es.db(ctx).
@@ -179,10 +167,7 @@ func (es *eventSessionRepository) CheckByCode(ctx context.Context, code string) 
 // Uses PostgreSQL EXISTS for optimal performance - stops at first match instead of counting all rows
 // Returns true if the code exists, false otherwise
 func (es *eventSessionRepository) CheckByEventCode(ctx context.Context, eventCode string) (bool, error) {
-	logger.Add(ctx, map[string]any{
-		"db_operation": "event_session.check_by_event_code",
-		"lookup_code":  eventCode,
-	})
+	logger.AddProcess(ctx, "db_operation", "event_session.check_by_event_code")
 
 	var exists bool
 	err := es.db(ctx).

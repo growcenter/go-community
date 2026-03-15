@@ -25,10 +25,6 @@ func NewFormUsecase(d *Dependencies) FormUsecase {
 }
 
 func (fu *formUsecase) Create(ctx context.Context, request *models.CreateFormRequest) (response *models.CreateFormResponse, err error) {
-	defer func() {
-		LogService(ctx, err)
-	}()
-
 	code, err := uuid.NewV7()
 	if err != nil {
 		return nil, errorc.Error(err)

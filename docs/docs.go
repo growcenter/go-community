@@ -3002,6 +3002,7 @@ const docTemplate = `{
                     "type": "boolean"
                 },
                 "parentSessionCode": {
+                    "description": "NULL = top-level session",
                     "type": "string"
                 },
                 "physical_address": {

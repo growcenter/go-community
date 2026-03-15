@@ -32,9 +32,10 @@ func NewEventHandler(api *echo.Group, u *usecases.Usecases, c *config.Configurat
 	endpointUserInternal := api.Group("/internal/events")
 	endpointUserInternal.Use(middleware.UserMiddleware(c, u, []string{"event-internal-view"}))
 
-	endpointCreateEvent := endpointUserInternal.Group("")
-	endpointCreateEvent.Use(middleware.UserMiddleware(c, u, []string{"event-internal-create"}))
-	endpointCreateEvent.POST("", handler.Create)
+	endpointUserInternalCreate := endpointUserInternal.Group("")
+	endpointUserInternalCreate.Use(middleware.UserMiddleware(c, u, []string{"event-internal-create"}))
+	endpointUserInternalCreate.POST("", handler.Create)
+	endpointUserInternalCreate.POST("/:eventCode/sessions", handler.CreateSession)
 }
 
 // Create godoc
@@ -135,7 +136,7 @@ func (eh *EventHandler) CreateSession(ctx echo.Context) error {
 		return response.Error(ctx, err)
 	}
 
-	return response.SuccessListV2(ctx, http.StatusCreated, "Event Session is created successfully.", eventSession.ToResponse())
+	return response.SuccessV2(ctx, http.StatusCreated, "Event Session is created successfully.", eventSession.ToResponse())
 }
 
 // GetAllSessionsByEventCode godoc

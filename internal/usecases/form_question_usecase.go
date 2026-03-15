@@ -31,10 +31,6 @@ func NewFormQuestionUsecase(d *Dependencies) FormQuestionUsecase {
 }
 
 func (fqu *formQuestionUsecase) BulkCreate(ctx context.Context, formCode string, request []models.BulkCreateFormQuestionRequest) (responses []models.FormQuestionResponse, err error) {
-	defer func() {
-		LogService(ctx, err)
-	}()
-
 	formCodeUUID, err := uuid.Parse(formCode)
 	if err != nil {
 		return nil, errorc.Error(errorc.ErrorInvalidInput, "invalid form code: %s", formCode)

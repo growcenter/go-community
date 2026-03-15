@@ -38,10 +38,6 @@ func NewFormAnswerUsecase(d *Dependencies) FormAnswerUsecase {
 }
 
 func (fau *formAnswerUsecase) Submit(ctx context.Context, request *models.CreateFormAnswerRequest) (response *models.CreateFormAnswerResponse, err error) {
-	defer func() {
-		LogService(ctx, err)
-	}()
-
 	// ── 1. Resolve form code ──────────────────────────────────────────────────
 	// Either a direct formCode or an entity lookup must be provided.
 	var formCode uuid.UUID

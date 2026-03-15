@@ -29,7 +29,7 @@ func NewFormAssociationRepository(db *gorm.DB) FormAssociationRepository {
 // Create creates a new form association.
 // Participates in any enclosing Atomic transaction via context.
 func (r *formAssociationRepository) Create(ctx context.Context, association *models.FormAssociation) (err error) {
-	logger.Add(ctx, "db_operation", "form_association.create")
+	logger.AddProcess(ctx, "db_operation", "form_association.create")
 	err = r.db(ctx).Create(association).Error
 	if err != nil {
 		logger.AddError(ctx, &logger.ErrorContext{
@@ -46,10 +46,8 @@ func (r *formAssociationRepository) Create(ctx context.Context, association *mod
 
 // GetByFormCode retrieves all associations for a given form code.
 func (r *formAssociationRepository) GetByFormCode(ctx context.Context, formCode string) (associations []models.FormAssociation, err error) {
-	logger.Add(ctx, map[string]any{
-		"db_operation": "form_association.get_by_form_code",
-		"form_code":    formCode,
-	})
+	logger.AddProcess(ctx, "db_operation", "form_association.get_by_form_code")
+	logger.Add(ctx, "form_code", formCode)
 
 	err = r.db(ctx).Where("form_code = ?", formCode).Find(&associations).Error
 	if err != nil {
@@ -68,10 +66,10 @@ func (r *formAssociationRepository) GetByFormCode(ctx context.Context, formCode 
 
 // GetByEntity retrieves all associations for a given entity.
 func (r *formAssociationRepository) GetByEntity(ctx context.Context, entityType string, entityCode string) (associations []models.FormAssociation, err error) {
+	logger.AddProcess(ctx, "db_operation", "form_association.get_by_entity")
 	logger.Add(ctx, map[string]any{
-		"db_operation": "form_association.get_by_entity",
-		"entity_code":  entityCode,
-		"entity_type":  entityType,
+		"entity_code": entityCode,
+		"entity_type": entityType,
 	})
 
 	err = r.db(ctx).Where("entity_code = ? AND entity_type = ?", entityCode, entityType).Find(&associations).Error
@@ -91,10 +89,10 @@ func (r *formAssociationRepository) GetByEntity(ctx context.Context, entityType 
 
 // Delete removes a specific association between a form and an entity.
 func (r *formAssociationRepository) Delete(ctx context.Context, formCode, entityCode string) error {
+	logger.AddProcess(ctx, "db_operation", "form_association.delete")
 	logger.Add(ctx, map[string]any{
-		"db_operation": "form_association.delete",
-		"form_code":    formCode,
-		"entity_code":  entityCode,
+		"form_code":   formCode,
+		"entity_code": entityCode,
 	})
 
 	err := r.db(ctx).
@@ -118,7 +116,7 @@ func (r *formAssociationRepository) Delete(ctx context.Context, formCode, entity
 // GetDummy is a temporary function to get all forms, form associations, and form questions
 // for event and event_session in one query.
 func (r *formAssociationRepository) GetDummy(ctx context.Context, eventCode string, eventSessionCode string) ([]map[string]any, error) {
-	logger.Add(ctx, "db_operation", "form_association.get_dummy")
+	logger.AddProcess(ctx, "db_operation", "form_association.get_dummy")
 
 	var results []map[string]any
 

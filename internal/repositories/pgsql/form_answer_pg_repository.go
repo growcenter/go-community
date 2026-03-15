@@ -29,10 +29,8 @@ func (r *formAnswerRepository) BulkCreate(ctx context.Context, answers *[]models
 		return nil
 	}
 
-	logger.Add(ctx, map[string]any{
-		"db_operation": "form_answer.bulk_create",
-		"record_count": len(*answers),
-	})
+	logger.AddProcess(ctx, "db_operation", "form_answer.bulk_create")
+	logger.Add(ctx, "record_count", len(*answers))
 
 	err := r.db(ctx).CreateInBatches(answers, 100).Error
 	if err != nil {
