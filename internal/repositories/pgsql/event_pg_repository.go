@@ -42,7 +42,7 @@ func NewEventRepository(db *gorm.DB) EventRepository {
 // Create creates a new event
 // Returns error if the event could not be created
 func (er *eventRepository) Create(ctx context.Context, event *models.Event) (err error) {
-	logger.Add(ctx, "db_operation", "event.create")
+	logger.AddProcess(ctx, "db_operation", "event.create")
 	err = er.db(ctx).Create(&event).Error
 	if err != nil {
 		logger.AddError(ctx, &logger.ErrorContext{
@@ -60,7 +60,7 @@ func (er *eventRepository) Create(ctx context.Context, event *models.Event) (err
 // GetDummy retrieves all event without filter
 // Returns the event if found, or an error if not found or on database error
 func (er *eventRepository) GetDummy(ctx context.Context) ([]models.Event, error) {
-	logger.Add(ctx, "db_operation", "event.get_dummy")
+	logger.AddProcess(ctx, "db_operation", "event.get_dummy")
 
 	var event []models.Event
 	err := er.db(ctx).Find(&event).Error
@@ -83,8 +83,7 @@ func (er *eventRepository) GetDummy(ctx context.Context) ([]models.Event, error)
 // GetByCode retrieves an event by its code
 // Returns the event if found, or an error if not found or on database error
 func (er *eventRepository) GetByCode(ctx context.Context, code string) (*models.Event, error) {
-	logger.Add(ctx, "db_operation", "event.get_by_code")
-	logger.Add(ctx, "lookup_code", code)
+	logger.AddProcess(ctx, "db_operation", "event.get_by_code")
 
 	var event models.Event
 	err := er.db(ctx).Where("code = ?", code).First(&event).Error
@@ -108,8 +107,7 @@ func (er *eventRepository) GetByCode(ctx context.Context, code string) (*models.
 // Uses PostgreSQL EXISTS for optimal performance - stops at first match instead of counting all rows
 // Returns true if the code exists, false otherwise
 func (er *eventRepository) CheckByCode(ctx context.Context, code string) (bool, error) {
-	logger.Add(ctx, "db_operation", "event.check_by_code")
-	logger.Add(ctx, "lookup_code", code)
+	logger.AddProcess(ctx, "db_operation", "event.check_by_code")
 
 	var exists bool
 	err := er.db(ctx).
@@ -136,8 +134,7 @@ func (er *eventRepository) CheckByCode(ctx context.Context, code string) (bool, 
 // Uses PostgreSQL EXISTS for optimal performance - stops at first match instead of counting all rows
 // Returns true if the slug exists, false otherwise
 func (er *eventRepository) CheckBySlug(ctx context.Context, slug string) (bool, error) {
-	logger.Add(ctx, "db_operation", "event.check_by_slug")
-	logger.Add(ctx, "lookup_slug", slug)
+	logger.AddProcess(ctx, "db_operation", "event.check_by_slug")
 
 	var exists bool
 	err := er.db(ctx).
@@ -164,8 +161,7 @@ func (er *eventRepository) CheckBySlug(ctx context.Context, slug string) (bool, 
 // Pass empty string for code or slug to skip checking that field
 // Returns true if an event with the given code or slug exists
 func (er *eventRepository) CheckByCodeOrSlug(ctx context.Context, identifier ...string) (bool, error) {
-	logger.Add(ctx, "db_operation", "event.check_by_code_or_slug")
-	logger.Add(ctx, "lookup_code", identifier)
+	logger.AddProcess(ctx, "db_operation", "event.check_by_code_or_slug")
 
 	var exists bool
 	var err error
@@ -205,8 +201,7 @@ func (er *eventRepository) CheckByCodeOrSlug(ctx context.Context, identifier ...
 // This is a pure data access method - it executes the update and returns success/failure
 // The usecase layer is responsible for validation and fetching updated data if needed
 func (er *eventRepository) UpdatePartial(ctx context.Context, code string, updates *models.UpdateEventRequest) error {
-	logger.Add(ctx, "db_operation", "event.update_partial")
-	logger.Add(ctx, "event_code", code)
+	logger.AddProcess(ctx, "db_operation", "event.update_partial")
 
 	// Build update map from model
 	updateMap, fieldCount := updates.ToUpdateMap()

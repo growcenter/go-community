@@ -27,7 +27,7 @@ func NewEventInstanceRepository(db *gorm.DB) EventInstanceRepository {
 // Create creates a new event instance
 // Returns error if the event instance could not be created
 func (er *eventInstanceRepository) Create(ctx context.Context, event *models.EventInstance) (err error) {
-	logger.Add(ctx, "db_operation", "event_instance.create")
+	logger.AddProcess(ctx, "db_operation", "event_instance.create")
 	err = er.db(ctx).Create(&event).Error
 	if err != nil {
 		logger.AddError(ctx, &logger.ErrorContext{
@@ -50,10 +50,7 @@ func (er *eventInstanceRepository) BulkCreate(ctx context.Context, events []mode
 		return nil
 	}
 
-	logger.Add(ctx, map[string]any{
-		"db_operation": "event_instance.bulk_create",
-		"record_count": len(events),
-	})
+	logger.AddProcess(ctx, "db_operation", "event_instance.bulk_create")
 
 	// Use CreateInBatches for better performance with large datasets
 	// Batch size of 100 is a good balance between performance and memory
@@ -76,10 +73,7 @@ func (er *eventInstanceRepository) BulkCreate(ctx context.Context, events []mode
 // GetByCode retrieves an event instance by its code
 // Returns the event instance if found, or an error if not found or on database error
 func (er *eventInstanceRepository) GetByCode(ctx context.Context, code string) (*models.EventInstance, error) {
-	logger.Add(ctx, map[string]any{
-		"db_operation": "event_instance.get_by_code",
-		"lookup_code":  code,
-	})
+	logger.AddProcess(ctx, "db_operation", "event_instance.get_by_code")
 
 	var event models.EventInstance
 	err := er.db(ctx).Where("code = ?", code).First(&event).Error
@@ -102,10 +96,7 @@ func (er *eventInstanceRepository) GetByCode(ctx context.Context, code string) (
 // GetByEventCode retrieves all event instances for a given event code
 // Returns the event instances if found, or an error if not found or on database error
 func (er *eventInstanceRepository) GetByEventCode(ctx context.Context, code string) ([]models.EventInstance, error) {
-	logger.Add(ctx, map[string]any{
-		"db_operation": "event_instance.get_by_event_code",
-		"lookup_code":  code,
-	})
+	logger.AddProcess(ctx, "db_operation", "event_instance.get_by_event_code")
 
 	var events []models.EventInstance
 	err := er.db(ctx).Where("event_code = ?", code).Find(&events).Error
@@ -129,10 +120,7 @@ func (er *eventInstanceRepository) GetByEventCode(ctx context.Context, code stri
 // Returns true if the code exists, false otherwise
 // This is more efficient than GetByCode for uniqueness checks as it only counts
 func (er *eventInstanceRepository) CheckByCode(ctx context.Context, code string) (bool, error) {
-	logger.Add(ctx, map[string]any{
-		"db_operation": "event_instance.check_by_code",
-		"lookup_code":  code,
-	})
+	logger.AddProcess(ctx, "db_operation", "event_instance.check_by_code")
 
 	var count int64
 	err := er.db(ctx).

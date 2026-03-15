@@ -861,6 +861,7 @@ definitions:
           (example: if event has 4 sessions, user can only register for 1 session)'
         type: boolean
       parentSessionCode:
+        description: NULL = top-level session
         type: string
       physical_address:
         description: Physical address

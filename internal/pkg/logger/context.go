@@ -230,6 +230,39 @@ func (w *WideEvent) addToKey(groupKey string, args ...interface{}) {
 	}
 }
 
+// appendToArray appends a string value to a string slice stored at the given key.
+// If the key does not exist, it creates a new slice and consumes a BusinessData slot.
+// If the key exists but is not a string slice, it replaces it.
+//
+// Thread-safe: can be called concurrently from multiple goroutines.
+func (w *WideEvent) appendToArray(key string, value string) {
+	w.mu.Lock()
+	defer w.mu.Unlock()
+
+	existing, exists := w.BusinessData[key]
+	if !exists {
+		if w.businessDataLen >= MaxBusinessDataSize {
+			return
+		}
+		w.BusinessData[key] = []string{value}
+		w.businessDataLen++
+		return
+	}
+
+	if arr, ok := existing.([]string); ok {
+		// Cap the array growth to prevent unbounded memory usage
+		if len(arr) >= MaxBusinessDataSize*10 {
+			return // Ignore further appends to prevent memory leak
+		}
+		w.BusinessData[key] = append(arr, value)
+		return
+	}
+
+	// Existing value is not a string slice — replace it.
+	// The slot was already counted, so businessDataLen stays the same.
+	w.BusinessData[key] = []string{value}
+}
+
 // addMany adds multiple business context fields using variadic key-value pairs.
 // Thread-safe: can be called concurrently from multiple goroutines.
 //
@@ -473,6 +506,40 @@ func MergeTo(ctx context.Context, groupKey string, fields map[string]any) {
 func AddMap(ctx context.Context, data map[string]any) {
 	if event := GetWideEvent(ctx); event != nil {
 		event.addMap(data)
+	}
+}
+
+// AddProcess appends a process step to a named array within the wide event.
+// This is useful for tracking a sequence of operations sequentially.
+//
+// Thread-safe: can be called from any layer, even concurrently.
+//
+// IMPORTANT:
+// You cannot use AddProcess() and Add() in the same key.
+// Example:
+//
+//	logger.AddProcess(ctx, "db_operation", "event.update_partial")
+//	logger.Add(ctx, "db_operation", "event.get_by_code")
+//
+// This will result in:
+//
+//	"db_operation": "event.get_by_code"
+//
+// Instead of:
+//
+//	"db_operation": ["event.update_partial", "event.get_by_code"]
+//
+// Example usage:
+//
+//	logger.AddProcess(ctx, "db_operation", "event.update_partial")
+//	logger.AddProcess(ctx, "db_operation", "event.get_by_code")
+//
+// This results in:
+//
+//	"db_operation": ["event.update_partial", "event.get_by_code"]
+func AddProcess(ctx context.Context, processName string, step string) {
+	if event := GetWideEvent(ctx); event != nil {
+		event.appendToArray(processName, step)
 	}
 }
 
