@@ -2,13 +2,14 @@ package common
 
 import (
 	"fmt"
+	"reflect"
+	"strings"
+	"unicode"
+
 	"github.com/google/uuid"
 	"github.com/spf13/viper"
 	"golang.org/x/text/cases"
 	"golang.org/x/text/language"
-	"reflect"
-	"strings"
-	"unicode"
 )
 
 func CapitalizeFirstWord(str string) string {
@@ -155,4 +156,18 @@ func ContainsAlphabet(s string) bool {
 		}
 	}
 	return false
+}
+
+func UniqueArray(arr []string) []string {
+	uniqueMap := make(map[string]bool)
+	var uniqueArr []string
+
+	for _, item := range arr {
+		if !uniqueMap[item] {
+			uniqueMap[item] = true
+			uniqueArr = append(uniqueArr, item)
+		}
+	}
+
+	return uniqueArr
 }
