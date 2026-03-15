@@ -12,8 +12,8 @@ func LogService(ctx context.Context, err error) {
 		logStatusError := zap.String("status", "error")
 		logError := zap.Error(err)
 
-		logger.Logger.Warn("[SERVICE-ERROR]", logStatusError, logError)
+		logger.Log.Warn("[SERVICE-ERROR]", logStatusError, logError)
 	} else {
-		logger.Logger.Info("[SERVICE]", zap.String("status", "success"))
+		logger.Log.Info("[SERVICE]", zap.String("status", "success"))
 	}
 }

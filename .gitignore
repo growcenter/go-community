@@ -16,3 +16,11 @@ config.*
 
 # Idea
 .idea
+
+# AI markdown
+GEMINI.md
+
+# Code Analysis
+qodana.yaml
+
+/tmp

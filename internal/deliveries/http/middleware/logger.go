@@ -1,83 +1,504 @@
+// Package middleware provides HTTP middleware for the Echo framework.
+// This file implements comprehensive wide events logging following loggingsucks.com principles.
+//
+// Thread Safety:
+// Wide events are stored in context.Context with mutex protection, making them
+// safe for concurrent access from handlers, services, and repositories.
 package middleware
 
 import (
 	"bytes"
+	"context"
+	"encoding/json"
+	"fmt"
+	"go-community/internal/pkg/logger"
 	"io"
 	"net/http"
+	"os"
+	"reflect"
+	"runtime"
+	"runtime/debug"
+	"sync"
 	"time"
 
+	"github.com/google/uuid"
 	"github.com/labstack/echo/v4"
-	"go.uber.org/zap"
 )
 
-type bodyDumpResponseWriter struct {
-	io.Writer
-	http.ResponseWriter
-}
+// ============================================================================
+// Logging Middleware
+// ============================================================================
 
-func (w *bodyDumpResponseWriter) Write(b []byte) (int, error) {
-	return w.Writer.Write(b)
-}
-
-func (m *Middleware) LoggingMiddleware(logger *zap.Logger) echo.MiddlewareFunc {
+// LoggingMiddleware creates comprehensive request logging middleware for Echo.
+// Follows loggingsucks.com Wide Events pattern: one canonical log line per request.
+//
+// Captures:
+// - Request: headers, body, params, query, cookies (with credential masking)
+// - Response: headers, body (with credential masking)
+// - System: user-agent, traceparent, host, IP, PID, function
+// - Timing: duration, severity based on status code
+//
+// Thread Safety:
+// The WideEvent is stored in context.Context with internal mutex protection,
+// allowing handlers to safely enrich it from multiple goroutines.
+func (m *Middleware) LoggingMiddleware(log logger.Logger) echo.MiddlewareFunc {
 	return func(next echo.HandlerFunc) echo.HandlerFunc {
-		return func(ctx echo.Context) error {
-			// Request logging
-			req := ctx.Request()
-			res := ctx.Response()
-
-			// Retrieve request ID from context
-			requestId, _ := ctx.Get("X-Request-Id").(string)
-
-			// Read request body
-			var reqBody []byte
-			if req.Body != nil {
-				reqBody, _ = io.ReadAll(req.Body)
-				req.Body = io.NopCloser(bytes.NewBuffer(reqBody)) // Restore body for further processing
-			}
-
-			// Dump response body
-			resBody := new(bytes.Buffer)
-			mw := io.MultiWriter(res.Writer, resBody)
-			writer := &bodyDumpResponseWriter{Writer: mw, ResponseWriter: res.Writer}
-			ctx.Response().Writer = writer
-
+		return func(ectx echo.Context) error {
 			start := time.Now()
 
-			// Process request
-			err := next(ctx)
+			// Wrap the response writer to capture the response body
+			bcw := &bodyCapturingWriter{ResponseWriter: ectx.Response().Writer}
+			ectx.Response().Writer = bcw
 
-			// Log request and response details
-			stop := time.Now()
-			latency := stop.Sub(start)
+			// Generate or get request ID
+			requestID := ectx.Request().Header.Get("X-Request-ID")
+			if requestID == "" {
+				requestID = uuid.New().String()
+			}
+			ectx.Response().Header().Set("X-Request-ID", requestID)
 
-			logger.Info("request",
-				zap.String("method", req.Method),
-				zap.String("uri", req.RequestURI),
-				zap.String("remote_ip", ctx.RealIP()),
-				zap.String("host", req.Host),
-				zap.String("referer", req.Referer()),
-				zap.String("x-request-id", requestId),
-				zap.String("user_agent", req.UserAgent()),
-				zap.Any("headers", req.Header),
-				zap.ByteString("request_body", reqBody),
-				zap.Int("status", res.Status),
-				zap.Any("response_headers", res.Header()),
-				zap.ByteString("response_body", resBody.Bytes()),
-				zap.Duration("latency", latency),
-				zap.Time("start_time", start),
-				zap.Time("end_time", stop),
-				zap.String("error", errToString(err)),
+			// Store in Echo context for response functions to access
+			ectx.Set("X-Request-ID", requestID)
+
+			// Initialize wide event with request metadata
+			wideEvent := logger.NewWideEvent(
+				requestID,
+				ectx.Request().Method,
+				ectx.Request().URL.Path,
+				ectx.RealIP(),
+				ectx.Request().UserAgent(),
 			)
+
+			// Store wide event in context.Context (thread-safe!)
+			ctx := ectx.Request().Context()
+			ctx = logger.WithWideEvent(ctx, wideEvent)
+			ctx = logger.WithRequestID(ctx, requestID)
+
+			// Extract and set user context if available
+			if userID := extractUserID(ectx); userID != "" {
+				ctx = logger.WithUserID(ctx, userID)
+				logger.SetUserContext(ctx, &logger.UserContext{
+					ID: userID,
+				})
+			}
+
+			// Update request with enriched context
+			ectx.SetRequest(ectx.Request().WithContext(ctx))
+
+			// ================================================================
+			// Capture Request Data (with masking)
+			// ================================================================
+
+			// Capture request headers (masked)
+			reqHeaders := captureHeaders(ectx.Request().Header)
+			logger.AddSafe(ctx, "request_headers", reqHeaders)
+
+			// Capture request body (masked)
+			reqBody := captureRequestBody(ectx)
+			if reqBody != nil {
+				logger.AddSafe(ctx, "request_body", reqBody)
+			}
+
+			// Capture path parameters (masked)
+			pathParams := capturePathParams(ectx)
+			if len(pathParams) > 0 {
+				logger.AddSafe(ctx, "request_params", pathParams)
+			}
+
+			// Capture query parameters (masked)
+			queryParams := captureQueryParams(ectx)
+			if len(queryParams) > 0 {
+				logger.AddSafe(ctx, "request_query", queryParams)
+			}
+
+			// Capture cookies (masked)
+			cookies := captureCookies(ectx)
+			if len(cookies) > 0 {
+				logger.AddSafe(ctx, "request_cookies", cookies)
+			}
+
+			// Capture system metadata
+			logger.AddMap(ctx, map[string]any{
+				"host":       ectx.Request().Host,
+				"ip":         ectx.RealIP(),
+				"pid":        os.Getpid(),
+				"user_agent": ectx.Request().UserAgent(),
+			})
+
+			// Capture traceparent if available (W3C Trace Context)
+			if traceparent := ectx.Request().Header.Get("traceparent"); traceparent != "" {
+				logger.Add(ctx, "traceparent", traceparent)
+			}
+
+			// Capture trace ID (X-Trace-ID or traceparent)
+			if traceID := ectx.Request().Header.Get("X-Trace-ID"); traceID != "" {
+				wideEvent.SetTraceID(traceID)
+				logger.Add(ctx, "trace_id", traceID)
+			}
+
+			// Set infrastructure metadata
+			logger.AddMap(ctx, map[string]any{
+				"service":     m.cfg.Application.Name,
+				"version":     m.cfg.Application.Version,
+				"environment": m.cfg.Application.Environment,
+			})
+
+			// ================================================================
+			// Process Request
+			// ================================================================
+
+			var err error
+			var handlerFunc string
+
+			func() {
+				defer func() {
+					if r := recover(); r != nil {
+						// Capture the real panic stack HERE — this is the only
+						// moment where the original goroutine frames are still alive.
+						// Do NOT re-panic: re-panicking unwinds past emitWideEvent,
+						// so the canonical log line would never be emitted.
+						panicStack := string(debug.Stack())
+						logger.AddError(ctx, &logger.ErrorContext{
+							Type:      "PanicError",
+							Message:   fmt.Sprintf("panic: %v", r),
+							Retriable: false,
+							Stack:     panicStack,
+						})
+						// Convert panic to a 500 error so the normal post-handler
+						// path (emitWideEvent) runs and emits the wide event.
+						err = echo.ErrInternalServerError
+						ectx.Error(err)
+					}
+				}()
+
+				// Capture handler function name
+				handlerFunc = getFunctionName(next)
+				logger.Add(ctx, "function", handlerFunc)
+
+				err = next(ectx)
+			}()
+
+			// ================================================================
+			// Capture Response Data (with masking)
+			// ================================================================
+
+			// Capture response headers (masked)
+			respHeaders := captureHeaders(ectx.Response().Header())
+			logger.AddSafe(ctx, "response_headers", respHeaders)
+
+			// Capture response body
+			respBody := captureResponseBody(bcw)
+			if respBody != nil {
+				logger.AddSafe(ctx, "response_body", respBody)
+			}
+
+			logger.AddMap(ctx, map[string]any{
+				"response_status": ectx.Response().Status,
+				"response_size":   ectx.Response().Size,
+			})
+
+			// Calculate duration and severity
+			duration := time.Since(start)
+			severity := determineSeverity(ectx.Response().Status)
+			logger.AddMap(ctx, map[string]any{
+				// "duration_ms": duration.Milliseconds(),
+				"severity": severity,
+			})
+
+			// ================================================================
+			// Emit Canonical Log Line
+			// ================================================================
+
+			emitWideEvent(log, ctx, wideEvent, ectx, duration, severity, err)
 
 			return err
 		}
 	}
 }
 
-func errToString(err error) string {
-	if err != nil {
-		return err.Error()
+// ============================================================================
+// Helper Functions for Data Capture
+// ============================================================================
+
+// captureHeaders converts http.Header to map[string]string
+func captureHeaders(headers map[string][]string) map[string]string {
+	result := make(map[string]string, len(headers))
+	for key, values := range headers {
+		if len(values) > 0 {
+			result[key] = values[0] // Take first value
+		}
 	}
+	return result
+}
+
+// captureRequestBody reads and captures request body (with size limit)
+func captureRequestBody(c echo.Context) map[string]any {
+	const maxBodySize = 10 * 1024 // 10KB limit
+
+	if c.Request().Body == nil {
+		return nil
+	}
+
+	// Read body
+	bodyBytes, err := io.ReadAll(io.LimitReader(c.Request().Body, maxBodySize))
+	if err != nil {
+		return nil
+	}
+
+	// Restore body for handler
+	c.Request().Body = io.NopCloser(bytes.NewBuffer(bodyBytes))
+
+	// Try to parse as JSON
+	var bodyData map[string]any
+	if err := json.Unmarshal(bodyBytes, &bodyData); err == nil {
+		return bodyData
+	}
+
+	// If not JSON, return as string (truncated if too long)
+	bodyStr := string(bodyBytes)
+	if len(bodyStr) > 1000 {
+		bodyStr = bodyStr[:1000] + "...(truncated)"
+	}
+
+	return map[string]any{
+		"raw": bodyStr,
+	}
+}
+
+// capturePathParams captures URL path parameters
+func capturePathParams(c echo.Context) map[string]string {
+	params := make(map[string]string)
+	for _, name := range c.ParamNames() {
+		params[name] = c.Param(name)
+	}
+	return params
+}
+
+// captureQueryParams captures URL query parameters
+func captureQueryParams(c echo.Context) map[string]string {
+	query := c.QueryParams()
+	params := make(map[string]string, len(query))
+	for key, values := range query {
+		if len(values) > 0 {
+			params[key] = values[0]
+		}
+	}
+	return params
+}
+
+// captureCookies captures request cookies
+func captureCookies(c echo.Context) map[string]string {
+	cookies := c.Cookies()
+	result := make(map[string]string, len(cookies))
+	for _, cookie := range cookies {
+		result[cookie.Name] = cookie.Value
+	}
+	return result
+}
+
+// ============================================================================
+// Response Body Capture
+// ============================================================================
+
+// maxResponseCapture is the maximum number of response body bytes we buffer.
+// Writes beyond this limit are forwarded to the underlying writer but not
+// captured, keeping memory usage predictable regardless of response size.
+const maxResponseCapture = 10 * 1024 // 10 KB
+
+// bodyCapturingWriter is a thread-safe response writer that tees the first
+// maxResponseCapture bytes of every write into an internal buffer. It also
+// implements http.Flusher so that middleware like gzip/compress continues to
+// work correctly.
+type bodyCapturingWriter struct {
+	http.ResponseWriter
+	mu       sync.Mutex
+	buf      bytes.Buffer
+	captured int
+}
+
+// Write tees up to maxResponseCapture bytes into the internal buffer, then
+// forwards the full slice to the underlying ResponseWriter.
+func (w *bodyCapturingWriter) Write(b []byte) (int, error) {
+	w.mu.Lock()
+	remaining := maxResponseCapture - w.captured
+	if remaining > 0 {
+		if remaining > len(b) {
+			remaining = len(b)
+		}
+		w.buf.Write(b[:remaining])
+		w.captured += remaining
+	}
+	w.mu.Unlock()
+
+	return w.ResponseWriter.Write(b)
+}
+
+// Flush implements http.Flusher, forwarding the call when the underlying
+// writer supports it (e.g., gzip middleware, chunked streaming).
+func (w *bodyCapturingWriter) Flush() {
+	if f, ok := w.ResponseWriter.(http.Flusher); ok {
+		f.Flush()
+	}
+}
+
+// bytes returns a safe copy of the captured buffer contents.
+func (w *bodyCapturingWriter) bytes() []byte {
+	w.mu.Lock()
+	defer w.mu.Unlock()
+	return w.buf.Bytes()
+}
+
+// captureResponseBody parses the buffered slice into a loggable value.
+// Returns nil when the slice is empty.
+func captureResponseBody(w *bodyCapturingWriter) map[string]any {
+	data := w.bytes()
+	if len(data) == 0 {
+		return nil
+	}
+
+	// Attempt JSON parse first
+	var bodyData map[string]any
+	if err := json.Unmarshal(data, &bodyData); err == nil {
+		return bodyData
+	}
+
+	// Fall back to raw string. The slice is already capped at maxResponseCapture
+	// bytes by Write(), so no second truncation is needed.
+	return map[string]any{"raw": string(data)}
+}
+
+// getFunctionName extracts function name using reflection
+func getFunctionName(i interface{}) string {
+	// Use reflect to get the function pointer
+	ptr := reflect.ValueOf(i).Pointer()
+
+	// Get function info from program counter
+	fn := runtime.FuncForPC(ptr)
+	if fn == nil {
+		return "unknown"
+	}
+
+	return fn.Name()
+}
+
+// determineSeverity determines log severity based on HTTP status code
+func determineSeverity(statusCode int) string {
+	switch {
+	case statusCode >= 500:
+		return "ERROR"
+	case statusCode >= 400:
+		return "WARNING"
+	case statusCode >= 300:
+		return "INFO"
+	default:
+		return "INFO"
+	}
+}
+
+// ============================================================================
+// Emit Wide Event
+// ============================================================================
+
+// emitWideEvent emits a single canonical log line with all request context.
+// This is called once per request at the end of the middleware chain.
+func emitWideEvent(
+	log logger.Logger,
+	ctx context.Context,
+	wideEvent *logger.WideEvent,
+	c echo.Context,
+	duration time.Duration,
+	severity string,
+	handlerErr error,
+) {
+	// Determine outcome and status
+	statusCode := c.Response().Status
+	bytesOut := c.Response().Size
+
+	// Get error from wide event (may have been set by handler/service)
+	errCtx := wideEvent.GetError()
+
+	// If handler returned error but no error context was set, create one
+	if handlerErr != nil && errCtx == nil {
+		errCtx = &logger.ErrorContext{
+			Type:      "HandlerError",
+			Message:   handlerErr.Error(),
+			Retriable: false,
+		}
+	}
+
+	// Determine outcome
+	outcome := "success"
+	if errCtx != nil || statusCode >= 500 {
+		outcome = "error"
+	}
+
+	// Build log message
+	msg := "Request completed"
+
+	// Pre-allocate fields slice with estimated capacity
+	fields := make([]logger.Field, 0, 20)
+
+	// Add core request/response fields
+	fields = append(fields,
+		logger.String("request_id", wideEvent.RequestID),
+		logger.String("method", wideEvent.Method),
+		logger.String("path", wideEvent.Path),
+		logger.Int("status_code", statusCode),
+		logger.Int64("duration_ms", duration.Milliseconds()),
+		logger.Int64("bytes_out", bytesOut),
+		logger.String("outcome", outcome),
+		logger.String("severity", severity),
+		logger.String("remote_ip", wideEvent.RemoteIP),
+		logger.String("user_agent", wideEvent.UserAgent),
+	)
+
+	// Add optional fields
+	if wideEvent.TraceID != "" {
+		fields = append(fields, logger.String("trace_id", wideEvent.TraceID))
+	}
+
+	if user := wideEvent.GetUser(); user != nil {
+		fields = append(fields, logger.Any("user", user))
+	}
+
+	// Add business data fields directly (thread-safe copy)
+	// Merge business data directly instead of nesting under "business_data"
+	if businessData := wideEvent.GetBusinessData(); len(businessData) > 0 {
+		for key, value := range businessData {
+			fields = append(fields, logger.Any(key, value))
+		}
+	}
+
+	if errCtx != nil {
+		fields = append(fields, logger.Any("error", errCtx))
+	}
+
+	// Log at appropriate level based on severity
+	switch severity {
+	case "ERROR":
+		log.Error(ctx, msg, fields...)
+	case "WARNING":
+		log.Warn(ctx, msg, fields...)
+	default:
+		log.Info(ctx, msg, fields...)
+	}
+}
+
+// extractUserID extracts user ID from context or JWT.
+// Customize this based on your authentication setup.
+func extractUserID(c echo.Context) string {
+	// Example: from JWT claims
+	// if user, ok := c.Get("user").(*jwt.Token); ok {
+	//     claims := user.Claims.(jwt.MapClaims)
+	//     if userID, ok := claims["user_id"].(string); ok {
+	//         return userID
+	//     }
+	// }
+
+	// Example: from custom header
+	if userID := c.Request().Header.Get("X-User-ID"); userID != "" {
+		return userID
+	}
+
 	return ""
 }

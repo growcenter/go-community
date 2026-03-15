@@ -1,7 +1,6 @@
 package http
 
 import (
-	echoSwagger "github.com/swaggo/echo-swagger"
 	_ "go-community/docs"
 	"go-community/internal/config"
 	"go-community/internal/deliveries/http/health"
@@ -11,6 +10,8 @@ import (
 	"go-community/internal/pkg/authorization"
 	"go-community/internal/usecases"
 	"net/http"
+
+	echoSwagger "github.com/swaggo/echo-swagger"
 
 	"github.com/labstack/echo/v4"
 )
@@ -37,7 +38,7 @@ import (
 // @schemes https
 func New(e *echo.Echo, u *usecases.Usecases, c *config.Configuration, a *authorization.Auth) {
 	// Middleware for Recover and Logging
-	middleware := middleware.New(e)
+	middleware := middleware.New(e, c)
 	middleware.Default(c)
 
 	e.GET("/", func(ctx echo.Context) error {

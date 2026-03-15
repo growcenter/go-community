@@ -2,6 +2,7 @@ package validator
 
 import (
 	"errors"
+	"go-community/internal/constants"
 	"go-community/internal/models"
 	"reflect"
 	"regexp"
@@ -27,6 +28,12 @@ func init() {
 	registerEmailOrPhoneField()
 	registerNameIdentifierCommunityIdFields()
 	registerPhoneStandardize()
+	registerCommunityIds()
+	registerCampusCode()
+	registerCampusCodes()
+	registerBannerRequiresImages()
+	registerURLFormat()
+	registerQuestionType()
 }
 
 func Validate(request interface{}) error {
@@ -232,5 +239,127 @@ func registerPhoneStandardize() {
 		}
 
 		return true
+	})
+}
+
+func registerCommunityIds() {
+	valid.RegisterValidation("communityIds", func(fl v10.FieldLevel) bool {
+		communityIds := fl.Field().Interface().([]string)
+
+		for _, communityId := range communityIds {
+			if !LuhnAccountNumber(communityId) {
+				return false
+			}
+		}
+
+		return true
+	})
+}
+
+func registerCampusCode() {
+	valid.RegisterValidation("campusCode", func(fl v10.FieldLevel) bool {
+		campusCode := fl.Field().String()
+
+		return campusCode == "" || len(campusCode) == 3
+	})
+}
+
+func registerCampusCodes() {
+	valid.RegisterValidation("campusCodes", func(fl v10.FieldLevel) bool {
+		val := fl.Field().Interface()
+		if campusCodes, ok := val.([]string); ok {
+			for _, campusCode := range campusCodes {
+				if campusCode != "" && len(campusCode) != 3 {
+					return false
+				}
+			}
+			return true
+		}
+		return false
+	})
+}
+
+// registerURLFormat validates that a field is a valid URL, but skips validation
+// for nil pointers and empty strings. This is necessary because the built-in `url`
+// tag does not respect *string fields pointing to "": omitempty only skips when the
+// pointer itself is nil, so an explicit empty string still gets validated by `url`
+// and incorrectly fails. Use `urlFormat` instead of `url` on optional *string URL fields.
+func registerURLFormat() {
+	valid.RegisterValidation("urlFormat", func(fl v10.FieldLevel) bool {
+		field := fl.Field()
+
+		// Handle *string: skip if nil or points to empty string
+		if field.Kind() == reflect.Ptr {
+			if field.IsNil() {
+				return true
+			}
+			field = field.Elem()
+		}
+
+		// Skip validation for empty strings
+		str := field.String()
+		if str == "" {
+			return true
+		}
+
+		// Delegate to built-in URL validator
+		return v10.New().Var(str, "url") == nil
+	})
+}
+
+// registerBannerRequiresImages validates that BannerLink can only have a value if ImageLinks is not empty
+// Business Rule:
+//   - If ImageLinks is empty → BannerLink MUST be empty (nil or empty string)
+//   - If ImageLinks is not empty → BannerLink CAN be empty or have a value
+func registerBannerRequiresImages() {
+	valid.RegisterValidation("bannerRequiresImages", func(fl v10.FieldLevel) bool {
+		// Get BannerLink field (pointer to string)
+		bannerLinkField := fl.Field()
+
+		// If BannerLink is nil, it's always valid (let omitempty handle it)
+		if bannerLinkField.Kind() == reflect.Ptr && bannerLinkField.IsNil() {
+			return true
+		}
+
+		// If BannerLink is an empty string, it's always valid
+		if bannerLinkField.Kind() == reflect.Ptr && !bannerLinkField.IsNil() {
+			bannerStr := bannerLinkField.Elem().String()
+			if bannerStr == "" {
+				return true
+			}
+		}
+
+		if bannerLinkField.Kind() == reflect.String {
+			if bannerLinkField.String() == "" {
+				return true
+			}
+		}
+
+		// BannerLink has a non-empty value - check if ImageLinks is also non-empty
+		parent := fl.Parent()
+		imageLinksField := parent.FieldByName("ImageLinks")
+		if !imageLinksField.IsValid() {
+			return true // If field doesn't exist, skip validation
+		}
+
+		// Check if ImageLinks is empty
+		imageLinksEmpty := imageLinksField.Len() == 0
+
+		// If ImageLinks is empty but BannerLink has a value, fail validation
+		if imageLinksEmpty {
+			return false
+		}
+
+		// ImageLinks is not empty, so BannerLink can have a value
+		return true
+	})
+}
+
+func registerQuestionType() {
+	valid.RegisterValidation("questionType", func(fl v10.FieldLevel) bool {
+		value := fl.Field().String()
+		// Check if the field's value exists as a key in the map of valid types.
+		_, ok := constants.MapQuestionType[value]
+		return ok
 	})
 }

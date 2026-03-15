@@ -1,7 +1,7 @@
 package v2
 
 import (
-	"github.com/labstack/echo/v4"
+	"errors"
 	"go-community/internal/config"
 	"go-community/internal/deliveries/http/common/response"
 	"go-community/internal/deliveries/http/middleware"
@@ -10,6 +10,8 @@ import (
 	"go-community/internal/pkg/validator"
 	"go-community/internal/usecases"
 	"net/http"
+
+	"github.com/labstack/echo/v4"
 )
 
 type EventHandler struct {
@@ -25,34 +27,39 @@ func NewEventHandler(api *echo.Group, u *usecases.Usecases, c *config.Configurat
 	endpointUserAuth := endpoint.Group("")
 	endpointUserAuth.Use(middleware.UserMiddleware(c, u, nil))
 	endpointUserAuth.GET("", handler.GetAll)
-	endpointUserAuth.GET("/:code", handler.GetByCode)
-	endpointUserAuth.POST("/registers", handler.Register)
-	endpointUserAuth.GET("/registers", handler.GetAllRegistered)
-	endpointUserAuth.PATCH("/registers/:id/status", handler.UpdateStatus)
-	endpointUserAuth.GET("/attendance", handler.GetEventAttendance)
+	endpointUserAuth.GET("/:eventCode/sessions", handler.GetAllSessionsByEventCode)
 
 	endpointUserInternal := api.Group("/internal/events")
-	endpointUserInternal.Use(middleware.UserMiddleware(c, u, []string{"event-internal-view", "event-internal-edit"}))
-	endpointUserInternal.POST("", handler.Create)
-	endpointUserInternal.GET("", handler.GetTitles)
-	endpointUserInternal.GET("/:eventCode/summary", handler.GetSummary)
-	endpointUserInternal.GET("/registers", handler.GetAllRegisteredInternal)
-	endpointUserInternal.POST("/instances", handler.CreateInstance)
-	endpointUserInternal.GET("/registers/download", handler.DownloadInternal)
+	endpointUserInternal.Use(middleware.UserMiddleware(c, u, []string{"event-internal-view"}))
+
+	endpointUserInternalCreate := endpointUserInternal.Group("")
+	endpointUserInternalCreate.Use(middleware.UserMiddleware(c, u, []string{"event-internal-create"}))
+	endpointUserInternalCreate.POST("", handler.Create)
+	endpointUserInternalCreate.POST("/:eventCode/sessions", handler.CreateSession)
 }
 
 // Create godoc
-// @Summary Create Event
-// @Description Create event with the instances/sessions
+// @Summary Create a new Event
+// @Description Creates a new event along with its associated sessions and form questions.
+// @Description The event can be of various categories (e.g., registration, announcement, internal-attendance).
+// @Description It supports comprehensive configurations for images, organizers, access control, location (online/offline/hybrid), scheduling, recurrences, and notifications.
+// @Description
+// @Description **Important Notes:**
+// @Description - `sessions` are required unless the category is `announcement`.
+// @Description - `location` must match the event's location type (`online`, `offline`, or `hybrid`).
+// @Description - `access` controls who can view or register for the event.
 // @Tags events
 // @Accept json
 // @Produce json
-// @Param user body models.CreateEventRequest true "User object that needs to be added"
+// @Param request body models.CreateEventRequest true "Event creation payload containing core details, settings, sessions, and optional questions"
 // @Param X-API-Key header string true "mandatory header to access endpoint"
 // @Security BearerAuth
-// @Success 201 {object} models.CreateEventResponse{instances=models.CreateInstanceResponse} "Response indicates that the request succeeded and the resources has been fetched and transmitted in the message body"
-// @Failure 400 {object} models.ErrorResponse "Bad Request"
-// @Failure 422 {object} models.ErrorResponse{errors=models.ErrorValidateResponse} "Validation error. This can happen if there is an error validation while create account"
+// @Success 201 {object} models.CreateEventResponse "Successfully created event with its sessions and form questions"
+// @Failure 400 {object} models.ErrorResponse "Bad Request - Invalid payload format or missing required fields"
+// @Failure 401 {object} models.ErrorResponse "Unauthorized - Invalid or missing authentication token"
+// @Failure 403 {object} models.ErrorResponse "Forbidden - User does not have the required permissions"
+// @Failure 422 {object} models.ErrorResponse{errors=models.ErrorValidateResponse} "Unprocessable Entity - Validation errors (e.g., invalid location type, missing required linked fields)"
+// @Failure 500 {object} models.ErrorResponse "Internal Server Error"
 // @Router /v2/internal/events [post]
 func (eh *EventHandler) Create(ctx echo.Context) error {
 	var request models.CreateEventRequest
@@ -72,309 +79,93 @@ func (eh *EventHandler) Create(ctx echo.Context) error {
 	return response.Success(ctx, http.StatusCreated, event.ToResponse())
 }
 
-// GetAll godoc
-// @Summary Get All Events
-// @Description Get All Events based on User Roles
+// CreateSession godoc
+// @Summary Create a new Event Session
+// @Description Creates a new event session for a specific event. This can be a standalone session, or a child session (e.g., a breakout room or a specific track) if `parentSessionCode` is provided.
+// @Description
+// @Description **Inheritance & Defaults:**
+// @Description - If location details are omitted, the session inherits the location from the parent event (or parent session).
+// @Description - If status is omitted, it defaults to the event's status.
+// @Description - Timezone falls back to the event's timezone.
+// @Description
+// @Description **Registration & Capacity:**
+// @Description - `sessionCapacity.capacity`: Set to 0 for unlimited. Waitlist can only be enabled if capacity > 0 and registration method is not QR-based walk-in.
+// @Description - `sessionRules.registrationMode`: Supported modes are `self_only`, `self_and_registered`, and `self_and_others`.
+// @Description - `sessionRules.registrationMethods`: Options include `personal-qr`, `event-qr`, `session-qr`, `registration-qr`.
+// @Description - Supports age limits (`minAge`, `maxAge`) and prerequisites.
+// @Description
+// @Description **Check-in & Check-out:**
+// @Description - `checkIn` is enabled by default. You can configure `allowLate` and `lateThreshold` with specific late policies (`reject`, `warn`, `allow`).
+// @Description - Validations ensure that check-in/check-out times align with the session schedule.
+// @Tags events
+// @Accept json
+// @Produce json
+// @Param eventCode path string true "Event Code"
+// @Param request body models.CreateEventSessionRequest true "Event session creation payload containing core details, settings, and optional questions"
+// @Param X-API-Key header string true "mandatory header to access endpoint"
+// @Security BearerAuth
+// @Success 201 {object} models.Response{data=models.CreateEventSessionResponse} "Successfully created event session"
+// @Failure 400 {object} models.ErrorResponse "Bad Request - Invalid payload format or missing required fields"
+// @Failure 401 {object} models.ErrorResponse "Unauthorized - Invalid or missing authentication token"
+// @Failure 403 {object} models.ErrorResponse "Forbidden - User does not have the required permissions"
+// @Failure 422 {object} models.ErrorResponse{errors=models.ErrorValidateResponse} "Unprocessable Entity - Validation errors"
+// @Failure 500 {object} models.ErrorResponse "Internal Server Error"
+// @Router /v2/internal/events/{eventCode}/sessions [post]
+func (eh *EventHandler) CreateSession(ctx echo.Context) error {
+	var request models.CreateEventSessionRequest
+	if err := ctx.Bind(&request); err != nil {
+		return response.Error(ctx, err)
+	}
+
+	if err := validator.Validate(request); err != nil {
+		return response.ErrorValidation(ctx, err)
+	}
+
+	eventCode := ctx.Param("eventCode")
+	if eventCode == "" {
+		return response.Error(ctx, errors.New("event code is required"))
+	}
+
+	var eventCodePtr *string
+	if eventCode != "" {
+		eventCodePtr = &eventCode
+	}
+
+	eventSession, err := eh.usecase.EventSession.Create(ctx.Request().Context(), []models.CreateEventSessionRequest{request}, eventCodePtr, nil)
+	if err != nil {
+		return response.Error(ctx, err)
+	}
+
+	return response.SuccessV2(ctx, http.StatusCreated, "Event Session is created successfully.", eventSession.ToResponse())
+}
+
+// GetAllSessionsByEventCode godoc
+// @Summary Get All Sessions By Event Code
+// @Description Fetch all event sessions associated with a specific event code
 // @Tags events
 // @Accept json
 // @Produce json
 // @Security BearerAuth
+// @Param eventCode path string true "Event Code"
 // @Param X-API-Key header string true "mandatory header to access endpoint"
-// @Success 200 {object} models.List{data=[]models.GetAllEventsResponse} "Response indicates that the request succeeded and the resources has been fetched and transmitted in the message body"
+// @Success 200 {object} models.List{data=[]models.EventSession} "Successfully fetched event sessions"
 // @Failure 400 {object} models.ErrorResponse "Bad Request"
-// @Failure 422 {object} models.ErrorResponse{errors=models.ErrorValidateResponse} "Validation error. This can happen if there is an error validation while create account"
-// @Router /v2/events [get]
+// @Failure 422 {object} models.ErrorResponse{errors=models.ErrorValidateResponse} "Validation error."
+// @Router /v2/events/{eventCode}/sessions [get]
+func (eh *EventHandler) GetAllSessionsByEventCode(ctx echo.Context) error {
+	events, err := eh.usecase.EventSession.GetByEventCode(ctx.Request().Context(), ctx.Param("eventCode"))
+	if err != nil {
+		return response.Error(ctx, err)
+	}
+
+	return response.SuccessList(ctx, http.StatusOK, len(events), events)
+}
+
 func (eh *EventHandler) GetAll(ctx echo.Context) error {
-	events, err := eh.usecase.Event.GetAll(ctx.Request().Context(), ctx.Get("roles").([]string), ctx.Get("userTypes").([]string))
+	events, err := eh.usecase.Event.GetAll(ctx.Request().Context())
 	if err != nil {
 		return response.Error(ctx, err)
 	}
 
-	return response.SuccessList(ctx, http.StatusOK, len(*events), events)
-}
-
-// GetByCode godoc
-// @Summary Get Event by Event Code
-// @Description Get Event and Instances by Event Code
-// @Tags events
-// @Accept json
-// @Produce json
-// @Param code path int true "object that needs to be added"
-// @Param X-API-Key header string true "mandatory header to access endpoint"
-// @Security BearerAuth
-// @Success 200 {object} models.ListWithDetail{details=models.GetEventByCodeResponse,data=[]models.GetInstancesByEventCodeResponse} "Response indicates that the request succeeded and the resources has been fetched and transmitted in the message body"
-// @Failure 400 {object} models.ErrorResponse "Bad Request"
-// @Failure 422 {object} models.ErrorResponse{errors=models.ErrorValidateResponse} "Validation error. This can happen if there is an error validation while create account"
-// @Router /v2/events/{code} [get]
-func (eh *EventHandler) GetByCode(ctx echo.Context) error {
-	parameter := models.GetEventByCodeParameter{
-		Code: ctx.Param("code"),
-	}
-
-	if err := validator.Validate(parameter); err != nil {
-		return response.ErrorValidation(ctx, err)
-	}
-
-	detail, data, err := eh.usecase.Event.GetByCode(ctx.Request().Context(), parameter.Code, ctx.Get("roles").([]string), ctx.Get("userTypes").([]string))
-	if err != nil {
-		return response.Error(ctx, err)
-	}
-
-	return response.SuccessListWithDetail(ctx, http.StatusOK, len(data), detail, data)
-}
-
-// Register godoc
-// @Summary Register User to Event
-// @Description Register user to particular event and instances
-// @Tags events
-// @Accept json
-// @Produce json
-// @Param user body models.CreateEventRegistrationRecordRequest true "User object that needs to be added"
-// @Param X-API-Key header string true "mandatory header to access endpoint"
-// @Security BearerAuth
-// @Success 201 {object} models.CreateEventRegistrationRecordResponse{registrants=models.CreateOtherEventRegistrationRecordRequest} "Response indicates that the request succeeded and the resources has been fetched and transmitted in the message body"
-// @Failure 400 {object} models.ErrorResponse "Bad Request"
-// @Failure 422 {object} models.ErrorResponse{errors=models.ErrorValidateResponse} "Validation error. This can happen if there is an error validation while create account"
-// @Router /v2/events/registers [post]
-func (eh *EventHandler) Register(ctx echo.Context) error {
-	var request models.CreateEventRegistrationRecordRequest
-	if err := ctx.Bind(&request); err != nil {
-		return response.Error(ctx, err)
-	}
-
-	if err := validator.Validate(request); err != nil {
-		return response.ErrorValidation(ctx, err)
-	}
-
-	tokenValue, err := models.GetValueFromToken(ctx)
-	if err != nil {
-		return response.Error(ctx, err)
-	}
-
-	register, err := eh.usecase.EventRegistrationRecord.Create(ctx.Request().Context(), &request, &tokenValue)
-	if err != nil {
-		return response.Error(ctx, err)
-	}
-
-	return response.Success(ctx, http.StatusCreated, register.ToResponse())
-}
-
-// GetAllRegistered godoc
-// @Summary Get All User's Registered Event
-// @Description Get All User's Registered Event
-// @Tags events
-// @Accept json
-// @Produce json
-// @Param X-API-Key header string true "mandatory header to access endpoint"
-// @Security BearerAuth
-// @Success 200 {object} models.GetAllRegisteredUserResponse{instances=[]models.InstancesForRegisteredRecordsResponse} "Response indicates that the request succeeded and the resources has been fetched and transmitted in the message body"
-// @Failure 400 {object} models.ErrorResponse "Bad Request"
-// @Failure 422 {object} models.ErrorResponse{errors=models.ErrorValidateResponse} "Validation error. This can happen if there is an error validation while create account"
-// @Router /v2/events/registers [get]
-func (eh *EventHandler) GetAllRegistered(ctx echo.Context) error {
-	parameter := models.GetAllRegisteredUserParameter{
-		CommunityId: ctx.Get("id").(string),
-	}
-
-	if err := validator.Validate(parameter); err != nil {
-		return response.ErrorValidation(ctx, err)
-	}
-
-	res, err := eh.usecase.Event.GetRegistered(ctx.Request().Context(), parameter.CommunityId)
-	if err != nil {
-		return response.Error(ctx, err)
-	}
-
-	return response.SuccessList(ctx, http.StatusOK, len(res), res)
-}
-
-// UpdateStatus godoc
-// @Summary Update Registration Status
-// @Description Update user registration id to success or failed
-// @Tags events
-// @Accept json
-// @Produce json
-// @Param id path string true "registration id"
-// @Param user body models.UpdateRegistrationStatusRequest true "User object that needs to be added"
-// @Param X-API-Key header string true "mandatory header to access endpoint"
-// @Success 201 {object} models.UpdateRegistrationStatusResponse "Response indicates that the request succeeded and the resources has been fetched and transmitted in the message body"
-// @Failure 400 {object} models.ErrorResponse "Bad Request"
-// @Failure 422 {object} models.ErrorResponse{errors=models.ErrorValidateResponse} "Validation error. This can happen if there is an error validation while create account"
-// @Router /v2/events/registers/{id}/status [patch]
-func (eh *EventHandler) UpdateStatus(ctx echo.Context) error {
-	requestParam := models.UpdateRegistrationStatusParameter{
-		ID: ctx.Param("id"),
-	}
-
-	if err := validator.Validate(requestParam); err != nil {
-		return response.ErrorValidation(ctx, err)
-	}
-
-	var requestBody models.UpdateRegistrationStatusRequest
-	if err := ctx.Bind(&requestBody); err != nil {
-		return response.Error(ctx, err)
-	}
-
-	if err := validator.Validate(requestBody); err != nil {
-		return response.ErrorValidation(ctx, err)
-	}
-
-	tokenValue, err := models.GetValueFromToken(ctx)
-	if err != nil {
-		return response.Error(ctx, err)
-	}
-
-	record, err := eh.usecase.EventRegistrationRecord.UpdateStatus(ctx.Request().Context(), &requestParam, &requestBody, &tokenValue)
-	if err != nil {
-		return response.Error(ctx, err)
-	}
-
-	return response.Success(ctx, http.StatusOK, record.ToResponse())
-}
-
-// GetTitles godoc
-// @Summary Get Events Titles
-// @Description For Internal Purposes Only
-// @Tags events
-// @Accept json
-// @Produce json
-// @Param X-API-Key header string true "mandatory header to access endpoint"
-// @Security BearerAuth
-// @Success 200 {object} models.List{data=[]models.GetEventTitlesResponse} "Response indicates that the request succeeded and the resources has been fetched and transmitted in the message body"
-// @Failure 400 {object} models.ErrorResponse "Bad Request"
-// @Failure 422 {object} models.ErrorResponse{errors=models.ErrorValidateResponse} "Validation error. This can happen if there is an error validation while create account"
-// @Router /v2/events/registers [get]
-func (eh *EventHandler) GetTitles(ctx echo.Context) error {
-	res, err := eh.usecase.Event.GetTitles(ctx.Request().Context())
-	if err != nil {
-		return response.Error(ctx, err)
-	}
-
-	return response.SuccessList(ctx, http.StatusOK, len(res), res)
-}
-
-// GetSummary godoc
-// @Summary Get Event and Sessions by Event Code
-// @Description For Internal Purposes Only
-// @Tags events
-// @Accept json
-// @Produce json
-// @Param code path int true "object that needs to be added"
-// @Param X-API-Key header string true "mandatory header to access endpoint"
-// @Security BearerAuth
-// @Success 200 {object} models.ListWithDetail{details=models.GetEventSummaryResponse,data=[]models.GetInstanceSummaryResponse} "Response indicates that the request succeeded and the resources has been fetched and transmitted in the message body"
-// @Failure 400 {object} models.ErrorResponse "Bad Request"
-// @Failure 422 {object} models.ErrorResponse{errors=models.ErrorValidateResponse} "Validation error. This can happen if there is an error validation while create account"
-// @Router /v2/internal/events/{eventCode}/summary [get]
-func (eh *EventHandler) GetSummary(ctx echo.Context) error {
-	detail, data, err := eh.usecase.Event.GetSummary(ctx.Request().Context(), ctx.Param("eventCode"))
-	if err != nil {
-		return response.Error(ctx, err)
-	}
-
-	return response.SuccessListWithDetail(ctx, http.StatusOK, len(data), detail, data)
-}
-
-// CreateInstance godoc
-// @Summary Create Instance
-// @Description Create instance from existing Event
-// @Tags events
-// @Accept json
-// @Produce json
-// @Param user body models.CreateInstanceExistingEventRequest true "User object that needs to be added"
-// @Param X-API-Key header string true "mandatory header to access endpoint"
-// @Security BearerAuth
-// @Success 201 {object} models.CreateInstanceResponse "Response indicates that the request succeeded and the resources has been fetched and transmitted in the message body"
-// @Failure 400 {object} models.ErrorResponse "Bad Request"
-// @Failure 422 {object} models.ErrorResponse{errors=models.ErrorValidateResponse} "Validation error. This can happen if there is an error validation while create account"
-// @Router /v2/internal/events/instances [post]
-func (eh *EventHandler) CreateInstance(ctx echo.Context) error {
-	var request models.CreateInstanceExistingEventRequest
-	if err := ctx.Bind(&request); err != nil {
-		return response.Error(ctx, err)
-	}
-
-	if err := validator.Validate(request); err != nil {
-		return response.ErrorValidation(ctx, err)
-	}
-
-	instance, err := eh.usecase.EventInstance.Create(ctx.Request().Context(), request)
-	if err != nil {
-		return response.Error(ctx, err)
-	}
-
-	return response.Success(ctx, http.StatusCreated, instance.ToResponse())
-}
-
-func (eh *EventHandler) GetEventAttendance(ctx echo.Context) error {
-	var request models.GetEventAttendanceParameter
-	if err := ctx.Bind(&request); err != nil {
-		return response.Error(ctx, err)
-	}
-
-	if err := validator.Validate(request); err != nil {
-		return response.ErrorValidation(ctx, err)
-	}
-
-	detail, list, err := eh.usecase.EventRegistrationRecord.GetAttendance(ctx.Request().Context(), request)
-	if err != nil {
-		return response.Error(ctx, err)
-	}
-
-	return response.SuccessListWithDetail(ctx, http.StatusOK, len(list), detail, list)
-}
-
-//func (eh *EventHandler) GetAllRegisteredInternal(ctx echo.Context) error {
-//	var param models.GetAllRegisteredCursorParam
-//	if err := ctx.Bind(&param); err != nil {
-//		return response.Error(ctx, err)
-//	}
-//
-//	if err := validator.Validate(param); err != nil {
-//		return response.ErrorValidation(ctx, err)
-//	}
-//
-//	data, info, err := eh.usecase.EventRegistrationRecord.GetAllCursor(ctx.Request().Context(), param)
-//	if err != nil {
-//		return response.Error(ctx, err)
-//	}
-//
-//	return response.SuccessCursor(ctx, http.StatusOK, info, data)
-//}
-
-func (eh *EventHandler) GetAllRegisteredInternal(ctx echo.Context) error {
-	var param models.GetAllRegisteredCursorParam
-	if err := ctx.Bind(&param); err != nil {
-		return response.Error(ctx, err)
-	}
-
-	if err := validator.Validate(param); err != nil {
-		return response.ErrorValidation(ctx, err)
-	}
-
-	data, info, err := eh.usecase.EventRegistrationRecord.GetAllCursor(ctx.Request().Context(), param)
-	if err != nil {
-		return response.Error(ctx, err)
-	}
-
-	//return response.SuccessCursor[models.GetAllRegisteredCursorResponse](ctx, data, 0, 0, nil)
-	return response.SuccessCursor(ctx, http.StatusOK, info, data)
-}
-
-func (eh *EventHandler) DownloadInternal(ctx echo.Context) error {
-	var param models.GetDownloadAllRegisteredParam
-	if err := ctx.Bind(&param); err != nil {
-		return response.Error(ctx, err)
-	}
-
-	if err := validator.Validate(param); err != nil {
-		return response.ErrorValidation(ctx, err)
-	}
-
-	data, contentType, fileName, err := eh.usecase.EventRegistrationRecord.Download(ctx.Request().Context(), param)
-	if err != nil {
-		return response.Error(ctx, err)
-	}
-
-	return response.SuccessDownload(ctx, http.StatusOK, contentType, fileName, data)
+	return response.SuccessList(ctx, http.StatusOK, len(events), events)
 }

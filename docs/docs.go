@@ -352,14 +352,14 @@ const docTemplate = `{
                 }
             }
         },
-        "/v2/events": {
+        "/v2/events/{eventCode}/sessions": {
             "get": {
                 "security": [
                     {
                         "BearerAuth": []
                     }
                 ],
-                "description": "Get All Events based on User Roles",
+                "description": "Fetch all event sessions associated with a specific event code",
                 "consumes": [
                     "application/json"
                 ],
@@ -369,316 +369,12 @@ const docTemplate = `{
                 "tags": [
                     "events"
                 ],
-                "summary": "Get All Events",
+                "summary": "Get All Sessions By Event Code",
                 "parameters": [
                     {
                         "type": "string",
-                        "description": "mandatory header to access endpoint",
-                        "name": "X-API-Key",
-                        "in": "header",
-                        "required": true
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "Response indicates that the request succeeded and the resources has been fetched and transmitted in the message body",
-                        "schema": {
-                            "allOf": [
-                                {
-                                    "$ref": "#/definitions/models.List"
-                                },
-                                {
-                                    "type": "object",
-                                    "properties": {
-                                        "data": {
-                                            "type": "array",
-                                            "items": {
-                                                "$ref": "#/definitions/models.GetAllEventsResponse"
-                                            }
-                                        }
-                                    }
-                                }
-                            ]
-                        }
-                    },
-                    "400": {
-                        "description": "Bad Request",
-                        "schema": {
-                            "$ref": "#/definitions/models.ErrorResponse"
-                        }
-                    },
-                    "422": {
-                        "description": "Validation error. This can happen if there is an error validation while create account",
-                        "schema": {
-                            "allOf": [
-                                {
-                                    "$ref": "#/definitions/models.ErrorResponse"
-                                },
-                                {
-                                    "type": "object",
-                                    "properties": {
-                                        "errors": {
-                                            "$ref": "#/definitions/models.ErrorValidateResponse"
-                                        }
-                                    }
-                                }
-                            ]
-                        }
-                    }
-                }
-            }
-        },
-        "/v2/events/registers": {
-            "get": {
-                "security": [
-                    {
-                        "BearerAuth": []
-                    }
-                ],
-                "description": "For Internal Purposes Only",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "events"
-                ],
-                "summary": "Get Events Titles",
-                "parameters": [
-                    {
-                        "type": "string",
-                        "description": "mandatory header to access endpoint",
-                        "name": "X-API-Key",
-                        "in": "header",
-                        "required": true
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "Response indicates that the request succeeded and the resources has been fetched and transmitted in the message body",
-                        "schema": {
-                            "allOf": [
-                                {
-                                    "$ref": "#/definitions/models.List"
-                                },
-                                {
-                                    "type": "object",
-                                    "properties": {
-                                        "data": {
-                                            "type": "array",
-                                            "items": {
-                                                "$ref": "#/definitions/models.GetEventTitlesResponse"
-                                            }
-                                        }
-                                    }
-                                }
-                            ]
-                        }
-                    },
-                    "400": {
-                        "description": "Bad Request",
-                        "schema": {
-                            "$ref": "#/definitions/models.ErrorResponse"
-                        }
-                    },
-                    "422": {
-                        "description": "Validation error. This can happen if there is an error validation while create account",
-                        "schema": {
-                            "allOf": [
-                                {
-                                    "$ref": "#/definitions/models.ErrorResponse"
-                                },
-                                {
-                                    "type": "object",
-                                    "properties": {
-                                        "errors": {
-                                            "$ref": "#/definitions/models.ErrorValidateResponse"
-                                        }
-                                    }
-                                }
-                            ]
-                        }
-                    }
-                }
-            },
-            "post": {
-                "security": [
-                    {
-                        "BearerAuth": []
-                    }
-                ],
-                "description": "Register user to particular event and instances",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "events"
-                ],
-                "summary": "Register User to Event",
-                "parameters": [
-                    {
-                        "description": "User object that needs to be added",
-                        "name": "user",
-                        "in": "body",
-                        "required": true,
-                        "schema": {
-                            "$ref": "#/definitions/models.CreateEventRegistrationRecordRequest"
-                        }
-                    },
-                    {
-                        "type": "string",
-                        "description": "mandatory header to access endpoint",
-                        "name": "X-API-Key",
-                        "in": "header",
-                        "required": true
-                    }
-                ],
-                "responses": {
-                    "201": {
-                        "description": "Response indicates that the request succeeded and the resources has been fetched and transmitted in the message body",
-                        "schema": {
-                            "allOf": [
-                                {
-                                    "$ref": "#/definitions/models.CreateEventRegistrationRecordResponse"
-                                },
-                                {
-                                    "type": "object",
-                                    "properties": {
-                                        "registrants": {
-                                            "$ref": "#/definitions/models.CreateOtherEventRegistrationRecordRequest"
-                                        }
-                                    }
-                                }
-                            ]
-                        }
-                    },
-                    "400": {
-                        "description": "Bad Request",
-                        "schema": {
-                            "$ref": "#/definitions/models.ErrorResponse"
-                        }
-                    },
-                    "422": {
-                        "description": "Validation error. This can happen if there is an error validation while create account",
-                        "schema": {
-                            "allOf": [
-                                {
-                                    "$ref": "#/definitions/models.ErrorResponse"
-                                },
-                                {
-                                    "type": "object",
-                                    "properties": {
-                                        "errors": {
-                                            "$ref": "#/definitions/models.ErrorValidateResponse"
-                                        }
-                                    }
-                                }
-                            ]
-                        }
-                    }
-                }
-            }
-        },
-        "/v2/events/registers/{id}/status": {
-            "patch": {
-                "description": "Update user registration id to success or failed",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "events"
-                ],
-                "summary": "Update Registration Status",
-                "parameters": [
-                    {
-                        "type": "string",
-                        "description": "registration id",
-                        "name": "id",
-                        "in": "path",
-                        "required": true
-                    },
-                    {
-                        "description": "User object that needs to be added",
-                        "name": "user",
-                        "in": "body",
-                        "required": true,
-                        "schema": {
-                            "$ref": "#/definitions/models.UpdateRegistrationStatusRequest"
-                        }
-                    },
-                    {
-                        "type": "string",
-                        "description": "mandatory header to access endpoint",
-                        "name": "X-API-Key",
-                        "in": "header",
-                        "required": true
-                    }
-                ],
-                "responses": {
-                    "201": {
-                        "description": "Response indicates that the request succeeded and the resources has been fetched and transmitted in the message body",
-                        "schema": {
-                            "$ref": "#/definitions/models.UpdateRegistrationStatusResponse"
-                        }
-                    },
-                    "400": {
-                        "description": "Bad Request",
-                        "schema": {
-                            "$ref": "#/definitions/models.ErrorResponse"
-                        }
-                    },
-                    "422": {
-                        "description": "Validation error. This can happen if there is an error validation while create account",
-                        "schema": {
-                            "allOf": [
-                                {
-                                    "$ref": "#/definitions/models.ErrorResponse"
-                                },
-                                {
-                                    "type": "object",
-                                    "properties": {
-                                        "errors": {
-                                            "$ref": "#/definitions/models.ErrorValidateResponse"
-                                        }
-                                    }
-                                }
-                            ]
-                        }
-                    }
-                }
-            }
-        },
-        "/v2/events/{code}": {
-            "get": {
-                "security": [
-                    {
-                        "BearerAuth": []
-                    }
-                ],
-                "description": "Get Event and Instances by Event Code",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "events"
-                ],
-                "summary": "Get Event by Event Code",
-                "parameters": [
-                    {
-                        "type": "integer",
-                        "description": "object that needs to be added",
-                        "name": "code",
+                        "description": "Event Code",
+                        "name": "eventCode",
                         "in": "path",
                         "required": true
                     },
@@ -692,11 +388,11 @@ const docTemplate = `{
                 ],
                 "responses": {
                     "200": {
-                        "description": "Response indicates that the request succeeded and the resources has been fetched and transmitted in the message body",
+                        "description": "Successfully fetched event sessions",
                         "schema": {
                             "allOf": [
                                 {
-                                    "$ref": "#/definitions/models.ListWithDetail"
+                                    "$ref": "#/definitions/models.List"
                                 },
                                 {
                                     "type": "object",
@@ -704,11 +400,8 @@ const docTemplate = `{
                                         "data": {
                                             "type": "array",
                                             "items": {
-                                                "$ref": "#/definitions/models.GetInstancesByEventCodeResponse"
+                                                "$ref": "#/definitions/models.EventSession"
                                             }
-                                        },
-                                        "details": {
-                                            "$ref": "#/definitions/models.GetEventByCodeResponse"
                                         }
                                     }
                                 }
@@ -722,7 +415,7 @@ const docTemplate = `{
                         }
                     },
                     "422": {
-                        "description": "Validation error. This can happen if there is an error validation while create account",
+                        "description": "Validation error.",
                         "schema": {
                             "allOf": [
                                 {
@@ -749,7 +442,7 @@ const docTemplate = `{
                         "BearerAuth": []
                     }
                 ],
-                "description": "Create event with the instances/sessions",
+                "description": "Creates a new event along with its associated sessions and form questions.\nThe event can be of various categories (e.g., registration, announcement, internal-attendance).\nIt supports comprehensive configurations for images, organizers, access control, location (online/offline/hybrid), scheduling, recurrences, and notifications.\n\n**Important Notes:**\n- ` + "`" + `sessions` + "`" + ` are required unless the category is ` + "`" + `announcement` + "`" + `.\n- ` + "`" + `location` + "`" + ` must match the event's location type (` + "`" + `online` + "`" + `, ` + "`" + `offline` + "`" + `, or ` + "`" + `hybrid` + "`" + `).\n- ` + "`" + `access` + "`" + ` controls who can view or register for the event.",
                 "consumes": [
                     "application/json"
                 ],
@@ -759,11 +452,11 @@ const docTemplate = `{
                 "tags": [
                     "events"
                 ],
-                "summary": "Create Event",
+                "summary": "Create a new Event",
                 "parameters": [
                     {
-                        "description": "User object that needs to be added",
-                        "name": "user",
+                        "description": "Event creation payload containing core details, settings, sessions, and optional questions",
+                        "name": "request",
                         "in": "body",
                         "required": true,
                         "schema": {
@@ -780,31 +473,31 @@ const docTemplate = `{
                 ],
                 "responses": {
                     "201": {
-                        "description": "Response indicates that the request succeeded and the resources has been fetched and transmitted in the message body",
+                        "description": "Successfully created event with its sessions and form questions",
                         "schema": {
-                            "allOf": [
-                                {
-                                    "$ref": "#/definitions/models.CreateEventResponse"
-                                },
-                                {
-                                    "type": "object",
-                                    "properties": {
-                                        "instances": {
-                                            "$ref": "#/definitions/models.CreateInstanceResponse"
-                                        }
-                                    }
-                                }
-                            ]
+                            "$ref": "#/definitions/models.CreateEventResponse"
                         }
                     },
                     "400": {
-                        "description": "Bad Request",
+                        "description": "Bad Request - Invalid payload format or missing required fields",
+                        "schema": {
+                            "$ref": "#/definitions/models.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized - Invalid or missing authentication token",
+                        "schema": {
+                            "$ref": "#/definitions/models.ErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden - User does not have the required permissions",
                         "schema": {
                             "$ref": "#/definitions/models.ErrorResponse"
                         }
                     },
                     "422": {
-                        "description": "Validation error. This can happen if there is an error validation while create account",
+                        "description": "Unprocessable Entity - Validation errors (e.g., invalid location type, missing required linked fields)",
                         "schema": {
                             "allOf": [
                                 {
@@ -820,18 +513,24 @@ const docTemplate = `{
                                 }
                             ]
                         }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/models.ErrorResponse"
+                        }
                     }
                 }
             }
         },
-        "/v2/internal/events/instances": {
+        "/v2/internal/events/{eventCode}/sessions": {
             "post": {
                 "security": [
                     {
                         "BearerAuth": []
                     }
                 ],
-                "description": "Create instance from existing Event",
+                "description": "Creates a new event session for a specific event. This can be a standalone session, or a child session (e.g., a breakout room or a specific track) if ` + "`" + `parentSessionCode` + "`" + ` is provided.\n\n**Inheritance \u0026 Defaults:**\n- If location details are omitted, the session inherits the location from the parent event (or parent session).\n- If status is omitted, it defaults to the event's status.\n- Timezone falls back to the event's timezone.\n\n**Registration \u0026 Capacity:**\n- ` + "`" + `sessionCapacity.capacity` + "`" + `: Set to 0 for unlimited. Waitlist can only be enabled if capacity \u003e 0 and registration method is not QR-based walk-in.\n- ` + "`" + `sessionRules.registrationMode` + "`" + `: Supported modes are ` + "`" + `self_only` + "`" + `, ` + "`" + `self_and_registered` + "`" + `, and ` + "`" + `self_and_others` + "`" + `.\n- ` + "`" + `sessionRules.registrationMethods` + "`" + `: Options include ` + "`" + `personal-qr` + "`" + `, ` + "`" + `event-qr` + "`" + `, ` + "`" + `session-qr` + "`" + `, ` + "`" + `registration-qr` + "`" + `.\n- Supports age limits (` + "`" + `minAge` + "`" + `, ` + "`" + `maxAge` + "`" + `) and prerequisites.\n\n**Check-in \u0026 Check-out:**\n- ` + "`" + `checkIn` + "`" + ` is enabled by default. You can configure ` + "`" + `allowLate` + "`" + ` and ` + "`" + `lateThreshold` + "`" + ` with specific late policies (` + "`" + `reject` + "`" + `, ` + "`" + `warn` + "`" + `, ` + "`" + `allow` + "`" + `).\n- Validations ensure that check-in/check-out times align with the session schedule.",
                 "consumes": [
                     "application/json"
                 ],
@@ -841,15 +540,22 @@ const docTemplate = `{
                 "tags": [
                     "events"
                 ],
-                "summary": "Create Instance",
+                "summary": "Create a new Event Session",
                 "parameters": [
                     {
-                        "description": "User object that needs to be added",
-                        "name": "user",
+                        "type": "string",
+                        "description": "Event Code",
+                        "name": "eventCode",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Event session creation payload containing core details, settings, and optional questions",
+                        "name": "request",
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/models.CreateInstanceExistingEventRequest"
+                            "$ref": "#/definitions/models.CreateEventSessionRequest"
                         }
                     },
                     {
@@ -862,91 +568,17 @@ const docTemplate = `{
                 ],
                 "responses": {
                     "201": {
-                        "description": "Response indicates that the request succeeded and the resources has been fetched and transmitted in the message body",
-                        "schema": {
-                            "$ref": "#/definitions/models.CreateInstanceResponse"
-                        }
-                    },
-                    "400": {
-                        "description": "Bad Request",
-                        "schema": {
-                            "$ref": "#/definitions/models.ErrorResponse"
-                        }
-                    },
-                    "422": {
-                        "description": "Validation error. This can happen if there is an error validation while create account",
+                        "description": "Successfully created event session",
                         "schema": {
                             "allOf": [
                                 {
-                                    "$ref": "#/definitions/models.ErrorResponse"
-                                },
-                                {
-                                    "type": "object",
-                                    "properties": {
-                                        "errors": {
-                                            "$ref": "#/definitions/models.ErrorValidateResponse"
-                                        }
-                                    }
-                                }
-                            ]
-                        }
-                    }
-                }
-            }
-        },
-        "/v2/internal/events/{eventCode}/summary": {
-            "get": {
-                "security": [
-                    {
-                        "BearerAuth": []
-                    }
-                ],
-                "description": "For Internal Purposes Only",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "events"
-                ],
-                "summary": "Get Event and Sessions by Event Code",
-                "parameters": [
-                    {
-                        "type": "integer",
-                        "description": "object that needs to be added",
-                        "name": "code",
-                        "in": "path",
-                        "required": true
-                    },
-                    {
-                        "type": "string",
-                        "description": "mandatory header to access endpoint",
-                        "name": "X-API-Key",
-                        "in": "header",
-                        "required": true
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "Response indicates that the request succeeded and the resources has been fetched and transmitted in the message body",
-                        "schema": {
-                            "allOf": [
-                                {
-                                    "$ref": "#/definitions/models.ListWithDetail"
+                                    "$ref": "#/definitions/models.Response"
                                 },
                                 {
                                     "type": "object",
                                     "properties": {
                                         "data": {
-                                            "type": "array",
-                                            "items": {
-                                                "$ref": "#/definitions/models.GetInstanceSummaryResponse"
-                                            }
-                                        },
-                                        "details": {
-                                            "$ref": "#/definitions/models.GetEventSummaryResponse"
+                                            "$ref": "#/definitions/models.CreateEventSessionResponse"
                                         }
                                     }
                                 }
@@ -954,13 +586,25 @@ const docTemplate = `{
                         }
                     },
                     "400": {
-                        "description": "Bad Request",
+                        "description": "Bad Request - Invalid payload format or missing required fields",
+                        "schema": {
+                            "$ref": "#/definitions/models.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized - Invalid or missing authentication token",
+                        "schema": {
+                            "$ref": "#/definitions/models.ErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden - User does not have the required permissions",
                         "schema": {
                             "$ref": "#/definitions/models.ErrorResponse"
                         }
                     },
                     "422": {
-                        "description": "Validation error. This can happen if there is an error validation while create account",
+                        "description": "Unprocessable Entity - Validation errors",
                         "schema": {
                             "allOf": [
                                 {
@@ -975,6 +619,12 @@ const docTemplate = `{
                                     }
                                 }
                             ]
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/models.ErrorResponse"
                         }
                     }
                 }
@@ -2146,6 +1796,73 @@ const docTemplate = `{
         }
     },
     "definitions": {
+        "constants.QuestionType": {
+            "type": "string",
+            "enum": [
+                "short_text",
+                "long_text",
+                "single_choice",
+                "multiple_choice",
+                "date",
+                "time",
+                "email",
+                "phone",
+                "number"
+            ],
+            "x-enum-varnames": [
+                "QuestionTypeShortText",
+                "QuestionTypeLongText",
+                "QuestionTypeSingle",
+                "QuestionTypeMultiple",
+                "QuestionTypeDate",
+                "QuestionTypeTime",
+                "QuestionTypeEmail",
+                "QuestionTypePhone",
+                "QuestionTypeNumber"
+            ]
+        },
+        "models.BulkCreateFormQuestionRequest": {
+            "type": "object",
+            "required": [
+                "requiredFor",
+                "text",
+                "type",
+                "visibleFor"
+            ],
+            "properties": {
+                "correctAnswer": {
+                    "type": "string"
+                },
+                "displayOrder": {
+                    "type": "integer",
+                    "minimum": 0
+                },
+                "options": {
+                    "$ref": "#/definitions/models.QuestionOptions"
+                },
+                "requiredFor": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "rules": {
+                    "$ref": "#/definitions/models.QuestionValidationRules"
+                },
+                "text": {
+                    "type": "string"
+                },
+                "type": {
+                    "$ref": "#/definitions/constants.QuestionType"
+                },
+                "visibleFor": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                }
+            }
+        },
         "models.CampusesResponse": {
             "type": "object",
             "properties": {
@@ -2178,550 +1895,322 @@ const docTemplate = `{
                 }
             }
         },
-        "models.CreateEventRegistrationRecordRequest": {
+        "models.ClickToAction": {
             "type": "object",
-            "required": [
-                "eventCode",
-                "instanceCode",
-                "registerAt",
-                "registrants"
-            ],
             "properties": {
-                "communityId": {
-                    "type": "string"
-                },
-                "description": {
-                    "type": "string"
-                },
-                "eventCode": {
+                "link": {
                     "type": "string",
-                    "maxLength": 7,
-                    "minLength": 7
+                    "maxLength": 2048,
+                    "example": "https://register.example.com"
                 },
-                "identifier": {
-                    "type": "string"
-                },
-                "instanceCode": {
+                "text": {
                     "type": "string",
-                    "maxLength": 15,
-                    "minLength": 15
-                },
-                "isPersonalQR": {
-                    "description": "IsInheritUser bool                                        ` + "`" + `json:\"isInheritUser\" validate:\"required\"` + "`" + `",
-                    "type": "boolean"
-                },
-                "name": {
-                    "type": "string",
-                    "maxLength": 50,
+                    "maxLength": 100,
                     "minLength": 1,
-                    "example": "Professionals"
-                },
-                "registerAt": {
-                    "type": "string"
-                },
-                "registrants": {
-                    "type": "array",
-                    "items": {
-                        "$ref": "#/definitions/models.CreateOtherEventRegistrationRecordRequest"
-                    }
-                }
-            }
-        },
-        "models.CreateEventRegistrationRecordResponse": {
-            "type": "object",
-            "properties": {
-                "communityId": {
-                    "type": "string"
-                },
-                "description": {
-                    "type": "string"
-                },
-                "eventCode": {
-                    "type": "string"
-                },
-                "eventTitle": {
-                    "type": "string"
-                },
-                "identifier": {
-                    "type": "string"
-                },
-                "instanceCode": {
-                    "type": "string"
-                },
-                "instanceTitle": {
-                    "type": "string"
-                },
-                "name": {
-                    "type": "string"
-                },
-                "registerAt": {
-                    "type": "string"
-                },
-                "registrants": {
-                    "type": "array",
-                    "items": {
-                        "$ref": "#/definitions/models.CreateOtherEventRegistrationRecordResponse"
-                    }
-                },
-                "registrationId": {
-                    "type": "string"
-                },
-                "status": {
-                    "type": "string"
-                },
-                "totalRegistrants": {
-                    "type": "integer"
-                },
-                "type": {
-                    "type": "string"
+                    "example": "Register Now!"
                 }
             }
         },
         "models.CreateEventRequest": {
             "type": "object",
             "required": [
-                "allowedCampuses",
-                "allowedFor",
-                "allowedRoles",
-                "allowedUsers",
-                "instances",
-                "locationName",
-                "locationType",
-                "name"
+                "category",
+                "status"
             ],
             "properties": {
-                "allowedCampuses": {
-                    "type": "array",
-                    "items": {
-                        "type": "string"
-                    }
+                "access": {
+                    "$ref": "#/definitions/models.EventAccess"
                 },
-                "allowedFor": {
+                "category": {
                     "type": "string",
                     "enum": [
-                        "public",
-                        "private"
+                        "registration",
+                        "internal-attendance",
+                        "announcement",
+                        "external-attendance"
                     ]
                 },
-                "allowedRoles": {
-                    "type": "array",
-                    "items": {
-                        "type": "string"
-                    }
+                "images": {
+                    "$ref": "#/definitions/models.EventImages"
                 },
-                "allowedUsers": {
-                    "type": "array",
-                    "items": {
-                        "type": "string"
-                    }
+                "location": {
+                    "$ref": "#/definitions/models.EventLocation"
                 },
-                "description": {
-                    "type": "string"
+                "notification": {
+                    "$ref": "#/definitions/models.EventNotification"
                 },
-                "eventEndAt": {
-                    "type": "string"
+                "organizer": {
+                    "$ref": "#/definitions/models.EventOrganizer"
                 },
-                "eventStartAt": {
-                    "type": "string"
+                "postDescription": {
+                    "type": "object"
                 },
-                "instances": {
-                    "type": "array",
-                    "items": {
-                        "$ref": "#/definitions/models.CreateInstanceRequest"
-                    }
-                },
-                "isRecurring": {
-                    "type": "boolean"
-                },
-                "locationName": {
-                    "type": "string"
-                },
-                "locationType": {
+                "preDescription": {
                     "type": "string",
-                    "enum": [
-                        "online",
-                        "onsite",
-                        "hybrid"
-                    ]
+                    "example": "Event Pre Description"
                 },
-                "name": {
-                    "type": "string"
+                "questions": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/models.BulkCreateFormQuestionRequest"
+                    }
                 },
                 "recurrence": {
-                    "type": "string"
+                    "$ref": "#/definitions/models.EventRecurrence"
                 },
-                "registerEndAt": {
-                    "type": "string"
+                "schedule": {
+                    "$ref": "#/definitions/models.EventSchedule"
                 },
-                "registerStartAt": {
-                    "type": "string"
+                "sessions": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/models.CreateEventSessionRequest"
+                    }
+                },
+                "slug": {
+                    "type": "string",
+                    "example": "event-title"
+                },
+                "status": {
+                    "type": "string",
+                    "enum": [
+                        "draft",
+                        "active",
+                        "inactive"
+                    ]
+                },
+                "template": {
+                    "$ref": "#/definitions/models.EventTemplate"
                 },
                 "termsAndConditions": {
-                    "type": "string"
+                    "type": "string",
+                    "example": "Event Terms and Conditions"
+                },
+                "title": {
+                    "type": "string",
+                    "example": "Event Title"
                 },
                 "topics": {
                     "type": "array",
                     "items": {
                         "type": "string"
-                    }
+                    },
+                    "example": [
+                        "topic1",
+                        "topic2",
+                        "topic3"
+                    ]
                 }
             }
         },
         "models.CreateEventResponse": {
             "type": "object",
-            "required": [
-                "instances"
-            ],
             "properties": {
-                "allowedCampuses": {
-                    "type": "array",
-                    "items": {
-                        "type": "string"
-                    }
+                "access": {
+                    "$ref": "#/definitions/models.EventAccess"
                 },
-                "allowedFor": {
+                "category": {
                     "type": "string",
-                    "example": "public"
-                },
-                "allowedRoles": {
-                    "type": "array",
-                    "items": {
-                        "type": "string"
-                    }
-                },
-                "allowedUsers": {
-                    "type": "array",
-                    "items": {
-                        "type": "string"
-                    }
+                    "example": "registration"
                 },
                 "code": {
                     "type": "string",
-                    "example": "bhfe382"
+                    "example": "event-code"
                 },
-                "description": {
+                "images": {
+                    "$ref": "#/definitions/models.EventImages"
+                },
+                "location": {
+                    "$ref": "#/definitions/models.EventLocation"
+                },
+                "notification": {
+                    "$ref": "#/definitions/models.EventNotification"
+                },
+                "organizer": {
+                    "$ref": "#/definitions/models.EventOrganizer"
+                },
+                "postDescription": {
+                    "type": "object"
+                },
+                "preDescription": {
                     "type": "string",
-                    "example": "This event blabla"
+                    "example": "Event Pre Description"
                 },
-                "eventEndAt": {
-                    "type": "string",
-                    "example": ""
-                },
-                "eventStartAt": {
-                    "type": "string",
-                    "example": ""
-                },
-                "instances": {
+                "questions": {
                     "type": "array",
                     "items": {
-                        "$ref": "#/definitions/models.CreateInstanceResponse"
+                        "$ref": "#/definitions/models.FormQuestionResponse"
                     }
                 },
-                "isRecurring": {
-                    "type": "boolean",
-                    "example": true
-                },
-                "locationName": {
-                    "type": "string",
-                    "example": "PIOT 6 Lt. 6"
-                },
-                "locationType": {
-                    "type": "string",
-                    "example": "offline"
-                },
                 "recurrence": {
-                    "type": "string",
-                    "example": "monthly"
+                    "$ref": "#/definitions/models.EventRecurrence"
                 },
-                "registerEndAt": {
-                    "type": "string",
-                    "example": ""
+                "schedule": {
+                    "$ref": "#/definitions/models.EventSchedule"
                 },
-                "registerStartAt": {
+                "sessions": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/models.CreateEventSessionResponse"
+                    }
+                },
+                "slug": {
                     "type": "string",
-                    "example": ""
+                    "example": "event-title"
                 },
                 "status": {
                     "type": "string",
-                    "example": "available"
+                    "example": "draft"
+                },
+                "template": {
+                    "$ref": "#/definitions/models.EventTemplate"
                 },
                 "termsAndConditions": {
                     "type": "string",
-                    "example": "This event blabla"
+                    "example": "Event Terms and Conditions"
                 },
                 "title": {
                     "type": "string",
-                    "example": "Homebase"
-                },
-                "topics": {
-                    "type": "array",
-                    "items": {
-                        "type": "string"
-                    }
+                    "example": "Event Title"
                 },
                 "type": {
+                    "description": "Use TypeEvent constant in code",
                     "type": "string",
                     "example": "event"
                 }
             }
         },
-        "models.CreateInstanceExistingEventRequest": {
+        "models.CreateEventSessionRequest": {
             "type": "object",
             "required": [
-                "allowVerifyAt",
-                "disallowVerifyAt",
-                "eventCode",
-                "instanceEndAt",
-                "instanceStartAt",
-                "locationName",
-                "locationType",
-                "registerEndAt",
-                "registerStartAt",
+                "sessionCapacity",
+                "sessionRules",
+                "sessionType",
+                "status",
                 "title"
             ],
             "properties": {
-                "allowVerifyAt": {
-                    "type": "string"
-                },
-                "checkType": {
-                    "type": "string",
-                    "enum": [
-                        "check-in",
-                        "check-out",
-                        "both",
-                        "none"
-                    ]
-                },
                 "description": {
                     "type": "string"
                 },
-                "disallowVerifyAt": {
-                    "type": "string"
+                "geolocation": {
+                    "$ref": "#/definitions/models.GeolocationConfiguration"
                 },
-                "eventCode": {
-                    "type": "string"
-                },
-                "instanceEndAt": {
-                    "type": "string"
-                },
-                "instanceStartAt": {
-                    "type": "string"
-                },
-                "isOnePerAccount": {
+                "isUpdateEvent": {
                     "type": "boolean"
                 },
-                "isOnePerTicket": {
-                    "type": "boolean"
+                "location": {
+                    "$ref": "#/definitions/models.EventLocation"
                 },
-                "isUpdateEventTime": {
-                    "type": "boolean"
-                },
-                "locationName": {
+                "parentSessionCode": {
                     "type": "string"
                 },
-                "locationType": {
+                "questions": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/models.BulkCreateFormQuestionRequest"
+                    }
+                },
+                "schedule": {
+                    "$ref": "#/definitions/models.EventSchedule"
+                },
+                "sessionCapacity": {
+                    "$ref": "#/definitions/models.SessionCapacity"
+                },
+                "sessionRules": {
+                    "$ref": "#/definitions/models.SessionRules"
+                },
+                "sessionType": {
                     "type": "string",
                     "enum": [
-                        "online",
-                        "onsite",
-                        "hybrid"
+                        "service",
+                        "class",
+                        "track",
+                        "breakout",
+                        "workshop",
+                        "general",
+                        "kids",
+                        "youth",
+                        "teen",
+                        "adult"
                     ]
-                },
-                "maxPerTransaction": {
-                    "type": "integer"
-                },
-                "registerEndAt": {
-                    "type": "string"
-                },
-                "registerFlow": {
-                    "type": "string",
-                    "enum": [
-                        "personal-qr",
-                        "event-qr",
-                        "both-qr",
-                        "none"
-                    ]
-                },
-                "registerStartAt": {
-                    "type": "string"
-                },
-                "title": {
-                    "type": "string"
-                },
-                "totalSeats": {
-                    "type": "integer"
-                }
-            }
-        },
-        "models.CreateInstanceRequest": {
-            "type": "object",
-            "required": [
-                "allowVerifyAt",
-                "disallowVerifyAt",
-                "instanceEndAt",
-                "instanceStartAt",
-                "locationName",
-                "locationType",
-                "registerEndAt",
-                "registerStartAt",
-                "title"
-            ],
-            "properties": {
-                "allowVerifyAt": {
-                    "type": "string"
-                },
-                "checkType": {
-                    "type": "string",
-                    "enum": [
-                        "check-in",
-                        "check-out",
-                        "both",
-                        "none"
-                    ]
-                },
-                "description": {
-                    "type": "string"
-                },
-                "disallowVerifyAt": {
-                    "type": "string"
-                },
-                "instanceEndAt": {
-                    "type": "string"
-                },
-                "instanceStartAt": {
-                    "type": "string"
-                },
-                "isOnePerAccount": {
-                    "type": "boolean"
-                },
-                "isOnePerTicket": {
-                    "type": "boolean"
-                },
-                "locationName": {
-                    "type": "string"
-                },
-                "locationType": {
-                    "type": "string",
-                    "enum": [
-                        "online",
-                        "onsite",
-                        "hybrid"
-                    ]
-                },
-                "maxPerTransaction": {
-                    "type": "integer"
-                },
-                "registerEndAt": {
-                    "type": "string"
-                },
-                "registerFlow": {
-                    "type": "string",
-                    "enum": [
-                        "personal-qr",
-                        "event-qr",
-                        "both-qr",
-                        "none"
-                    ]
-                },
-                "registerStartAt": {
-                    "type": "string"
-                },
-                "title": {
-                    "type": "string"
-                },
-                "totalSeats": {
-                    "type": "integer"
-                }
-            }
-        },
-        "models.CreateInstanceResponse": {
-            "type": "object",
-            "properties": {
-                "allowVerifyAt": {
-                    "type": "string"
-                },
-                "checkType": {
-                    "type": "string"
-                },
-                "description": {
-                    "type": "string"
-                },
-                "disallowVerifyAt": {
-                    "type": "string"
-                },
-                "eventCode": {
-                    "type": "string"
-                },
-                "instanceCode": {
-                    "type": "string"
-                },
-                "instanceEndAt": {
-                    "type": "string"
-                },
-                "instanceStartAt": {
-                    "type": "string"
-                },
-                "isOnePerAccount": {
-                    "type": "boolean"
-                },
-                "isOnePerTicket": {
-                    "type": "boolean"
-                },
-                "locationName": {
-                    "type": "string"
-                },
-                "locationType": {
-                    "type": "string"
-                },
-                "maxPerTransaction": {
-                    "type": "integer"
-                },
-                "registerEndAt": {
-                    "type": "string"
-                },
-                "registerFlow": {
-                    "type": "string"
-                },
-                "registerStartAt": {
-                    "type": "string"
                 },
                 "status": {
                     "type": "string",
-                    "example": "active"
+                    "enum": [
+                        "draft",
+                        "active",
+                        "inactive"
+                    ]
+                },
+                "times": {
+                    "$ref": "#/definitions/models.SessionTimeConfiguration"
                 },
                 "title": {
                     "type": "string"
-                },
-                "totalSeats": {
-                    "type": "integer"
-                },
-                "type": {
-                    "type": "string"
                 }
             }
         },
-        "models.CreateOtherEventRegistrationRecordRequest": {
-            "type": "object",
-            "required": [
-                "name"
-            ],
-            "properties": {
-                "name": {
-                    "type": "string"
-                }
-            }
-        },
-        "models.CreateOtherEventRegistrationRecordResponse": {
+        "models.CreateEventSessionResponse": {
             "type": "object",
             "properties": {
-                "id": {
-                    "type": "string"
+                "checkInConfig": {
+                    "$ref": "#/definitions/models.SessionCheckInConfig"
                 },
-                "name": {
-                    "type": "string"
+                "checkOutConfig": {
+                    "$ref": "#/definitions/models.SessionCheckOutConfig"
+                },
+                "code": {
+                    "type": "string",
+                    "example": "event-code"
+                },
+                "description": {
+                    "type": "string",
+                    "example": "Event Description"
+                },
+                "eventCode": {
+                    "type": "string",
+                    "example": "event-code"
+                },
+                "geolocation": {
+                    "$ref": "#/definitions/models.GeolocationConfiguration"
+                },
+                "location": {
+                    "$ref": "#/definitions/models.EventLocation"
+                },
+                "parentSessionCode": {
+                    "type": "string",
+                    "example": "event-code"
+                },
+                "questions": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/models.FormQuestionResponse"
+                    }
+                },
+                "schedule": {
+                    "$ref": "#/definitions/models.EventSchedule"
+                },
+                "sessionCapacity": {
+                    "$ref": "#/definitions/models.SessionCapacity"
+                },
+                "sessionRules": {
+                    "$ref": "#/definitions/models.SessionRules"
+                },
+                "sessionType": {
+                    "type": "string",
+                    "example": "service"
                 },
                 "status": {
-                    "type": "string"
+                    "type": "string",
+                    "example": "draft"
+                },
+                "times": {
+                    "$ref": "#/definitions/models.SessionTimeConfiguration"
+                },
+                "title": {
+                    "type": "string",
+                    "example": "Event Title"
                 },
                 "type": {
                     "type": "string"
@@ -3202,137 +2691,485 @@ const docTemplate = `{
                 }
             }
         },
-        "models.GetAllEventsResponse": {
+        "models.EventAccess": {
             "type": "object",
+            "required": [
+                "accessLevel"
+            ],
             "properties": {
+                "accessLevel": {
+                    "type": "string",
+                    "enum": [
+                        "public",
+                        "private"
+                    ]
+                },
                 "allowedCampuses": {
                     "type": "array",
+                    "maxItems": 50,
                     "items": {
                         "type": "string"
                     }
                 },
-                "allowedFor": {
-                    "type": "string",
-                    "example": "public"
+                "allowedCommunityIds": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
                 },
                 "allowedRoles": {
                     "type": "array",
+                    "maxItems": 20,
                     "items": {
                         "type": "string"
                     }
                 },
-                "allowedUsers": {
+                "allowedUserTypes": {
+                    "type": "array",
+                    "maxItems": 20,
+                    "items": {
+                        "type": "string"
+                    }
+                }
+            }
+        },
+        "models.EventImages": {
+            "type": "object",
+            "properties": {
+                "bannerLink": {
+                    "type": "string",
+                    "maxLength": 2048,
+                    "example": "https://example.com/banner.jpg"
+                },
+                "imageLinks": {
+                    "type": "array",
+                    "maxItems": 10,
+                    "items": {
+                        "type": "string"
+                    },
+                    "example": [
+                        "https://example.com/image1.jpg",
+                        "https://example.com/image2.jpg"
+                    ]
+                }
+            }
+        },
+        "models.EventLocation": {
+            "type": "object",
+            "required": [
+                "locationType",
+                "locationVisibility"
+            ],
+            "properties": {
+                "clickToAction": {
+                    "$ref": "#/definitions/models.ClickToAction"
+                },
+                "locationDetails": {
+                    "type": "string",
+                    "maxLength": 1000
+                },
+                "locationType": {
+                    "type": "string",
+                    "enum": [
+                        "online",
+                        "offline",
+                        "hybrid"
+                    ]
+                },
+                "locationVisibility": {
+                    "type": "string",
+                    "enum": [
+                        "pre-registration",
+                        "post-registration",
+                        "all"
+                    ]
+                },
+                "physicalAddress": {
+                    "type": "string",
+                    "maxLength": 500,
+                    "minLength": 1
+                },
+                "physicalPlaceName": {
+                    "type": "string",
+                    "maxLength": 255,
+                    "minLength": 1
+                },
+                "virtualLink": {
+                    "type": "string",
+                    "maxLength": 2048
+                },
+                "virtualPlatform": {
+                    "type": "string",
+                    "maxLength": 50,
+                    "minLength": 1
+                }
+            }
+        },
+        "models.EventNotification": {
+            "type": "object",
+            "properties": {
+                "notificationChannels": {
+                    "type": "array",
+                    "maxItems": 5,
+                    "items": {
+                        "type": "string"
+                    },
+                    "example": [
+                        "email",
+                        "whatsapp"
+                    ]
+                },
+                "reminderConfig": {
+                    "$ref": "#/definitions/models.ReminderConfig"
+                }
+            }
+        },
+        "models.EventOrganizer": {
+            "type": "object",
+            "required": [
+                "organizerCommunityIds"
+            ],
+            "properties": {
+                "contactCommunityIds": {
                     "type": "array",
                     "items": {
                         "type": "string"
-                    }
+                    },
+                    "example": [
+                        "550e8400-e29b-41d4-a716-446655440001"
+                    ]
                 },
-                "availabilityStatus": {
-                    "type": "string",
-                    "example": "available"
-                },
-                "code": {
-                    "type": "string",
-                    "example": "2024-HOMEBASE"
-                },
-                "eventEndAt": {
-                    "type": "string",
-                    "example": ""
-                },
-                "eventStartAt": {
-                    "type": "string",
-                    "example": ""
-                },
-                "imagesLinks": {
+                "organizerCommunityIds": {
                     "type": "array",
                     "items": {
                         "type": "string"
-                    }
-                },
+                    },
+                    "example": [
+                        "550e8400-e29b-41d4-a716-446655440000"
+                    ]
+                }
+            }
+        },
+        "models.EventRecurrence": {
+            "type": "object",
+            "properties": {
                 "isRecurring": {
                     "type": "boolean",
                     "example": true
                 },
-                "locationType": {
+                "recurrenceEndDate": {
                     "type": "string",
-                    "example": "offline"
+                    "example": "2027-12-31T23:59:59Z"
                 },
-                "recurrence": {
-                    "type": "string",
-                    "example": "monthly"
-                },
-                "registerEndAt": {
-                    "type": "string",
-                    "example": ""
-                },
-                "registerStartAt": {
-                    "type": "string",
-                    "example": ""
-                },
-                "title": {
-                    "type": "string",
-                    "example": "Homebase"
-                },
-                "topics": {
-                    "type": "array",
-                    "items": {
-                        "type": "string"
-                    }
-                },
-                "totalRemainingSeats": {
-                    "type": "integer",
-                    "example": 2
-                },
-                "type": {
-                    "type": "string",
-                    "example": "Event"
+                "recurrencePattern": {
+                    "$ref": "#/definitions/models.RecurrencePattern"
                 }
             }
         },
-        "models.GetAllRegisteredUserResponse": {
+        "models.EventSchedule": {
+            "type": "object",
+            "required": [
+                "endAt",
+                "startAt"
+            ],
+            "properties": {
+                "endAt": {
+                    "type": "string",
+                    "example": "2026-12-25T11:00:00Z"
+                },
+                "startAt": {
+                    "type": "string",
+                    "example": "2026-12-25T09:00:00Z"
+                },
+                "timezone": {
+                    "type": "string",
+                    "example": "Asia/Jakarta"
+                }
+            }
+        },
+        "models.EventSession": {
             "type": "object",
             "properties": {
+                "capacity": {
+                    "description": "Capacity",
+                    "type": "integer"
+                },
+                "check_in_allow_late": {
+                    "description": "Allow check-in after window?",
+                    "type": "boolean"
+                },
+                "check_in_enabled": {
+                    "description": "Check-in Configuration (Detailed)",
+                    "type": "boolean"
+                },
+                "check_in_end_at": {
+                    "type": "string"
+                },
+                "check_in_late_threshold": {
+                    "description": "Minutes to mark as \"late\"",
+                    "type": "integer"
+                },
+                "check_in_required": {
+                    "description": "Is check-in mandatory?",
+                    "type": "boolean"
+                },
+                "check_in_start_at": {
+                    "type": "string"
+                },
+                "check_out_allow_late": {
+                    "description": "Allow check-out after window?",
+                    "type": "boolean"
+                },
+                "check_out_enabled": {
+                    "description": "Check-out Configuration (Detailed)",
+                    "type": "boolean"
+                },
+                "check_out_end_at": {
+                    "type": "string"
+                },
+                "check_out_late_threshold": {
+                    "description": "Minutes to mark as \"late checkout\"",
+                    "type": "integer"
+                },
+                "check_out_required": {
+                    "description": "Is check-out mandatory?",
+                    "type": "boolean"
+                },
+                "check_out_start_at": {
+                    "type": "string"
+                },
                 "code": {
+                    "type": "string"
+                },
+                "created_at": {
+                    "type": "string"
+                },
+                "cta_link": {
+                    "description": "CTA button link",
+                    "type": "string"
+                },
+                "cta_text": {
+                    "description": "CTA button text",
+                    "type": "string"
+                },
+                "deleted_at": {
                     "type": "string"
                 },
                 "description": {
                     "type": "string"
                 },
-                "endAt": {
+                "end_at": {
                     "type": "string"
                 },
-                "imageLinks": {
+                "eventCode": {
+                    "type": "string"
+                },
+                "geolocation": {
+                    "type": "object"
+                },
+                "id": {
+                    "type": "integer"
+                },
+                "identifier_config": {
+                    "description": "Identifier Configuration (JSONB for flexibility)\nSeparate configs for primary registrant and additional registrants",
+                    "type": "object"
+                },
+                "location_details": {
+                    "description": "Additional location info",
+                    "type": "string"
+                },
+                "location_type": {
+                    "description": "Location Information",
+                    "type": "string"
+                },
+                "location_visibility": {
+                    "description": "pre-registration, post-registration, all",
+                    "type": "string"
+                },
+                "max_age": {
+                    "type": "integer"
+                },
+                "max_registrations_per_user": {
+                    "description": "How many people a user can register (including self)",
+                    "type": "integer"
+                },
+                "min_age": {
+                    "description": "Age/Eligibility (for kids, youth, etc.)",
+                    "type": "integer"
+                },
+                "one_session_per_event": {
+                    "description": "If true, user can only register for ONE session in this event (example: if event has 4 sessions, user can only register for 1 session)",
+                    "type": "boolean"
+                },
+                "parentSessionCode": {
+                    "description": "NULL = top-level session",
+                    "type": "string"
+                },
+                "physical_address": {
+                    "description": "Physical address",
+                    "type": "string"
+                },
+                "physical_place_name": {
+                    "description": "Place name",
+                    "type": "string"
+                },
+                "prerequisites": {
+                    "type": "string"
+                },
+                "registration_end_at": {
+                    "type": "string"
+                },
+                "registration_methods": {
                     "type": "array",
                     "items": {
                         "type": "string"
                     }
                 },
-                "instances": {
-                    "type": "array",
-                    "items": {
-                        "$ref": "#/definitions/models.InstancesForRegisteredRecordsResponse"
-                    }
-                },
-                "locationName": {
+                "registration_mode": {
+                    "description": "Group/Family Registration Config",
                     "type": "string"
                 },
-                "locationType": {
+                "registration_start_at": {
+                    "description": "Registration Window",
                     "type": "string"
                 },
-                "startAt": {
+                "require_approval": {
+                    "description": "Registration Rules",
+                    "type": "boolean"
+                },
+                "sessionType": {
+                    "type": "string"
+                },
+                "start_at": {
+                    "description": "Scheduling",
                     "type": "string"
                 },
                 "status": {
+                    "description": "Status",
                     "type": "string"
                 },
-                "termsAndConditions": {
+                "timezone": {
+                    "description": "IANA timezone (e.g., \"Asia/Jakarta\")",
                     "type": "string"
                 },
                 "title": {
                     "type": "string"
                 },
+                "updated_at": {
+                    "type": "string"
+                },
+                "virtual_link": {
+                    "description": "Meeting link",
+                    "type": "string"
+                },
+                "virtual_platform": {
+                    "description": "Meeting platform: YouTube, Zoom, etc",
+                    "type": "string"
+                },
+                "waitlist_capacity": {
+                    "type": "integer"
+                },
+                "waitlist_enabled": {
+                    "type": "boolean"
+                }
+            }
+        },
+        "models.EventTemplate": {
+            "type": "object",
+            "properties": {
+                "isTemplate": {
+                    "type": "boolean",
+                    "example": false
+                },
+                "seriesId": {
+                    "type": "string",
+                    "example": "550e8400-e29b-41d4-a716-446655440001"
+                },
+                "templateId": {
+                    "type": "string",
+                    "example": "550e8400-e29b-41d4-a716-446655440000"
+                }
+            }
+        },
+        "models.FormQuestionResponse": {
+            "type": "object",
+            "properties": {
+                "code": {
+                    "type": "string"
+                },
+                "correctAnswer": {
+                    "type": "string"
+                },
+                "displayOrder": {
+                    "type": "integer"
+                },
+                "formCode": {
+                    "type": "string"
+                },
+                "options": {
+                    "$ref": "#/definitions/models.QuestionOptions"
+                },
+                "questionType": {
+                    "type": "string"
+                },
+                "requiredFor": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "rules": {
+                    "$ref": "#/definitions/models.QuestionValidationRules"
+                },
+                "text": {
+                    "type": "string"
+                },
                 "type": {
                     "type": "string"
+                },
+                "visibleFor": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                }
+            }
+        },
+        "models.GeolocationConfiguration": {
+            "type": "object",
+            "required": [
+                "enabled",
+                "errorAction",
+                "latitude",
+                "longitude",
+                "radius"
+            ],
+            "properties": {
+                "enabled": {
+                    "type": "boolean"
+                },
+                "errorAction": {
+                    "type": "string",
+                    "enum": [
+                        "reject",
+                        "allow",
+                        "warn"
+                    ]
+                },
+                "latitude": {
+                    "type": "number"
+                },
+                "longitude": {
+                    "type": "number"
+                },
+                "qrValidationRules": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/models.QRValidationRule"
+                    }
+                },
+                "radius": {
+                    "type": "number"
                 }
             }
         },
@@ -3422,332 +3259,6 @@ const docTemplate = `{
                     "items": {
                         "type": "string"
                     }
-                }
-            }
-        },
-        "models.GetEventByCodeResponse": {
-            "type": "object",
-            "properties": {
-                "allowedCampuses": {
-                    "type": "array",
-                    "items": {
-                        "type": "string"
-                    }
-                },
-                "allowedFor": {
-                    "type": "string",
-                    "example": "public"
-                },
-                "allowedRoles": {
-                    "type": "array",
-                    "items": {
-                        "type": "string"
-                    }
-                },
-                "allowedUsers": {
-                    "type": "array",
-                    "items": {
-                        "type": "string"
-                    }
-                },
-                "availabilityStatus": {
-                    "type": "string",
-                    "example": "available"
-                },
-                "code": {
-                    "type": "string",
-                    "example": "bhfe382"
-                },
-                "description": {
-                    "type": "string",
-                    "example": "This event blabla"
-                },
-                "eventEndAt": {
-                    "type": "string",
-                    "example": ""
-                },
-                "eventStartAt": {
-                    "type": "string",
-                    "example": ""
-                },
-                "imageLinks": {
-                    "type": "array",
-                    "items": {
-                        "type": "string"
-                    }
-                },
-                "instances": {
-                    "type": "array",
-                    "items": {
-                        "$ref": "#/definitions/models.GetInstancesByEventCodeResponse"
-                    }
-                },
-                "isRecurring": {
-                    "type": "boolean",
-                    "example": true
-                },
-                "locationName": {
-                    "type": "string",
-                    "example": "PIOT 6 Lt. 6"
-                },
-                "locationType": {
-                    "type": "string",
-                    "example": "offline"
-                },
-                "recurrence": {
-                    "type": "string",
-                    "example": "monthly"
-                },
-                "registerEndAt": {
-                    "type": "string",
-                    "example": ""
-                },
-                "registerStartAt": {
-                    "type": "string",
-                    "example": ""
-                },
-                "termsAndConditions": {
-                    "type": "string",
-                    "example": "This event blabla"
-                },
-                "title": {
-                    "type": "string",
-                    "example": "Homebase"
-                },
-                "topics": {
-                    "type": "array",
-                    "items": {
-                        "type": "string"
-                    }
-                },
-                "type": {
-                    "type": "string",
-                    "example": "event"
-                }
-            }
-        },
-        "models.GetEventSummaryResponse": {
-            "type": "object",
-            "properties": {
-                "allowedCampuses": {
-                    "type": "array",
-                    "items": {
-                        "type": "string"
-                    },
-                    "example": [
-                        "BKS",
-                        " BKT"
-                    ]
-                },
-                "allowedFor": {
-                    "type": "string",
-                    "example": "volunteer"
-                },
-                "allowedRoles": {
-                    "type": "array",
-                    "items": {
-                        "type": "string"
-                    },
-                    "example": [
-                        "event-view-volunteer",
-                        " event-edit-volunteer"
-                    ]
-                },
-                "allowedUsers": {
-                    "type": "array",
-                    "items": {
-                        "type": "string"
-                    },
-                    "example": [
-                        "user-1",
-                        " user-2"
-                    ]
-                },
-                "code": {
-                    "type": "string",
-                    "example": "event-1"
-                },
-                "status": {
-                    "type": "string",
-                    "example": "active"
-                },
-                "title": {
-                    "type": "string",
-                    "example": "Event 1"
-                },
-                "totalBookedSeats": {
-                    "type": "integer",
-                    "example": 3003
-                },
-                "totalScannedSeats": {
-                    "type": "integer",
-                    "example": 309
-                },
-                "totalUsers": {
-                    "type": "integer",
-                    "example": 309
-                },
-                "type": {
-                    "type": "string",
-                    "example": "event"
-                }
-            }
-        },
-        "models.GetEventTitlesResponse": {
-            "type": "object",
-            "properties": {
-                "code": {
-                    "type": "string",
-                    "example": "event-1"
-                },
-                "title": {
-                    "type": "string",
-                    "example": "Event 1"
-                },
-                "type": {
-                    "type": "string",
-                    "example": "event"
-                }
-            }
-        },
-        "models.GetInstanceSummaryResponse": {
-            "type": "object",
-            "properties": {
-                "attendPercentage": {
-                    "type": "number",
-                    "example": 50
-                },
-                "bookedSeats": {
-                    "type": "integer",
-                    "example": 50
-                },
-                "checkType": {
-                    "type": "string",
-                    "example": "online"
-                },
-                "code": {
-                    "type": "string",
-                    "example": "instance-1"
-                },
-                "eventCode": {
-                    "type": "string",
-                    "example": "event-1"
-                },
-                "maxPerTransaction": {
-                    "type": "integer",
-                    "example": 5
-                },
-                "registerFlow": {
-                    "type": "string",
-                    "example": "online"
-                },
-                "scannedSeats": {
-                    "type": "integer",
-                    "example": 50
-                },
-                "status": {
-                    "type": "string",
-                    "example": "active"
-                },
-                "title": {
-                    "type": "string",
-                    "example": "Instance 1"
-                },
-                "totalRemainingSeats": {
-                    "type": "integer",
-                    "example": 50
-                },
-                "totalSeats": {
-                    "type": "integer",
-                    "example": 100
-                },
-                "type": {
-                    "type": "string",
-                    "example": "instance"
-                }
-            }
-        },
-        "models.GetInstancesByEventCodeResponse": {
-            "type": "object",
-            "properties": {
-                "LocationName": {
-                    "type": "string",
-                    "example": "PIOT 6 Lt. 6"
-                },
-                "allowVerifyAt": {
-                    "type": "string",
-                    "example": ""
-                },
-                "availabilityStatus": {
-                    "type": "string",
-                    "example": "available"
-                },
-                "bookedSeats": {
-                    "type": "integer",
-                    "example": 0
-                },
-                "checkType": {
-                    "type": "string"
-                },
-                "code": {
-                    "type": "string",
-                    "example": "2024-HOMEBASE"
-                },
-                "description": {
-                    "type": "string",
-                    "example": "Homebase"
-                },
-                "disallowVerifyAt": {
-                    "type": "string",
-                    "example": ""
-                },
-                "instanceEndAt": {
-                    "type": "string",
-                    "example": ""
-                },
-                "instanceStartAt": {
-                    "type": "string",
-                    "example": ""
-                },
-                "isOnePerAccount": {
-                    "type": "boolean"
-                },
-                "isOnePerTicket": {
-                    "type": "boolean"
-                },
-                "locationType": {
-                    "type": "string",
-                    "example": "offline"
-                },
-                "maxPerTransaction": {
-                    "type": "integer"
-                },
-                "registerEndAt": {
-                    "type": "string",
-                    "example": ""
-                },
-                "registerFlow": {
-                    "type": "string"
-                },
-                "registerStartAt": {
-                    "type": "string",
-                    "example": ""
-                },
-                "title": {
-                    "type": "string",
-                    "example": "Homebase"
-                },
-                "totalRemainingSeats": {
-                    "type": "integer",
-                    "example": 0
-                },
-                "totalSeats": {
-                    "type": "integer",
-                    "example": 0
-                },
-                "type": {
-                    "type": "string",
-                    "example": "eventInstance"
                 }
             }
         },
@@ -3947,62 +3458,10 @@ const docTemplate = `{
                 }
             }
         },
-        "models.InstancesForRegisteredRecordsResponse": {
-            "type": "object",
-            "properties": {
-                "code": {
-                    "type": "string"
-                },
-                "description": {
-                    "type": "string"
-                },
-                "instanceEndAt": {
-                    "type": "string"
-                },
-                "instanceStartAt": {
-                    "type": "string"
-                },
-                "locationName": {
-                    "type": "string"
-                },
-                "locationType": {
-                    "type": "string"
-                },
-                "registrants": {
-                    "type": "array",
-                    "items": {
-                        "$ref": "#/definitions/models.UserRegisteredRecordsResponse"
-                    }
-                },
-                "status": {
-                    "type": "string"
-                },
-                "title": {
-                    "type": "string"
-                },
-                "type": {
-                    "type": "string"
-                }
-            }
-        },
         "models.List": {
             "type": "object",
             "properties": {
                 "data": {},
-                "totalRows": {
-                    "type": "integer"
-                },
-                "type": {
-                    "type": "string",
-                    "example": "collection"
-                }
-            }
-        },
-        "models.ListWithDetail": {
-            "type": "object",
-            "properties": {
-                "data": {},
-                "details": {},
                 "totalRows": {
                     "type": "integer"
                 },
@@ -4132,6 +3591,166 @@ const docTemplate = `{
                 }
             }
         },
+        "models.QRValidationRule": {
+            "type": "object",
+            "required": [
+                "qrType"
+            ],
+            "properties": {
+                "allowOverride": {
+                    "type": "boolean"
+                },
+                "qrType": {
+                    "type": "string",
+                    "enum": [
+                        "personal-qr",
+                        "event-qr",
+                        "session-qr",
+                        "registration-qr"
+                    ]
+                },
+                "required": {
+                    "type": "boolean"
+                }
+            }
+        },
+        "models.QuestionOptions": {
+            "type": "object",
+            "properties": {
+                "choices": {
+                    "type": "array",
+                    "minItems": 1,
+                    "items": {
+                        "type": "string"
+                    }
+                }
+            }
+        },
+        "models.QuestionValidationRules": {
+            "type": "object",
+            "properties": {
+                "maxLength": {
+                    "type": "integer"
+                },
+                "maxSelection": {
+                    "type": "integer"
+                },
+                "maxValue": {
+                    "type": "integer"
+                },
+                "minLength": {
+                    "type": "integer"
+                },
+                "minSelection": {
+                    "type": "integer"
+                },
+                "minValue": {
+                    "type": "integer"
+                },
+                "notAfter": {
+                    "type": "string"
+                },
+                "notBefore": {
+                    "description": "\"today\" or a date like \"2025-10-01\"",
+                    "type": "string"
+                },
+                "pattern": {
+                    "description": "Regex applied to text/phone/email answers",
+                    "type": "string"
+                }
+            }
+        },
+        "models.RecurrencePattern": {
+            "type": "object",
+            "required": [
+                "frequency"
+            ],
+            "properties": {
+                "additionalDates": {
+                    "description": "Extra dates to include (like iCalendar RDATE)",
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "count": {
+                    "description": "End condition (use either Count OR EndDate, not both)",
+                    "type": "integer",
+                    "minimum": 1
+                },
+                "dayOfMonth": {
+                    "description": "e.g., 15 = \"15th of month\"",
+                    "type": "integer",
+                    "maximum": 31,
+                    "minimum": 1
+                },
+                "endDate": {
+                    "description": "End by this date",
+                    "type": "string"
+                },
+                "excludeDates": {
+                    "description": "Optional: Exception and additional dates",
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "frequency": {
+                    "description": "Basic recurrence",
+                    "type": "string",
+                    "enum": [
+                        "daily",
+                        "weekly",
+                        "monthly",
+                        "yearly"
+                    ]
+                },
+                "interval": {
+                    "description": "Every N days/weeks/months (default: 1)",
+                    "type": "integer",
+                    "minimum": 1
+                },
+                "monthlyPattern": {
+                    "description": "Monthly recurrence: choose ONE of these patterns",
+                    "type": "string",
+                    "enum": [
+                        "day_of_month",
+                        "nth_weekday"
+                    ]
+                },
+                "nthWeekday": {
+                    "description": "e.g., \"first\"",
+                    "type": "string",
+                    "enum": [
+                        "first",
+                        "second",
+                        "third",
+                        "fourth",
+                        "last"
+                    ]
+                },
+                "weekDays": {
+                    "description": "Weekly recurrence: which days of the week",
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "weekday": {
+                    "description": "e.g., \"sunday\"",
+                    "type": "string",
+                    "enum": [
+                        "monday",
+                        "tuesday",
+                        "wednesday",
+                        "thursday",
+                        "friday",
+                        "saturday",
+                        "sunday"
+                    ]
+                }
+            }
+        },
         "models.RelationUpdateProfile": {
             "type": "object",
             "required": [
@@ -4152,6 +3771,49 @@ const docTemplate = `{
                 }
             }
         },
+        "models.ReminderConfig": {
+            "type": "object",
+            "properties": {
+                "enabled": {
+                    "type": "boolean",
+                    "example": true
+                },
+                "intervals": {
+                    "type": "array",
+                    "maxItems": 10,
+                    "minItems": 1,
+                    "items": {
+                        "type": "string"
+                    },
+                    "example": [
+                        "24h",
+                        "1h"
+                    ]
+                }
+            }
+        },
+        "models.Response": {
+            "type": "object",
+            "properties": {
+                "code": {
+                    "type": "integer"
+                },
+                "data": {},
+                "errors": {},
+                "message": {
+                    "type": "string"
+                },
+                "metadata": {
+                    "$ref": "#/definitions/models.Metadata"
+                },
+                "pagination": {
+                    "$ref": "#/definitions/models.CursorInfo"
+                },
+                "status": {
+                    "type": "string"
+                }
+            }
+        },
         "models.RoleResponse": {
             "type": "object",
             "properties": {
@@ -4166,6 +3828,163 @@ const docTemplate = `{
                 "type": {
                     "type": "string",
                     "example": "role"
+                }
+            }
+        },
+        "models.SessionCapacity": {
+            "type": "object",
+            "required": [
+                "capacity"
+            ],
+            "properties": {
+                "capacity": {
+                    "type": "integer"
+                },
+                "waitlistCapacity": {
+                    "type": "integer"
+                },
+                "waitlistEnabled": {
+                    "type": "boolean"
+                }
+            }
+        },
+        "models.SessionCheckInConfig": {
+            "type": "object",
+            "properties": {
+                "allowLate": {
+                    "description": "Allow check-in after window?",
+                    "type": "boolean"
+                },
+                "enabled": {
+                    "description": "Is check-in feature enabled?",
+                    "type": "boolean"
+                },
+                "endAt": {
+                    "description": "Check-in end time",
+                    "type": "string"
+                },
+                "latePolicy": {
+                    "description": "How to handle late check-ins: reject (hard cutoff), warn (accept but flag), allow (accept silently)",
+                    "type": "string",
+                    "enum": [
+                        "reject",
+                        "warn",
+                        "allow"
+                    ]
+                },
+                "lateThreshold": {
+                    "description": "Minutes to mark as \"late\"",
+                    "type": "integer",
+                    "minimum": 0
+                },
+                "required": {
+                    "description": "Is check-in mandatory?",
+                    "type": "boolean"
+                },
+                "startAt": {
+                    "description": "Check-in start time",
+                    "type": "string"
+                },
+                "trackLate": {
+                    "description": "Whether to track/flag late check-ins",
+                    "type": "boolean"
+                }
+            }
+        },
+        "models.SessionCheckOutConfig": {
+            "type": "object",
+            "properties": {
+                "allowLate": {
+                    "description": "Allow check-out after window?",
+                    "type": "boolean"
+                },
+                "enabled": {
+                    "description": "Is check-out feature enabled?",
+                    "type": "boolean"
+                },
+                "endAt": {
+                    "description": "Check-out end time",
+                    "type": "string"
+                },
+                "latePolicy": {
+                    "description": "How to handle late check-outs: reject (hard cutoff), warn (accept but flag), allow (accept silently)",
+                    "type": "string",
+                    "enum": [
+                        "reject",
+                        "warn",
+                        "allow"
+                    ]
+                },
+                "lateThreshold": {
+                    "description": "Minutes to mark as \"late checkout\"",
+                    "type": "integer",
+                    "minimum": 0
+                },
+                "required": {
+                    "description": "Is check-out mandatory?",
+                    "type": "boolean"
+                },
+                "startAt": {
+                    "description": "Check-out start time",
+                    "type": "string"
+                },
+                "trackLate": {
+                    "description": "Whether to track/flag late check-outs",
+                    "type": "boolean"
+                }
+            }
+        },
+        "models.SessionRules": {
+            "type": "object",
+            "required": [
+                "registrationMode"
+            ],
+            "properties": {
+                "maxAge": {
+                    "type": "integer"
+                },
+                "maxRegistrationsPerUser": {
+                    "type": "integer"
+                },
+                "minAge": {
+                    "type": "integer"
+                },
+                "oneSessionPerEvent": {
+                    "type": "boolean"
+                },
+                "prerequisites": {
+                    "type": "string"
+                },
+                "registrationMethods": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "registrationMode": {
+                    "type": "string",
+                    "enum": [
+                        "self_only",
+                        "self_and_registered",
+                        "self_and_others"
+                    ]
+                },
+                "requireApproval": {
+                    "type": "boolean"
+                }
+            }
+        },
+        "models.SessionTimeConfiguration": {
+            "type": "object",
+            "properties": {
+                "checkIn": {
+                    "$ref": "#/definitions/models.SessionCheckInConfig"
+                },
+                "checkOut": {
+                    "$ref": "#/definitions/models.SessionCheckOutConfig"
+                },
+                "registration": {
+                    "$ref": "#/definitions/models.EventSchedule"
                 }
             }
         },
@@ -4355,74 +4174,6 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "type": {
-                    "type": "string"
-                }
-            }
-        },
-        "models.UpdateRegistrationStatusRequest": {
-            "type": "object",
-            "required": [
-                "status",
-                "updatedAt"
-            ],
-            "properties": {
-                "reason": {
-                    "type": "string"
-                },
-                "status": {
-                    "type": "string",
-                    "enum": [
-                        "success",
-                        "cancelled",
-                        "permit"
-                    ],
-                    "example": "success"
-                },
-                "updatedAt": {
-                    "type": "string"
-                }
-            }
-        },
-        "models.UpdateRegistrationStatusResponse": {
-            "type": "object",
-            "properties": {
-                "communityId": {
-                    "type": "string"
-                },
-                "eventCode": {
-                    "type": "string"
-                },
-                "eventTitle": {
-                    "type": "string"
-                },
-                "identifier": {
-                    "type": "string"
-                },
-                "instanceCode": {
-                    "type": "string"
-                },
-                "instanceTitle": {
-                    "type": "string"
-                },
-                "name": {
-                    "type": "string"
-                },
-                "reason": {
-                    "type": "string"
-                },
-                "registrationId": {
-                    "type": "string"
-                },
-                "status": {
-                    "type": "string"
-                },
-                "type": {
-                    "type": "string"
-                },
-                "updatedBy": {
-                    "type": "string"
-                },
-                "verifiedAt": {
                     "type": "string"
                 }
             }
@@ -4744,47 +4495,6 @@ const docTemplate = `{
                     "items": {
                         "type": "string"
                     }
-                }
-            }
-        },
-        "models.UserRegisteredRecordsResponse": {
-            "type": "object",
-            "properties": {
-                "communityId": {
-                    "type": "string"
-                },
-                "communityIdOrigin": {
-                    "type": "string"
-                },
-                "id": {
-                    "type": "string"
-                },
-                "identifier": {
-                    "type": "string"
-                },
-                "identifierOrigin": {
-                    "type": "string"
-                },
-                "isPersonalQr": {
-                    "type": "boolean"
-                },
-                "name": {
-                    "type": "string"
-                },
-                "registeredAt": {
-                    "type": "string"
-                },
-                "registrationStatus": {
-                    "type": "string"
-                },
-                "type": {
-                    "type": "string"
-                },
-                "updatedBy": {
-                    "type": "string"
-                },
-                "verifiedAt": {
-                    "type": "string"
                 }
             }
         },
