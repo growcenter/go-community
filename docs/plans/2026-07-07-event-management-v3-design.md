@@ -160,6 +160,7 @@ erDiagram
 Notes:
 
 - `attendance_logs` is the **append-only audit truth** — never updated, never deleted. `registration_attendees.status` is the convenient projection derived from it.
+- **All four time windows are per-session**: event dates (`start_at`/`end_at`), registration window (`register_start_at`/`register_end_at`), and check-in/verification window (`checkin_open_at`/`checkin_close_at`). The event's overall period is derived from its sessions (earliest start → latest end), never stored separately.
 - Every attendee gets their **own row and own QR**, even inside one party — individual door verification always works.
 - All v3 tables are new; v2 tables (`events`, `event_instances`, `event_registration_records`, `event_questions`) are untouched. v3 table names carry no prefix collision because the v2 names differ (`event_sessions` vs `event_instances`, `registrations` vs `event_registration_records`).
 
@@ -197,18 +198,31 @@ Semantics: `everyone` = any logged-in user (guests can view but must sign in to 
     "fields": "all"
   },
   "form": [
-    { "key": "name",  "type": "name",  "label": "Full name", "required": true },
-    { "key": "phone", "type": "phone", "label": "Phone",     "required": false },
-    { "key": "nik",   "type": "nik",   "label": "NIK",       "required": false },
+    { "key": "name",  "type": "name",  "label": "Full name", "required": true,
+      "answered_by": "everyone" },
+    { "key": "phone", "type": "phone", "label": "Phone", "required": false,
+      "answered_by": "primary" },
+    { "key": "nik",   "type": "nik",   "label": "NIK", "required": false,
+      "answered_by": "primary" },
     { "key": "diet",  "type": "select", "label": "Dietary needs",
       "options": ["none", "vegetarian", "allergy"], "required": true,
-      "ask_companions": true },
+      "answered_by": "everyone" },
+    { "key": "child_consent", "type": "checkbox", "label": "Guardian consent",
+      "required": true, "answered_by": "companions" },
     { "key": "allergy_detail", "type": "text", "label": "Describe your allergy",
-      "required": true, "ask_companions": true,
+      "required": true, "answered_by": "everyone",
       "show_if": { "field": "diet", "op": "eq", "value": "allergy" } }
   ]
 }
 ```
+
+**Who answers each field — `answered_by`.** Every field independently declares its audience:
+
+- `primary` (default) — only the registrant answers; companions never see it.
+- `everyone` — the registrant answers it for themselves AND each companion answers it (or the registrant fills it on their behalf).
+- `companions` — only companion seats answer it (e.g., guardian consent for accompanied children); the primary skips it.
+
+`required` applies within that audience only. Combined with `show_if`, this supports shapes like "companions under 12 must have a consent checkbox" without special cases. The party-level `companion_detail: count_only` short-circuits all of it — companions are name-only rows regardless of field audiences.
 
 **Conditional (branching) questions — `show_if`.** Any field may carry a condition tree deciding whether it is shown, evaluated against the same attendee's other answers:
 
@@ -239,7 +253,7 @@ Semantics: `everyone` = any logged-in user (guests can view but must sign in to 
 
 - `mode: none` → **information-only event**: page renders, no registration endpoints active, no counters.
 - `max_per_registration`: `1` = one person only, `N` = party up to N, `0` = unlimited.
-- `companion_detail: full` → each companion answers every form field with `ask_companions: true`; `count_only` → companions are just names (auto-numbered "Guest of X" if blank).
+- `companion_detail: full` → companions answer the form fields whose `answered_by` audience includes them; `count_only` → companions are just names (auto-numbered "Guest of X" if blank).
 - **`name` is the only default field** and the only one that is always present. Email, phone, NIK, and custom questions are each independently togglable for visibility and requiredness.
 - Built-in field types: `name`, `email`, `phone`, `nik`, `text`, `textarea`, `number`, `select`, `multiselect`, `checkbox`, `date`. Typed fields get format validation for free (email format, Indonesian phone format, 16-digit NIK).
 
