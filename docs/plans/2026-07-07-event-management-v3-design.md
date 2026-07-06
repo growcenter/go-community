@@ -83,7 +83,8 @@ erDiagram
         varchar online_url
         int total_seats "0 = unlimited"
         int booked_seats "counter, row-locked"
-        text_arr attendance_modes "personal_qr|session_qr|registration_qr|manual"
+        text_arr attendance_modes "empty = registration-only, no check-in"
+        bool enable_checkout "check-out scanning on/off"
         bool generated_from_recurrence
         varchar status "scheduled|ongoing|completed|cancelled"
         timestamptz created_at
@@ -109,8 +110,9 @@ erDiagram
         varchar name
         jsonb answers "keyed by form field key"
         jsonb answer_revisions "append-only edit history"
-        varchar status "registered|attended|no_show|cancelled"
+        varchar status "registered|attended|checked_out|no_show|cancelled"
         timestamptz attended_at
+        timestamptz checked_out_at
     }
 
     attendance_logs {
@@ -118,6 +120,7 @@ erDiagram
         bigint session_id FK
         uuid attendee_id FK "nullable"
         varchar community_id "nullable"
+        varchar action "checkin|checkout"
         varchar mode "personal_qr|session_qr|registration_qr|manual|headcount"
         varchar checked_by "community_id of actor"
         numeric lat "nullable"
@@ -354,6 +357,20 @@ Rules:
 
 ## 5. Check-in
 
+### 5.0 The attendance spectrum
+
+Attendance tracking is fully optional and independent of registration. The two knobs compose into every level of caring:
+
+| Organizer wants | `registration_config.mode` | `attendance_modes[]` | `enable_checkout` |
+|---|---|---|---|
+| Info page only | `none` | `[]` | — |
+| Who registered, don't care who came | `required`/`optional` | `[]` (registration-only) | — |
+| Who came, no advance registration | `none` | e.g. `[personal_qr, manual]` | false |
+| Who registered AND who came | `required` | any mix | false |
+| Presence duration / guarded pickup | any | any mix | **true** |
+
+With `attendance_modes: []`, no check-in endpoint activates for the session and reports show registration data only.
+
 ### 5.1 The four modes
 
 Any combination can be enabled per session via `attendance_modes[]`. (Whether people can register in advance is a separate knob — `registration_config.mode`; enabling `registration_qr` only makes sense when registration is on.)
@@ -401,6 +418,16 @@ flowchart TD
 - **Idempotency:** re-scanning an attended QR returns the existing state with `ALREADY_CHECKED_IN`; it never double-counts, never errors the scanner flow.
 - **Headcount taps** create a log row with null attendee/community — counted in reports as anonymous walk-ins.
 - **Staff authorization:** staff modes require the caller to be an `event_organizer` of the event (owner/staff) or hold the global event-admin RBAC role (superadmin bypass applies as everywhere).
+
+### 5.3 Check-out (optional, per session)
+
+When `enable_checkout: true`, the same scanning machinery records departures:
+
+- Any enabled mode can perform check-out — the same QR is scanned again with `action: checkout` (the QR `act` endpoint exposes `event_checkout` alongside `event_checkin` once the attendee is checked in).
+- Rules: check-out requires a prior check-in (`NOT_CHECKED_IN` otherwise); idempotent like check-in (re-scan returns existing state); geo policy of the mode applies; logged as `attendance_logs.action = checkout`.
+- Attendee status becomes `checked_out`, `checked_out_at` set. Reports gain checkout time and computed presence duration.
+- Typical uses: kids ministry (guardian's personal QR scanned at pickup — the log records who collected the child), seminars needing real presence duration.
+- When `enable_checkout: false` (default), nothing changes anywhere — no endpoints, no columns in reports.
 
 ---
 
@@ -549,6 +576,7 @@ POST   /v3/qr/act                          perform an action (self check-in via 
 
 ── Staff (event organizer or event-admin RBAC) ─────────────────
 POST   /v3/sessions/{code}/checkin         staff check-in: personal_qr / registration_qr / manual / headcount
+POST   /v3/sessions/{code}/checkout        staff check-out (when enable_checkout; same modes)
 GET    /v3/sessions/{code}/attendees       attendee list, search, status filter, live counts
 GET    /v3/staff/dashboard                 my events, today's sessions, live counts
 GET    /v3/events/{code}/summary           per-session stats
