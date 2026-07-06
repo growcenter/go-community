@@ -108,6 +108,7 @@ erDiagram
         varchar community_id "null = guest companion"
         varchar name
         jsonb answers "keyed by form field key"
+        jsonb answer_revisions "append-only edit history"
         varchar status "registered|attended|no_show|cancelled"
         timestamptz attended_at
     }
@@ -190,16 +191,51 @@ Semantics: `everyone` = any logged-in user (guests can view but must sign in to 
   "max_per_registration": 3,
   "allow_multiple_registrations": false,
   "companion_detail": "full | count_only",
+  "edit_policy": {
+    "enabled": true,
+    "until": "register_end | checkin_open | session_start | never",
+    "fields": "all"
+  },
   "form": [
     { "key": "name",  "type": "name",  "label": "Full name", "required": true },
     { "key": "phone", "type": "phone", "label": "Phone",     "required": false },
     { "key": "nik",   "type": "nik",   "label": "NIK",       "required": false },
     { "key": "diet",  "type": "select", "label": "Dietary needs",
       "options": ["none", "vegetarian", "allergy"], "required": true,
-      "ask_companions": true }
+      "ask_companions": true },
+    { "key": "allergy_detail", "type": "text", "label": "Describe your allergy",
+      "required": true, "ask_companions": true,
+      "show_if": { "field": "diet", "op": "eq", "value": "allergy" } }
   ]
 }
 ```
+
+**Conditional (branching) questions — `show_if`.** Any field may carry a condition tree deciding whether it is shown, evaluated against the same attendee's other answers:
+
+```json
+"show_if": { "field": "diet", "op": "eq", "value": "allergy" }
+
+"show_if": { "any": [
+  { "field": "diet", "op": "in", "value": ["vegetarian", "allergy"] },
+  { "all": [
+    { "field": "age", "op": "lt", "value": 12 },
+    { "field": "parent_name", "op": "answered" }
+  ]}
+]}
+```
+
+- Leaf operators: `eq`, `neq`, `in`, `not_in`, `answered`, `not_answered`, `gt`, `gte`, `lt`, `lte`, `contains`. Branch combinators: `all` (AND), `any` (OR) — nestable to any depth.
+- A hidden field's `required` is ignored, and any answer submitted for it is **dropped server-side** — visibility is re-evaluated on the server, never trusted from the client.
+- Publish-time validation rejects condition cycles (`a` depends on `b` depends on `a`) and references to unknown field keys.
+- The evaluator is one pure function (`form.Visible(field, answers)`) shared by validation, and the resolved visibility per field ships in the event-detail response so the frontend renders branching without re-implementing logic.
+
+**Editing answers after registration — `edit_policy`.** The registrant (or an organizer, any time) can update answers via `PATCH /v3/registrations/{id}/attendees/{attendee_id}` while the policy window is open:
+
+- `until` anchors the deadline to a session milestone; `never` disables self-editing entirely.
+- `fields: "all"` or an explicit list of editable keys (e.g., let people change `diet` but never `nik`).
+- Edits re-run full form validation including `show_if` (changing a controlling answer drops now-hidden answers and may newly require others).
+- Party size and session are **not** editable — cancel and re-register instead (keeps seat accounting trivial).
+- Every edit appends the previous `answers` snapshot to an `answer_revisions` JSONB array on the attendee row — organizers can always see what changed, without a new table.
 
 - `mode: none` → **information-only event**: page renders, no registration endpoints active, no counters.
 - `max_per_registration`: `1` = one person only, `N` = party up to N, `0` = unlimited.
@@ -492,6 +528,7 @@ GET    /v3/events/{code}                   detail + sessions + form schema + com
 POST   /v3/sessions/{code}/registrations   register self + companions
 GET    /v3/me/registrations                my registrations (upcoming/past)
 DELETE /v3/registrations/{id}              cancel own registration
+PATCH  /v3/registrations/{id}/attendees/{attendee_id}   edit answers (per edit_policy; organizers any time)
 GET    /v3/registrations/{id}/ticket.pdf   (re)download ticket — owner or organizer
 POST   /v3/qr/resolve                      what is this QR + my allowed actions
 POST   /v3/qr/act                          perform an action (self check-in via session QR, etc.)
@@ -575,8 +612,8 @@ internal/
 
 ## 12. Testing strategy
 
-- **Unit (pure, exhaustive):** form validation per field type, eligibility matrix (audience × rules), geo policy (inside/outside/missing/override per mode), recurrence expansion (weekly/monthly/custom, until, edited-session preservation), QR token codec (sign/verify/expiry/tamper).
-- **Integration (DB, per flow):** registration happy path + seat exhaustion race (two concurrent registrations, one seat), duplicate guard, cancellation refund of seats, each of the 4 check-in modes end-to-end incl. walk-in auto-creation and idempotent re-scan, outbox claim/retry, report generation with custom-question columns.
+- **Unit (pure, exhaustive):** form validation per field type, `show_if` evaluator (nested all/any, every operator, cycle detection, hidden-answer dropping), eligibility matrix (audience × rules), geo policy (inside/outside/missing/override per mode), recurrence expansion (weekly/monthly/custom, until, edited-session preservation), QR token codec (sign/verify/expiry/tamper).
+- **Integration (DB, per flow):** registration happy path + seat exhaustion race (two concurrent registrations, one seat), duplicate guard, cancellation refund of seats, answer editing within/outside the edit_policy window incl. revision history, each of the 4 check-in modes end-to-end incl. walk-in auto-creation and idempotent re-scan, outbox claim/retry, report generation with custom-question columns.
 - **Migration tests:** v3 tables in `tests/integration/db/migrations/` following the existing numbering convention.
 - Existing repo has no test suite yet — v3 introduces one; scope is v3 code only.
 
