@@ -402,26 +402,26 @@ stateDiagram-v2
 
 ```mermaid
 sequenceDiagram
-    actor U as Member (logged in)
-    participant API as POST /v3/sessions/{code}/registrations
-    participant V as Validators (pure funcs)
-    participant DB as Postgres (Atomic tx)
+    actor U as Member logged in
+    participant API as Registration endpoint
+    participant V as Validators pure funcs
+    participant DB as Postgres Atomic tx
     participant OB as notification_outbox
 
-    U->>API: party of N + form answers + geo coords (+ category, + access_code)
-    API->>V: session open? (status, window/active phase, registration_config.mode != none, not marked_sold_out)
-    API->>V: eligibility(user, event.eligibility or phase override) + access_code if phase requires
-    API->>V: geo.Validate(config, "web_registration", coords)
-    API->>V: answers valid vs form schema (per attendee if companion_detail=full)
+    U->>API: party of N, form answers, geo coords, optional category and access code
+    API->>V: session open - status, window or active phase, registration mode, not sold out
+    API->>V: eligibility of user vs event rules or phase override, access code if required
+    API->>V: geo validate for web_registration mode
+    API->>V: answers valid vs form schema, per attendee when companion_detail is full
     API->>DB: BEGIN
-    DB->>DB: SELECT session (or ticket category) FOR UPDATE
-    DB->>DB: booked_seats + N <= total_seats ? (skip if 0/unlimited)
-    DB->>DB: INSERT registration + N attendees
-    DB->>DB: UPDATE booked_seats += N
-    DB->>OB: INSERT confirmation email (same tx)
+    DB->>DB: SELECT session or ticket category FOR UPDATE
+    DB->>DB: check booked plus N within total seats, skipped when unlimited
+    DB->>DB: INSERT registration and N attendees
+    DB->>DB: UPDATE booked_seats plus N
+    DB->>OB: INSERT confirmation email in same tx
     DB->>API: COMMIT
-    API-->>U: 201 {registration, attendees[], ticket_url}
-    Note over OB: dispatcher sends email + PDF after commit (§8)
+    API-->>U: 201 with registration, attendees and ticket url
+    Note over OB: dispatcher sends email with PDF after commit, see section 8
 ```
 
 Rules:
@@ -535,17 +535,17 @@ https://<app-domain>/q/<token>
 
 ```mermaid
 sequenceDiagram
-    actor C as Camera / frontend at /q/*
-    participant Q as POST /v3/qr/resolve
+    actor C as Camera or frontend at /q/ path
+    participant Q as qr resolve endpoint
     participant REG as Handler registry
-    participant A as POST /v3/qr/act
+    participant A as qr act endpoint
 
-    C->>Q: {token}
-    Q->>Q: verify signature + expiry
-    Q->>REG: handlers for type, filtered by caller's permissions & context
-    Q-->>C: {type, subject, allowed_actions: ["event_checkin"]}
-    C->>A: {token, action: "event_checkin", context: {session_code, geo, override?}}
-    A->>REG: dispatch to event module's check-in handler (§5)
+    C->>Q: token
+    Q->>Q: verify signature and expiry
+    Q->>REG: handlers for this type, filtered by caller permissions and context
+    Q-->>C: type, subject and allowed actions, e.g. event_checkin
+    C->>A: token, chosen action, context with session code, geo, optional override
+    A->>REG: dispatch to the event module check-in handler, see section 5
     A-->>C: result
 ```
 
