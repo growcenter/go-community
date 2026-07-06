@@ -39,6 +39,8 @@ erDiagram
     events ||--o{ event_sessions : "has 1..N"
     events ||--o{ event_organizers : "staffed by"
     events }o--o| event_templates : "created from"
+    event_sessions ||--o{ session_ticket_categories : "0..N optional"
+    session_ticket_categories |o--o{ registrations : "optional pool"
     event_sessions ||--o{ registrations : "receives"
     registrations ||--|{ registration_attendees : "1 per seat"
     event_sessions ||--o{ attendance_logs : "append-only"
@@ -56,6 +58,11 @@ erDiagram
         text_arr image_links
         text_arr campus_codes
         varchar status "draft|published|completed|cancelled|archived"
+        timestamptz publish_at "scheduled auto-publish, nullable"
+        timestamptz unpublish_at "scheduled auto-hide, nullable"
+        jsonb content_sections "ordered rich-text blocks"
+        jsonb contacts "contact persons + channels"
+        jsonb venue_address "optional street/area/city/map fields"
         jsonb eligibility
         jsonb registration_config
         jsonb geo_config
@@ -81,8 +88,9 @@ erDiagram
         varchar location_type "onsite|online|hybrid"
         varchar location_name
         varchar online_url
-        int total_seats "0 = unlimited"
+        int total_seats "0 = unlimited; ignored when categories exist"
         int booked_seats "counter, row-locked"
+        bool marked_sold_out "manual kill-switch, overrides quota"
         text_arr attendance_modes "empty = registration-only, no check-in"
         bool enable_checkout "check-out scanning on/off"
         bool generated_from_recurrence
@@ -92,9 +100,22 @@ erDiagram
         timestamptz deleted_at
     }
 
+    session_ticket_categories {
+        bigint id PK
+        bigint session_id FK
+        varchar code
+        varchar name "e.g. Main Hall, Family Room, Volunteer"
+        text description
+        int total_seats "0 = unlimited"
+        int booked_seats "counter, row-locked"
+        bool marked_sold_out
+        int sort_order
+    }
+
     registrations {
         uuid id PK
         bigint session_id FK
+        bigint category_id FK "nullable; null = session's single pool"
         varchar registered_by "community_id, always set"
         int party_size
         varchar status "confirmed|cancelled"
@@ -298,6 +319,63 @@ Semantics: `everyone` = any logged-in user (guests can view but must sign in to 
 
 Sessions are always **materialized rows** — recurrence only generates them (§6). Editing/cancelling an individual generated session sticks; regeneration is idempotent and never overwrites edited rows.
 
+### 2.3 Optional capabilities (opt-in, invisible when unused)
+
+Everything below follows one rule: **if an event doesn't configure it, nothing changes anywhere** — no extra UI concepts, no extra validation, no report columns.
+
+**Ticket categories** (`session_ticket_categories`) — multiple quota pools per session, e.g. Main Hall / Family Room / Balcony zones, or Participant / Volunteer types at a conference. Each category has its own `total_seats`/`booked_seats` (row-locked exactly like the session pool), name, description, and manual `marked_sold_out`. A registration targets **one category** (a mixed-zone family registers per zone). When a session has zero categories — the default — the session's own `total_seats` is the single pool and `registrations.category_id` stays null. Reports gain a category column only when categories exist.
+
+**Registration phases + access codes** — inside `registration_config`, an optional `phases` array replaces the single window when present:
+
+```json
+"phases": [
+  { "name": "Volunteer early access", "start": "...", "end": "...",
+    "eligibility_override": { "audience": "rules", "rules": { "user_types": ["volunteer"] } },
+    "max_per_registration": 2 },
+  { "name": "Code holders", "start": "...", "end": "...",
+    "access_code": "XMAS25", "max_per_registration": 4 },
+  { "name": "General", "start": "...", "end": "..." }
+]
+```
+
+The active phase is resolved server-side by current time; each phase may override eligibility, party limit, or require an `access_code` submitted with the registration (compared case-insensitively, stored hashed is unnecessary — these are shared codes, not secrets). Phases may overlap (a volunteer can also use General). No `phases` → the session's `register_start_at/end_at` behave as before.
+
+**Publish window** — optional `publish_at`/`unpublish_at` on the event: the Cloud Scheduler tick flips a published event visible/hidden at the scheduled times (status stays `published`; visibility is computed). Null = manual control only, as before.
+
+**Manual sold-out + status reasons** — `marked_sold_out` on session and category instantly closes registration regardless of remaining quota. Every computed `availability` now ships with machine-readable `reasons[]` (e.g. `["QUOTA_FULL"]`, `["REGISTRATION_NOT_STARTED"]`, `["MARKED_SOLD_OUT"]`, `["OUTSIDE_PUBLISH_WINDOW"]`) so frontends and staff see *why*, never just *what*.
+
+**Content sections** (`content_sections` JSONB on events) — ordered rich-text blocks replacing hardcoded fields for FAQ/highlights/what's-included/redemption-guide/anything:
+
+```json
+[
+  { "key": "highlights", "title": "Highlights", "body": "<ul>...</ul>", "sort": 0 },
+  { "key": "faq", "title": "FAQ", "body": "...", "sort": 1 }
+]
+```
+
+`description` and `terms_and_conditions` remain first-class columns; sections cover everything else without future migrations.
+
+**Contact persons** (`contacts` JSONB on events) — one or more people, each with one or more channels:
+
+```json
+[
+  { "name": "Sarah", "role": "Event Coordinator",
+    "channels": [
+      { "type": "whatsapp", "value": "+628123456789" },
+      { "type": "instagram", "value": "@growcenter.events" }
+    ] },
+  { "name": "Ministry Office",
+    "channels": [ { "type": "email", "value": "events@example.org" },
+                  { "type": "phone", "value": "+62215551234" } ] }
+]
+```
+
+Channel types: `whatsapp`, `phone`, `email`, `instagram`, `other` (with a free `label`). Rendered on the event page and included in the PDF ticket footer.
+
+**Venue address** (`venue_address` JSONB) — optional structured location beyond `location_name`: street, area, city, map URL. The geo venue point in `geo_config` stays the validation source of truth; this is display-only.
+
+**Explicit non-adoptions from the tiket.com reference** (documented so nobody re-litigates them): pricing/refund/insurance/loyalty (no payments), assigned seat numbers & queue numbers, per-field i18n translations, SEO/OpenGraph blocks, captcha. Revisit only if a concrete need appears.
+
 ---
 
 ## 3. Event lifecycle
@@ -330,13 +408,13 @@ sequenceDiagram
     participant DB as Postgres (Atomic tx)
     participant OB as notification_outbox
 
-    U->>API: party of N + form answers + geo coords
-    API->>V: session open? (status, window, registration_config.mode != none)
-    API->>V: eligibility(user, event.eligibility)
+    U->>API: party of N + form answers + geo coords (+ category, + access_code)
+    API->>V: session open? (status, window/active phase, registration_config.mode != none, not marked_sold_out)
+    API->>V: eligibility(user, event.eligibility or phase override) + access_code if phase requires
     API->>V: geo.Validate(config, "web_registration", coords)
     API->>V: answers valid vs form schema (per attendee if companion_detail=full)
     API->>DB: BEGIN
-    DB->>DB: SELECT session FOR UPDATE
+    DB->>DB: SELECT session (or ticket category) FOR UPDATE
     DB->>DB: booked_seats + N <= total_seats ? (skip if 0/unlimited)
     DB->>DB: INSERT registration + N attendees
     DB->>DB: UPDATE booked_seats += N
@@ -500,11 +578,16 @@ Every event/session response embeds derived, human-meaningful state so the front
 ```json
 {
   "availability": "open | full | opens_soon | closed | walk_in_only | info_only",
+  "reasons": ["QUOTA_FULL"],
   "seats": { "total": 500, "booked": 342, "remaining": 158 },
+  "categories": [ { "code": "main-hall", "availability": "open", "remaining": 120 } ],
+  "active_phase": "General",
   "active_modes_now": ["registration_qr", "manual"],
   "checkin_window": { "open": true, "closes_at": "..." }
 }
 ```
+
+`reasons[]` is always machine-readable (`QUOTA_FULL`, `REGISTRATION_NOT_STARTED`, `REGISTRATION_ENDED`, `MARKED_SOLD_OUT`, `OUTSIDE_PUBLISH_WINDOW`, `NOT_ELIGIBLE`, ...); `categories` and `active_phase` appear only when the event uses them.
 
 Plus `GET /v3/staff/dashboard`: events I organize, today's sessions, live check-in counts — the staff home screen in one call.
 
@@ -547,7 +630,7 @@ flowchart LR
 
 ### 8.3 Recurring session generation
 
-Same Cloud Scheduler tick calls `POST /v3/internal/sessions/generate`:
+Same Cloud Scheduler tick calls `POST /v3/internal/sessions/generate` (which also applies any due `publish_at`/`unpublish_at` visibility flips):
 
 - For each published event with a recurrence rule: materialize sessions up to `generate_ahead` periods, computed **deterministically** from the rule (freq/interval/by_day/until + session_defaults).
 - **Idempotent** — a unique key (`event_id`, occurrence date) means re-runs insert nothing new.
@@ -592,6 +675,9 @@ DELETE /v3/events/{code}                   archive (hard delete: drafts only)
 POST   /v3/events/{code}/sessions          create sessions (single or bulk array)
 PATCH  /v3/sessions/{code}                 partial update
 DELETE /v3/sessions/{code}                 cancel/archive session
+POST   /v3/sessions/{code}/categories      create ticket categories (single or bulk; optional feature)
+PATCH  /v3/categories/{id}                 partial update (incl. marked_sold_out)
+DELETE /v3/categories/{id}                 remove category (only if no confirmed registrations)
 POST   /v3/events/{code}/organizers        assign owner/staff
 GET    /v3/templates                       list (system + own)
 POST   /v3/events/from-template/{id}       one-call creation
@@ -640,7 +726,7 @@ internal/
 
 | Concern | Mechanism |
 |---|---|
-| Two people grab the last seat | `SELECT ... FOR UPDATE` on session row; check+increment in one `Atomic` tx |
+| Two people grab the last seat | `SELECT ... FOR UPDATE` on the session row (or ticket-category row when categories are used); check+increment in one `Atomic` tx |
 | Double-scan of a QR | Idempotent: returns existing state (`ALREADY_CHECKED_IN`), logged, never double-counted |
 | Concurrent outbox dispatchers | `FOR UPDATE SKIP LOCKED` batch claiming |
 | Lost confirmation email | Outbox row written in the registration transaction; Cloud Scheduler retries |
@@ -655,7 +741,7 @@ internal/
 ## 12. Testing strategy
 
 - **Unit (pure, exhaustive):** form validation per field type, `show_if` evaluator (nested all/any, every operator, cycle detection, hidden-answer dropping), eligibility matrix (audience × rules), geo policy (inside/outside/missing/override per mode), recurrence expansion (weekly/monthly/custom, until, edited-session preservation), QR token codec (sign/verify/expiry/tamper).
-- **Integration (DB, per flow):** registration happy path + seat exhaustion race (two concurrent registrations, one seat), duplicate guard, cancellation refund of seats, answer editing within/outside the edit_policy window incl. revision history, each of the 4 check-in modes end-to-end incl. walk-in auto-creation and idempotent re-scan, outbox claim/retry, report generation with custom-question columns.
+- **Integration (DB, per flow):** registration happy path + seat exhaustion race (two concurrent registrations, one seat — both single-pool and per-category), duplicate guard, phase resolution + access-code gate, marked_sold_out override, cancellation refund of seats, answer editing within/outside the edit_policy window incl. revision history, each of the 4 check-in modes end-to-end incl. walk-in auto-creation and idempotent re-scan, outbox claim/retry, report generation with custom-question and category columns.
 - **Migration tests:** v3 tables in `tests/integration/db/migrations/` following the existing numbering convention.
 - Existing repo has no test suite yet — v3 introduces one; scope is v3 code only.
 
