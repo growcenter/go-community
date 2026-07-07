@@ -12,7 +12,9 @@
 
 - Module path is `go-community`. All imports use it.
 - v3 code NEVER uses `TransactionRepository.Transaction` — only `Atomic` (known scoping bug, see `wiki/entities/competing-transaction-abstractions.md`).
-- v3 errors are `*v3.Error` (typed, carry HTTP status) — never add to `models.ErrorMapping`.
+- v3 errors use `github.com/jeremygprawira/herr` end to end (Task 2). Domain errors are `herr.Define` classes in package `v3`; usecases return `error`; matching uses `v3.ErrX.Is(err)`, NEVER `==`. Never add to `models.ErrorMapping`.
+- **Bilingual messages:** every error class has a humanized English message (the class `Public.Message`) AND an Indonesian translation in the `mapl` localizer under key `errors.<lowercase_code>.message`. Default locale `id`; `Accept-Language: en` switches to English. Adding an error without its `id` translation is a review-rejectable defect (Task 2's completeness test enforces it).
+- **Go toolchain:** herr declares `go 1.26.1`; Task 2 bumps go-community's `go.mod` to `go 1.26` (verify CI/dev machines have Go ≥1.26 before starting).
 - Every usecase method body starts with `defer func() { usecases.LogService(ctx, err) }()` pattern is NOT reused in v3; v3 handlers log via existing middleware. Keep v3 free of the double-logging pattern.
 - Time zone: store timestamptz; business "today" uses `Asia/Jakarta` via `common.GetLocation()`.
 - All timestamps in API JSON are RFC3339.
@@ -296,103 +298,223 @@ func testDB(t *testing.T) *gorm.DB {
 
 ---
 
-### Task 2: Typed errors
+### Task 2: herr integration — bilingual humanized error catalog
 
 **Files:**
-- Create: `internal/models/v3/errors.go`
+- Create: `internal/models/v3/errors.go` (herr classes + constructors)
+- Create: `internal/models/v3/locale.go` (EN/ID message catalog + localizer install)
+- Modify: `go.mod` (add `github.com/jeremygprawira/herr`; bump `go 1.23.0` → `go 1.26`)
 - Test: `internal/models/v3/errors_test.go`
 
 **Interfaces:**
-- Produces: `type Error struct{ Status int; Code, Message string }` implementing `error`; constructor `func E(status int, code, msg string) *Error`; `func AsError(err error) *Error` (wraps unknown errors as 500 INTERNAL); sentinels used by all later tasks: `ErrNotFound, ErrNotEligible, ErrRegistrationClosed, ErrQuotaFull, ErrMarkedSoldOut, ErrAlreadyRegistered, ErrInvalidInput(msg), ErrGeoRequired, ErrGeoOutOfRange, ErrAlreadyCheckedIn, ErrNotCheckedIn, ErrNotRegistered, ErrCancelled, ErrForbidden, ErrEditWindowClosed, ErrInvalidAccessCode, ErrInvalidToken, ErrExpiredToken, ErrPublishValidation(msg)`.
+- Consumes: `github.com/jeremygprawira/herr` (+ `herr/localizer/mapl`, in the core module).
+- Produces (package `v3`) — these names are used by every later task:
+  - Classes (`*herr.Class`, immutable, match with `.Is(err)`): `ErrNotFound, ErrNotEligible, ErrRegistrationClosed, ErrQuotaFull, ErrMarkedSoldOut, ErrAlreadyRegistered, ErrGeoRequired, ErrGeoOutOfRange, ErrAlreadyCheckedIn, ErrNotCheckedIn, ErrNotRegistered, ErrCancelled, ErrForbidden, ErrEditWindowClosed, ErrInvalidAccessCode, ErrInvalidToken, ErrExpiredToken`.
+  - Constructors returning `error`: `ErrInvalidInput(detail string) error` (Kind Invalid; humanized generic public message, `detail` attached via `WithPublic("detail", ...)` so specifics survive without breaking localization), `ErrPublishValidation(detail string) error` (Kind Unprocessable, same pattern), `FieldErrors(code string, fields ...FieldIssue) error` where `type FieldIssue struct{ Field, Code, Message string }` — renders herr's typed `errors[]`.
+  - `func InstallLocale()` — installs the `mapl` localizer with the Indonesian catalog; called once from the composition root (`contract.go`, Task 17) and from `TestMain` in v3 test packages.
+  - `func Localize(err error, locale string) (status int, body []byte)` — thin wrapper over herr's `Body(locale)` + HTTP status for the Echo responder (Task 16).
 
-- [ ] **Step 1: Write the failing test**
+- [ ] **Step 1: Add dependency + toolchain bump**
+
+Run: `go get github.com/jeremygprawira/herr@latest` then edit `go.mod`: `go 1.26`. Run `go mod tidy && go build ./...` → OK (verify local Go ≥1.26 with `go version` first).
+
+- [ ] **Step 2: Write the failing test**
 
 ```go
 // internal/models/v3/errors_test.go
 package v3
 
 import (
-	"errors"
+	"encoding/json"
 	"testing"
+
+	"github.com/jeremygprawira/herr"
 )
 
-func TestTypedError(t *testing.T) {
-	e := E(404, "NOT_FOUND", "thing not found")
-	if e.Error() != "thing not found" || e.Status != 404 || e.Code != "NOT_FOUND" {
-		t.Fatalf("bad error: %+v", e)
+func TestMain(m *testing.M) { InstallLocale(); m.Run() }
+
+func TestClassesCarryKindAndMatch(t *testing.T) {
+	err := ErrQuotaFull.New()
+	if !ErrQuotaFull.Is(err) {
+		t.Fatal("class must match its instances through Is")
 	}
-	if AsError(e) != e {
-		t.Fatal("AsError must return same *Error")
+	if herr.HTTPStatus(err) != 409 {
+		t.Fatalf("KindConflict must map to 409, got %d", herr.HTTPStatus(err))
 	}
-	w := AsError(errors.New("boom"))
-	if w.Status != 500 || w.Code != "INTERNAL_SERVER_ERROR" {
-		t.Fatalf("unknown errors wrap as 500: %+v", w)
+	if ErrNotEligible.Is(err) {
+		t.Fatal("classes must not cross-match")
 	}
-	if ErrQuotaFull.Code != "QUOTA_FULL" || ErrNotEligible.Status != 403 {
-		t.Fatal("sentinel mismatch")
+}
+
+func TestBilingualBodies(t *testing.T) {
+	err := ErrQuotaFull.New()
+	var en, id map[string]any
+	_, bodyEN := Localize(err, "en")
+	_, bodyID := Localize(err, "id")
+	json.Unmarshal(bodyEN, &en)
+	json.Unmarshal(bodyID, &id)
+	if en["message"] == "" || id["message"] == "" || en["message"] == id["message"] {
+		t.Fatalf("EN and ID must both exist and differ: %v / %v", en["message"], id["message"])
+	}
+	if en["code"] != "QUOTA_FULL" || id["code"] != "QUOTA_FULL" {
+		t.Fatal("code is language-independent")
+	}
+}
+
+// Every class must have an Indonesian translation — forgetting one fails CI.
+func TestLocaleCatalogComplete(t *testing.T) {
+	for _, cls := range AllClasses {
+		_, body := Localize(cls.New(), "id")
+		var m map[string]any
+		json.Unmarshal(body, &m)
+		if msg, _ := m["message"].(string); msg == "" || msg == englishMessages[codeOf(cls)] {
+			t.Errorf("class %s is missing an Indonesian message", codeOf(cls))
+		}
+	}
+}
+
+func TestInternalNeverLeaks(t *testing.T) {
+	err := ErrQuotaFull.New().Internal("shard eu-3 exploded").With("secret", "hunter2")
+	_, body := Localize(err, "en")
+	if s := string(body); containsAny(s, "eu-3", "hunter2") {
+		t.Fatal("internal detail leaked into wire body")
+	}
+}
+
+func TestFieldErrors(t *testing.T) {
+	err := FieldErrors("VALIDATION_FAILED",
+		FieldIssue{Field: "email", Code: "INVALID_EMAIL", Message: "Enter a valid email address."})
+	_, body := Localize(err, "en")
+	var m struct {
+		Errors []struct{ Field, Code string } `json:"errors"`
+	}
+	json.Unmarshal(body, &m)
+	if len(m.Errors) != 1 || m.Errors[0].Field != "email" {
+		t.Fatalf("field errors must render errors[]: %s", body)
 	}
 }
 ```
 
-- [ ] **Step 2: Run** `go test ./internal/models/v3/ -run TestTypedError -v` → FAIL (package missing).
+(`containsAny` and `codeOf` are 3-line test helpers in the same file; `AllClasses` and `englishMessages` are exported by the implementation for the completeness gate.)
 
-- [ ] **Step 3: Implement**
+- [ ] **Step 3: Run** `go test ./internal/models/v3/ -v` → FAIL.
+
+- [ ] **Step 4: Implement the catalog**
 
 ```go
 // internal/models/v3/errors.go
 package v3
 
-import "net/http"
+import "github.com/jeremygprawira/herr"
 
-type Error struct {
-	Status  int    `json:"-"`
-	Code    string `json:"code"`
-	Message string `json:"message"`
-}
-
-func (e *Error) Error() string { return e.Message }
-
-func E(status int, code, msg string) *Error { return &Error{Status: status, Code: code, Message: msg} }
-
-func AsError(err error) *Error {
-	if err == nil {
-		return nil
-	}
-	if e, ok := err.(*Error); ok {
-		return e
-	}
-	return E(http.StatusInternalServerError, "INTERNAL_SERVER_ERROR", err.Error())
-}
-
-func ErrInvalidInput(msg string) *Error { return E(http.StatusBadRequest, "INVALID_INPUT", msg) }
-func ErrPublishValidation(msg string) *Error {
-	return E(http.StatusUnprocessableEntity, "PUBLISH_VALIDATION", msg)
+func def(code string, kind herr.Kind, en string) *herr.Class {
+	c := herr.Define(herr.Class{Code: code, Kind: kind, Public: herr.Public{Message: en}})
+	englishMessages[code] = en
+	AllClasses = append(AllClasses, c)
+	return c
 }
 
 var (
-	ErrNotFound           = E(http.StatusNotFound, "NOT_FOUND", "resource not found")
-	ErrNotEligible        = E(http.StatusForbidden, "NOT_ELIGIBLE", "you are not eligible for this event")
-	ErrRegistrationClosed = E(http.StatusForbidden, "REGISTRATION_CLOSED", "registration is not open")
-	ErrQuotaFull          = E(http.StatusConflict, "QUOTA_FULL", "no seats remaining")
-	ErrMarkedSoldOut      = E(http.StatusConflict, "MARKED_SOLD_OUT", "registration closed by organizer")
-	ErrAlreadyRegistered  = E(http.StatusConflict, "ALREADY_REGISTERED", "you already registered for this session")
-	ErrGeoRequired        = E(http.StatusBadRequest, "GEO_REQUIRED", "location is required for this action")
-	ErrGeoOutOfRange      = E(http.StatusForbidden, "GEO_OUT_OF_RANGE", "you must be at the venue")
-	ErrAlreadyCheckedIn   = E(http.StatusConflict, "ALREADY_CHECKED_IN", "already checked in")
-	ErrNotCheckedIn       = E(http.StatusConflict, "NOT_CHECKED_IN", "check-in required before check-out")
-	ErrNotRegistered      = E(http.StatusNotFound, "NOT_REGISTERED", "no registration found for this session")
-	ErrCancelled          = E(http.StatusConflict, "REGISTRATION_CANCELLED", "registration is cancelled")
-	ErrForbidden          = E(http.StatusForbidden, "FORBIDDEN", "you are not allowed to perform this action")
-	ErrEditWindowClosed   = E(http.StatusForbidden, "EDIT_WINDOW_CLOSED", "answers can no longer be edited")
-	ErrInvalidAccessCode  = E(http.StatusForbidden, "INVALID_ACCESS_CODE", "access code is invalid")
-	ErrInvalidToken       = E(http.StatusUnauthorized, "INVALID_QR_TOKEN", "qr token is invalid")
-	ErrExpiredToken       = E(http.StatusUnauthorized, "EXPIRED_QR_TOKEN", "qr token is expired")
+	AllClasses      []*herr.Class
+	englishMessages = map[string]string{}
+
+	ErrNotFound           = def("NOT_FOUND", herr.KindNotFound, "We couldn't find what you're looking for.")
+	ErrNotEligible        = def("NOT_ELIGIBLE", herr.KindForbidden, "This event isn't open for your account. Reach out to the organizer if you think this is a mistake.")
+	ErrRegistrationClosed = def("REGISTRATION_CLOSED", herr.KindForbidden, "Registration isn't open right now. Check the event page for the registration schedule.")
+	ErrQuotaFull          = def("QUOTA_FULL", herr.KindConflict, "All seats have been taken. Keep an eye out — a spot may open up if someone cancels.")
+	ErrMarkedSoldOut      = def("MARKED_SOLD_OUT", herr.KindConflict, "The organizer has closed registration for this session.")
+	ErrAlreadyRegistered  = def("ALREADY_REGISTERED", herr.KindConflict, "You're already registered for this session. Check My Registrations for your ticket.")
+	ErrGeoRequired        = def("GEO_REQUIRED", herr.KindInvalid, "We need your location for this step. Please allow location access and try again.")
+	ErrGeoOutOfRange      = def("GEO_OUT_OF_RANGE", herr.KindForbidden, "You seem to be away from the venue. Please try again when you've arrived.")
+	ErrAlreadyCheckedIn   = def("ALREADY_CHECKED_IN", herr.KindConflict, "You're already checked in — you're all set!")
+	ErrNotCheckedIn       = def("NOT_CHECKED_IN", herr.KindConflict, "We can't check you out because you haven't checked in yet.")
+	ErrNotRegistered      = def("NOT_REGISTERED", herr.KindNotFound, "We couldn't find a registration for this session.")
+	ErrCancelled          = def("REGISTRATION_CANCELLED", herr.KindConflict, "This registration has been cancelled.")
+	ErrForbidden          = def("FORBIDDEN", herr.KindForbidden, "You don't have access to do this.")
+	ErrEditWindowClosed   = def("EDIT_WINDOW_CLOSED", herr.KindForbidden, "The time window for editing your answers has passed.")
+	ErrInvalidAccessCode  = def("INVALID_ACCESS_CODE", herr.KindForbidden, "That access code doesn't look right. Double-check it and try again.")
+	ErrInvalidToken       = def("INVALID_QR_TOKEN", herr.KindUnauthorized, "This QR code isn't valid. Please use the QR from your ticket or profile.")
+	ErrExpiredToken       = def("EXPIRED_QR_TOKEN", herr.KindUnauthorized, "This QR code has expired. Please open a fresh one.")
+
+	clsInvalidInput = def("INVALID_INPUT", herr.KindInvalid, "Something in your submission doesn't look right. Please review and try again.")
+	clsPublish      = def("PUBLISH_VALIDATION", herr.KindUnprocessable, "The event isn't ready to publish yet. Please fix the highlighted issues.")
 )
+
+func ErrInvalidInput(detail string) error {
+	return clsInvalidInput.New().WithPublic("detail", detail)
+}
+func ErrPublishValidation(detail string) error {
+	return clsPublish.New().WithPublic("detail", detail)
+}
+
+type FieldIssue struct{ Field, Code, Message string }
+
+func FieldErrors(code string, fields ...FieldIssue) error {
+	e := herr.New(code).Kind(herr.KindUnprocessable)
+	for _, f := range fields {
+		e = e.FieldError(f.Field, f.Code, f.Message)
+	}
+	return e
+}
+
+func Localize(err error, locale string) (int, []byte) {
+	he := herr.From(err) // wraps non-herr errors as KindInternal, per herr docs
+	return herr.HTTPStatus(he), he.Body(locale)
+}
 ```
 
-- [ ] **Step 4: Run** `go test ./internal/models/v3/ -v` → PASS.
-- [ ] **Step 5: Commit** — `git add internal/models/v3/ && git commit -m "feat(v3): typed errors carrying HTTP status"`
+> Check exact helper names against the herr version pulled: the README documents `Body(locale)`, `Define`, `Class.Is`, `FieldError`, `WithPublic`; confirm the exported names for status extraction (`herr.HTTPStatus`) and non-herr wrapping (`herr.From`) in the package docs (`go doc github.com/jeremygprawira/herr`) and adjust the two call sites if they differ.
 
+```go
+// internal/models/v3/locale.go
+package v3
+
+import (
+	"github.com/jeremygprawira/herr"
+	"github.com/jeremygprawira/herr/localizer/mapl"
+)
+
+// Indonesian catalog — key format errors.<lowercase_code>.message.
+var indonesianMessages = map[string]string{
+	"errors.not_found.message":              "Kami tidak dapat menemukan yang Anda cari.",
+	"errors.not_eligible.message":           "Event ini belum terbuka untuk akun Anda. Hubungi panitia jika menurut Anda ini keliru.",
+	"errors.registration_closed.message":    "Pendaftaran belum dibuka saat ini. Silakan cek jadwal pendaftaran di halaman event.",
+	"errors.quota_full.message":             "Semua kursi sudah terisi. Pantau terus — kursi bisa tersedia lagi jika ada yang membatalkan.",
+	"errors.marked_sold_out.message":        "Panitia telah menutup pendaftaran untuk sesi ini.",
+	"errors.already_registered.message":     "Anda sudah terdaftar di sesi ini. Cek tiket Anda di menu Pendaftaran Saya.",
+	"errors.geo_required.message":           "Kami memerlukan lokasi Anda untuk langkah ini. Mohon izinkan akses lokasi lalu coba lagi.",
+	"errors.geo_out_of_range.message":       "Sepertinya Anda berada jauh dari lokasi acara. Silakan coba lagi setelah tiba di lokasi.",
+	"errors.already_checked_in.message":     "Anda sudah check-in — selamat menikmati acaranya!",
+	"errors.not_checked_in.message":         "Anda belum check-in, jadi belum bisa check-out.",
+	"errors.not_registered.message":         "Kami tidak menemukan pendaftaran Anda untuk sesi ini.",
+	"errors.registration_cancelled.message": "Pendaftaran ini sudah dibatalkan.",
+	"errors.forbidden.message":              "Anda tidak memiliki akses untuk melakukan ini.",
+	"errors.edit_window_closed.message":     "Batas waktu untuk mengubah jawaban Anda sudah lewat.",
+	"errors.invalid_access_code.message":    "Kode akses tidak sesuai. Mohon periksa kembali lalu coba lagi.",
+	"errors.invalid_qr_token.message":       "Kode QR ini tidak valid. Gunakan QR dari tiket atau profil Anda.",
+	"errors.expired_qr_token.message":       "Kode QR ini sudah kedaluwarsa. Silakan buka QR yang baru.",
+	"errors.invalid_input.message":          "Ada data yang belum sesuai. Mohon periksa kembali lalu coba lagi.",
+	"errors.publish_validation.message":     "Event belum siap dipublikasikan. Mohon perbaiki bagian yang ditandai.",
+}
+
+func InstallLocale() {
+	herr.SetLocalizer(mapl.New(map[string]map[string]string{"id": indonesianMessages}))
+}
+```
+
+- [ ] **Step 5: Run** `go test ./internal/models/v3/ -v` → PASS (incl. the leak test and the ID-catalog completeness gate).
+- [ ] **Step 6: Commit** — `git add go.mod go.sum internal/models/v3/ && git commit -m "feat(v3): herr error catalog with bilingual EN/ID humanized messages"`
+
+---
+
+> **herr substitution rule for Tasks 3–17.** Later tasks were drafted against a custom `*v3.Error`; with herr they read as follows — apply mechanically, no other changes:
+> 1. Every signature `*v3.Error` becomes `error`.
+> 2. Every comparison `err == v3.ErrX` / `e != v3.ErrX` becomes `v3.ErrX.Is(err)` / `!v3.ErrX.Is(err)`.
+> 3. Every `return v3.ErrX` becomes `return v3.ErrX.New()` (add `.With(...)`/`.Internal(...)` context where the task has useful detail — e.g. `.With("session", code)`).
+> 4. `v3.AsError(err)` disappears — return the error as-is; the responder wraps unknown errors via herr.
+> 5. Test assertions on `.Code` fields become `v3.ErrX.Is(err)` checks; wire-body assertions decode `Localize(err, locale)` output.
+> 6. Form-validation failures in Task 6 may use `v3.FieldErrors("VALIDATION_FAILED", issues...)` when reporting multiple fields; single-field early-exit `v3.ErrInvalidInput(...)` stays valid.
+> 7. Task 16's `respond.Err` becomes: resolve locale from `Accept-Language` (values `en`/`id`, default `id`), then `status, body := v3.Localize(err, locale); return ctx.JSONBlob(status, body)`. `InstallLocale()` is called once in `contract.go` (Task 17) and in each integration-test `TestMain`.
 ---
 
 ### Task 3: JSONB config structs + validation

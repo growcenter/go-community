@@ -711,7 +711,7 @@ internal/
 
 **Deliberate v3 conventions (fixing v2 tech-debt flagged in `wiki/`):**
 
-1. **Typed errors, not the sentinel switch.** v3 errors are a struct carrying HTTP status + code + message; one declaration site per error. No additions to the giant `ErrorMapping` switch.
+1. **`herr` errors, not the sentinel switch.** v3 uses [github.com/jeremygprawira/herr](https://github.com/jeremygprawira/herr) end to end: every domain error is an immutable `herr.Define` class (Kind drives the HTTP status), matched with `Class.Is(err)`. Public messages are **humanized and bilingual (English + Indonesian)** via herr's localizer keyed by error code; the request's `Accept-Language` picks the language (default `id`). Internal detail (`Internal`, `With`, `Wrap`) goes to logs only — herr's structural public/internal split guarantees no leaks. Form validation failures render as herr `FieldError` entries (`errors[]` keyed by field). No additions to v2's `ErrorMapping` switch. Requires bumping the module's Go toolchain to ≥1.26 (herr declares `go 1.26.1`).
 2. **Transactions via `Atomic` only** (tx-scoped repositories). The buggy `Transaction`-wrapper pattern is banned in v3 code.
 3. **One dependency style:** every v3 usecase takes the `PostgreRepositories` aggregate + config — no 7-interface constructors.
 4. **Validators are pure functions** (`eligibility.Check`, `form.Validate`, `geo.Validate`, recurrence expansion) — unit-testable without DB or HTTP.
