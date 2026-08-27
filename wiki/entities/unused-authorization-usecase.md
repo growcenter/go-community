@@ -7,7 +7,7 @@ ingested_at: 91a596d
 
 # Unused authorization_usecase.go
 
-`internal/usecases/authorization_usecase.go` is headed with a `// NOT USED` comment but still defines a live `Auth`/`Authorization` type that generates JWTs via `jwt.NewWithClaims`. [internal/usecases/authorization_usecase.go:1-45](internal/usecases/authorization_usecase.go#L1-L45)
+`internal/usecases/authorization_usecase.go` is headed with a `// NOT USED` comment but still defines a live `Auth`/`Authorization` type that generates JWTs via `jwt.NewWithClaims`. [internal/usecases/authorization_usecase.go:1-44](internal/usecases/authorization_usecase.go#L1-L44)
 
 This is separate from the JWT verification logic in [Auth Middleware Chain](auth-middleware-chain.md) (`internal/deliveries/http/middleware/authorization.go`), which reads tokens rather than generates them, and from `internal/pkg/authorization`, which the [Composition Root](composition-root.md) actually wires in as the app's `Authorization` dependency.
 
