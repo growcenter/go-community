@@ -16,3 +16,7 @@ config.*
 
 # Idea
 .idea
+
+# Generated output
+/graphify-out/
+/tmp/
