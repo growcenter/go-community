@@ -31,6 +31,8 @@ EVENT_NOT_CHECKED_IN       EVENT_NOT_REGISTERED         EVENT_REGISTRATION_CANCE
 EVENT_EDIT_WINDOW_CLOSED   EVENT_INVALID_ACCESS_CODE    EVENT_PUBLISH_VALIDATION
 EVENT_CATEGORY_NOT_ALLOWED EVENT_CATEGORY_REQUIRED      EVENT_SESSION_LIMIT_REACHED
 EVENT_CHANNEL_CLOSED       EVENT_ANONYMOUS_NOT_ALLOWED  EVENT_ELIGIBILITY_RECHECK_FAILED
+EVENT_OFFLINE_SYNC_EXPIRED EVENT_BATCH_TOO_LARGE        EVENT_FORM_UNSAFE_CHANGE
+EVENT_FILES_IN_USE         EVENT_DESK_ANSWERS_REQUIRED
 ```
 - `INVALID_QR_TOKEN` and `EXPIRED_QR_TOKEN` are removed. The `qr` module owns `QR_INVALID_TOKEN` and `QR_EXPIRED_TOKEN`.
 - `INVALID_INPUT` is removed. Validation failures use `herrx.ErrInvalidInput` with `FieldError` entries, so the body has `code`, a top-level `message` and `errors[]`.
@@ -144,7 +146,7 @@ id           uuid
 actor        community_id of the admin
 target_type  event | session | category | template
 target_ref   event code, session code, category id or template id
-action       created | updated | published | cancelled | archived | deleted | settings_changed
+action       created | updated | published | cancelled | archived | deleted | settings_changed | files_deleted
 changes      jsonb, field-level diff with old and new values
 created_at   timestamptz
 ```
@@ -217,6 +219,253 @@ Changes: none in events. A note for `calendar`.
 
 The v3 tables are `v3_events`, `v3_sessions`, `v3_session_ticket_categories`, `v3_registrations`, `v3_registration_attendees`, `v3_attendance_logs`, `v3_event_templates`, `v3_event_audit_logs`. The `v3_notification_outbox` table is replaced by the platform `notification_outbox`. `v3_event_organizers` is dropped. The calendar design must read `v3_sessions` and `v3_events`, never `event_sessions`, `registrations` or `event_organizers`.
 
+### 15. Offline desk check-in
+
+Changes: design §5 check-in, Task 1 (`v3_attendance_logs` columns), Task 11, delta 11 (`Idempotency-Key`). New in this delta, approved 2026-09-18.
+
+Why: with 1,000 to 3,000 people in one place the mobile network fails. The desk must keep working with no signal, and the server stays the final judge once the device is back online.
+
+- Offline scope: staff actions only. Those are `personal_qr` scans, `registration_qr` scans, `manual` lookup, checkout, headcount taps and headcount undo. `session_qr` self-scan by a member needs a connection and is never queued.
+- Roster sync: `GET /v3/sessions/{code}/roster?since=<cursor>` behind `event.checkin`. With no `since`, it returns the full roster and a `cursor`. With `since`, it returns only attendee rows that changed after that cursor, cancelled ones included, and a new `cursor`. If nothing changed, it returns `{ "changed": false, "cursor": <same> }` and no rows. The cursor is the highest `updated_at` of the session's attendee rows, so no new column is needed.
+- A roster row holds `attendee_id`, `community_id` (null for a companion), `name`, `status`, `category_id`, `checked_in_at` and `checked_out_at`. It never holds phone, email, form answers or any other personal data.
+- The personal QR payload is readable without the signing key (see `SPEC-qr.md`). The offline device reads `community_id` from it and matches the roster. The signature is checked later by the server at sync.
+- Batch sync: `POST /v3/sessions/{code}/checkin/batch` behind `event.checkin`. Body is up to 200 items. Each item has `idempotency_key` (a UUID made on the device), `action` (`checkin`, `checkout`, `headcount`, `headcount_undo`), `method` (`personal_qr`, `registration_qr`, `manual`), `token` or `attendee_id`, and `device_scanned_at`. The response has one result per item: `ok`, `duplicate`, `needs_review` or `rejected`, each with an `EVENT_` or `QR_` code when not `ok`.
+- Every item runs through the same check-in usecase as an online scan, one short transaction per item. A failed item never fails the batch.
+- First check-in wins. If two offline desks scanned the same person, the later item returns `duplicate` and changes nothing. Nobody sees an error.
+- Headcount taps add up. Each tap is its own item with its own key, so 30 taps from one desk and 25 from another give 55. An undo is its own item and subtracts one.
+- Each log row written from the batch has `offline = true`, `device_scanned_at` from the device and `synced_at` from the server. `checked_in_at` is set to `device_scanned_at`, so lateness is judged by when the person arrived, not when the signal came back.
+- Clock: `device_scanned_at` is accepted if it is inside the check-in window, widened by `event.offline_clock_tolerance_seconds` (configdb, default `120`). An item outside that range is still saved, with result `needs_review` and reason `outside_window`, because the person is already inside.
+- Items older than `event.offline_sync_max_hours` (configdb, default `24`) after the session end are `rejected` with `EVENT_OFFLINE_SYNC_EXPIRED`.
+- Person not on the roster: the event setting `offline_unknown_policy` decides. With `admit_review` (default) the device shows amber and lets the person in. At sync the server checks them in if they are registered. If they are not registered, walk-ins are open and a seat remains, it creates the walk-in. Otherwise the item is `needs_review`. With `reject` the device shows red and queues nothing.
+- The eligibility recheck from ADR 0008 runs at sync. A `block` result becomes `needs_review` with reason `eligibility`, not a rejection, because the person is already inside.
+- `GET /v3/sessions/{code}/attendees` accepts `review=true` and lists every `needs_review` row with its reason, so the desk lead can settle them after the event.
+- What offline cannot promise: walk-in seat limits and `max_sessions_per_person` are only enforced at sync. The spec accepts that an offline desk can let in a few people over the limit. Reports show them as `needs_review`.
+- The web app owns storing the roster and the queue on the device. That is out of scope for this backend.
+
+### 16. Scan labels
+
+Changes: design §2.1 `attendance_modes`, design §7.4 reports, Task 3, Task 11, Task 15, delta 10. New in this delta, approved 2026-09-18.
+
+- An organizer can give each check-in method a label that says what that scan means for this event. Example for a hybrid volunteer briefing: `personal_qr` means "Hadir di lokasi", `session_qr` means "Hadir online".
+- The setting is `scan_labels` in the event's check-in settings, next to `attendance_modes` and `self_scan_protection`. It is a map from method (`personal_qr`, `session_qr`, `registration_qr`, `manual`) to free text, 40 characters at most. Every entry is optional. An empty map is the default.
+- At check-in the server copies the label for the used method onto the log row as `label`. It is a snapshot, so a later change of the setting never rewrites history.
+- The label never changes the attendance count or percentage. It is data about how the person attended, nothing more.
+- If at least one method has a label, the session report and the attendance matrix gain a `label` column and a count per label, for example `Hadir di lokasi: 40, Hadir online: 12`. The JSON export carries `label` per row and `label_counts` per occurrence. If no method has a label, none of that appears.
+- Templates and recurring events carry `scan_labels` like every other check-in setting (Task 11j).
+- Labels are free text, so totals across different events are only as clean as what organizers type. Inside one event or one recurring series they are consistent.
+
+### 17. Custom registration form
+
+Changes: design §2.2 `registration_config.form` and design §7.4 reports. Also Task 3 (`FormField`, `Condition`), Task 6 (form engine) and Task 10 (registration). Also Task 11b (desk), Task 11d (walk-in), Task 13 (patch and publish), Task 15 (reports) and plan task E4. Decided in the interview of 2026-09-30.
+
+Why: some events need more than a name. The organizer builds the registration form like a Google Form, with question types, validation rules and conditions. The same engine can later serve COOL and standalone forms.
+
+Unchanged from design §2.2: `answered_by`, the `show_if` combinators and leaf operators, `edit_policy`, `answer_revisions` and `companion_detail`. `name` stays the only default field, and `name`, `email`, `phone` and `nik` stay built-in types.
+
+#### 17.1 The engine stands alone
+
+- The engine lives in `internal/pkg/form` and imports only the standard library. It owns the types `Field`, `Option`, `Condition`, `Facts` and `Problem`.
+- `v3.FormField` and `v3.Condition` from Task 3 are removed. `RegistrationConfig.Form` becomes `[]form.Field`.
+- The caller gives the engine a `Facts` value. Events fill it with category, session and person facts. A later COOL form or standalone form fills it with its own facts, and the engine stays the same.
+- The engine returns plain `Problem` values (field key, attendee index, rule). The events layer turns them into herrx `FieldError` entries with localized text.
+- Quiz mode (answer key, points, score) is out of scope. It comes with standalone forms. An answer key is a new optional attribute later, so nothing here prepares for it.
+
+#### 17.2 Field types
+
+| Type | Answer shape | Notes |
+|---|---|---|
+| `name`, `email`, `phone`, `nik` | string | Unchanged. Format rules as in Task 6. |
+| `text` | string | Short text. Default limit 500 characters. |
+| `textarea` | string | Long text. Default limit 5,000 characters. |
+| `number` | number | Unchanged. |
+| `radio` | option value, or `{"other": "..."}` | New. Single choice, every option visible. |
+| `select` | option value, or `{"other": "..."}` | Single choice as a dropdown. |
+| `multiselect` | array of option values, plus at most one `{"other": "..."}` | Several choices ("checkboxes" in Google Forms). |
+| `checkbox` | boolean | One yes/no box, for example consent. Unchanged. |
+| `date` | `"2026-10-01"` | Unchanged. |
+| `time` | `"14:30"` | New. 24-hour wall time. |
+| `datetime` | `"2026-10-01T14:30"` | New. Wall time with no zone. |
+| `scale` | integer | New. Linear scale. `display: stars` shows it as a rating. |
+| `grid` | object from row value to column value. With `multiple` on, each row holds an array of column values. | New. Rows in `rows`, columns in `options`. |
+| `file` | array of file URLs | New. See 17.6. |
+
+- Options change from strings to objects: `{ "value": "veg", "label": "Vegetarian" }`. `value` is stable, unique inside the field, and matches `^[a-z0-9_]{1,40}$`.
+- Answers, `show_if` and `edit_policy` refer to option values. Reports print labels. So an organizer can rename a label and no answer breaks.
+- `allow_other: true` on `radio`, `select` and `multiselect` adds an "Other" choice with free text, 200 characters at most. The answer is `{"other": "Halal only"}`, and reports print `Other: Halal only`.
+- `scale` has `min` (0 or 1), `max` (2 to 10), optional `min_label` and `max_label`, and `display` (`number` by default, or `stars`).
+- A `grid` with `required: true` needs an answer in every row.
+- `date`, `time` and `datetime` answers are wall time as the person typed it. They are form data, not system timestamps, so they carry no zone.
+- Every field can have `help`, a text under the label, 500 characters at most.
+
+#### 17.3 Response validation
+
+Each field can carry `validation`:
+
+```json
+"validation": { "min_length": 20, "max_length": 300, "min": 13, "max": 25,
+                "min_picks": 1, "max_picks": 3, "pattern": "[0-9]{10}",
+                "message": "Tulis 10 angka." }
+```
+
+| Rule | Applies to |
+|---|---|
+| `min_length`, `max_length` | `text`, `textarea`, and the Other text |
+| `min`, `max` | `number` |
+| `min_picks`, `max_picks` | `multiselect`, and each row of a `grid` with `multiple` on |
+| `pattern` | `text` |
+| `message` | Any rule. At most 120 characters. It replaces the default error text for that field. |
+
+- `pattern` uses Go `regexp` syntax (RE2), so it runs in linear time. The engine wraps the pattern in `^(?:...)$`, so it matches the whole answer. A pattern is at most 200 characters.
+- Save rejects a pattern that does not compile, a rule on a type that does not support it, and `min` above `max`.
+- An organizer can set `max_length` below the default, but never above 500 for `text` or 5,000 for `textarea`.
+
+#### 17.4 Conditions on category, session and person
+
+A `show_if` leaf gets an optional `source`. A leaf with no `source` reads the same attendee's answers, as today.
+
+```json
+{ "source": "category", "op": "in", "value": ["VOL"] }
+{ "source": "session",  "op": "eq", "value": "S-02" }
+{ "source": "person", "of": "attendee", "field": "age", "op": "lt", "value": 17 }
+```
+
+- `category` is the ticket category code of the registration. `session` is the session code. Both accept `eq`, `neq`, `in` and `not_in`.
+- `person` facts are `campus`, `department`, `cool`, `title`, `account_status`, `age`, `gender`, `marital_status` and `baptized`. `department` and `title` are lists, so `eq` on them means "contains". `age` is whole years on the day of submission.
+- `of` is `attendee` (default) or `registrant`. `attendee` reads the account of the row being answered. `registrant` reads the account of the person who registered the party.
+- A companion with no account has no facts. Every `person` leaf is false for them, except `not_answered`, which is true. The organizer combines leaves with `any` and `all` to decide what such companions see.
+- Example: `any[ age lt 17, age not_answered ]` shows a consent question to minors and to companions with no account.
+- Events build `Facts` through the identity, cool and permissions readers from open question 1. `internal/pkg/eligibility` and the events usecase share those readers. The identity reader adds `date_of_birth`, `gender`, `marital_status` and `baptized`.
+- The server is the final judge. It evaluates every condition again at submit and at answer edit, and drops answers to hidden fields, as design §2.2 says.
+- The web app evaluates conditions live while the person types. For that, `GET /v3/events/{code}` returns `viewer_facts`. It holds the signed-in person's own facts, and only the keys that a `person` condition in this form uses. It never holds facts of another person.
+- If the server result for a companion with an account differs from the web app, the submit returns `COMMON_INVALID_INPUT` with a `FieldError` for that companion. The person fixes it and submits again.
+- `internal/pkg/form/testdata/visible_cases.json` holds the evaluator cases as data. The Go test runs them, and the web app can run the same file.
+
+#### 17.5 Desk and walk-in
+
+- Each field gets `required_at_desk`, `false` by default. On desk registration (`source = admin`) and on a manual walk-in, `required_at_desk` replaces `required`. Every other field is optional there, and staff fill it in or leave it blank.
+- Walk-in auto-creation from a personal QR scan (Task 11d) has no form screen. If a field is visible with no answers and has `required_at_desk = true`, the scan fails with `EVENT_DESK_ANSWERS_REQUIRED`. The desk then uses desk registration.
+- An offline batch walk-in under `admit_review` (delta 15) gets `needs_review` with reason `form` in the same case.
+
+#### 17.6 File questions
+
+- The web app uploads to UploadThing, as it does for profile files. The backend stores only the URL and never stores bytes (`SPEC-identity.md`).
+- Every file is public. Anyone with the link can open it. The owner accepted this on 2026-09-30, see 17.9.
+- A `file` field has `file: { "accept": ["image", "pdf"], "max_files": 1, "max_mb": 5 }`. `accept` takes `image` and `pdf`. `max_files` is 1 to 5. `max_mb` is 1 to 10.
+- The web app enforces `accept` and `max_mb` in its UploadThing route, because the backend never sees the bytes.
+- If a URL does not start with `upload.public_url_prefix`, the backend rejects it with a `FieldError`. That YAML value is the file host of this UploadThing app. This blocks links to other sites and to files of other apps.
+- Files stay until an organizer deletes them. `POST /v3/events/{code}/files/delete` is behind `event.manage`. If the event is not `completed`, `cancelled` or `archived`, it returns `EVENT_FILES_IN_USE`.
+- The delete removes every file URL in the event's current answers and `answer_revisions` through the UploadThing server API. It sets those answers to `[]` and writes one `event_audit_logs` row with action `files_deleted` and the count.
+- A second delete call finds no files, calls nothing and returns 200.
+- The UploadThing secret is `upload.uploadthing_secret` in YAML. It never goes into configdb or logs.
+
+#### 17.7 Changing a form after answers exist
+
+Save compares the new form with the old one through `form.DiffSafe(old, new, used)`. `used` holds the field keys and option values that at least one stored answer of the event uses.
+
+Allowed at any time:
+
+- Change `label`, `help`, `validation.message`, option labels and row labels.
+- Reorder fields, options and rows.
+- Add a field with `required = false` and `required_at_desk = false`.
+- Add an option or a row.
+- Change `validation` and `show_if`. New rules apply to new submissions and to edits, never to stored answers.
+- Retire a field with `retired: true`. New registrations and edits no longer show it. Its stored answers stay, and reports keep its column.
+
+Blocked once the event has a registration, with `EVENT_FORM_UNSAFE_CHANGE` and one `FieldError` per field:
+
+- Delete a field that has an answer. Retire it instead.
+- Change the `key`, `type` or `answered_by` of a field.
+- Remove an option or a row that an answer uses.
+- Turn on `required` or `required_at_desk` for an existing field.
+
+Before the first registration, every change is allowed, as in a draft. Every form change writes the `event_audit_logs` row that delta 9 already requires for `registration_config`.
+
+#### 17.8 Pre-fill, reports and limits
+
+- For the registrant's own row, `GET /v3/events/{code}` returns `prefill` with `name`, `email` and `phone` from the profile, for the fields of those types.
+- The person can change a pre-filled value. The registration stores what the person submitted. The profile stays the same.
+- Reports (delta 10 and design §7.4) print labels, not values. `multiselect` joins labels with `; `. A `grid` gets one column per row, named `<field label> - <row label>`.
+- A `file` column joins its URLs with a space. Retired fields keep their column. The JSON export uses the same columns as the CSV.
+- The roster never holds answers or file URLs. Delta 15 stays as it is.
+- Limits, enforced at save and at submit: 100 fields per form, 50 options per field, 20 rows per grid, 200 characters per `label`, and 32 KB of answers JSON per attendee.
+
+#### 17.9 Known risks
+
+- Public file links. A forwarded report or export opens every file in it, payment proofs included. Private files need a paid UploadThing plan or a second store, and Supabase Storage is the free option.
+- Storage. The UploadThing free plan has 2 GB, and nothing deletes files automatically. 3,000 photos at 300 KB each take about 900 MB. An organizer must run the delete after large events.
+- Orphan files. A file uploaded for a registration that the person never submits stays on UploadThing. No event refers to it, so the delete endpoint cannot find it.
+- Personal data. Answers and files stay until an organizer deletes them. Under UU PDP, personal data with no retention limit is a compliance risk. The church owns that decision.
+- Flexibility cost. Each switch in this delta is one more thing an organizer must understand. The admin UI must show `required_at_desk`, `validation`, condition sources and `of` as advanced options with safe defaults.
+
+#### 17.10 Errors
+
+| Code | Kind | EN message |
+|---|---|---|
+| `EVENT_FORM_UNSAFE_CHANGE` | conflict | This change breaks answers that people already gave. |
+| `EVENT_DESK_ANSWERS_REQUIRED` | invalid | This event needs a few answers first. Please use desk registration. |
+| `EVENT_FILES_IN_USE` | conflict | You can delete files only after the event ends. |
+
+Answer validation failures stay `COMMON_INVALID_INPUT` with `FieldError` entries. Form schema errors at publish stay `EVENT_PUBLISH_VALIDATION`.
+
+#### 17.11 Where the code goes
+
+```
+internal/pkg/form/form.go                      → Field, Option, Condition, Facts, Problem, Validate, Visible
+internal/pkg/form/schema.go                    → ValidateSchema (save and publish), DiffSafe
+internal/pkg/form/form_test.go                 → table tests per type, rule and diff case
+internal/pkg/form/testdata/visible_cases.json  → evaluator cases, shared with the web app
+internal/pkg/uploadthing/client.go             → DeleteFiles(ctx, keys) over net/http
+internal/config/config.go                      → Upload{PublicURLPrefix, UploadThingSecret}
+```
+
+The shape of a field, as a style reference:
+
+```go
+// internal/pkg/form/form.go
+type Field struct {
+	Key            string      `json:"key"`
+	Type           string      `json:"type"`
+	Label          string      `json:"label"`
+	Help           string      `json:"help,omitempty"`
+	Required       bool        `json:"required"`
+	RequiredAtDesk bool        `json:"required_at_desk,omitempty"`
+	Retired        bool        `json:"retired,omitempty"`
+	Options        []Option    `json:"options,omitempty"`
+	Rows           []Option    `json:"rows,omitempty"`
+	AllowOther     bool        `json:"allow_other,omitempty"`
+	Multiple       bool        `json:"multiple,omitempty"`
+	Scale          *Scale      `json:"scale,omitempty"`
+	File           *FileRule   `json:"file,omitempty"`
+	Validation     *Validation `json:"validation,omitempty"`
+	AnsweredBy     string      `json:"answered_by,omitempty"`
+	ShowIf         *Condition  `json:"show_if,omitempty"`
+}
+
+// Facts is what the caller knows about the attendee being answered.
+// A nil Attendee means a companion with no account.
+type Facts struct {
+	Category   string
+	Session    string
+	Attendee   map[string]any
+	Registrant map[string]any
+}
+
+// Validate returns the answers with hidden fields dropped, and every problem found.
+// Desk makes RequiredAtDesk replace Required.
+func Validate(fields []Field, in Input) (map[string]any, []Problem)
+```
+
+### Deferred: registration approval
+
+Not in this spec. The interview of 2026-09-30 decided these points, so a future spec starts from them:
+
+- The event sets a default for approval, and each ticket category can override it.
+- A pending registration holds its seat. A rejection frees it.
+- A new action `event.registrations.approve` exists and can be granted alone, for example to a treasurer.
+- The approver can send a note. The person fixes their answers while the seat stays held.
+- A pending person at the door is blocked. A staff member who also holds the approve action can approve on the spot and then check the person in.
+- Still open: whether desk and walk-in registrations skip approval.
+
 ## Testing Strategy additions
 
 Unit, no DB:
@@ -225,6 +474,16 @@ Unit, no DB:
 - `self_scan_protection`: each of the three values against inside window, outside window, inside radius, outside radius, missing coordinates.
 - Matrix builder: a person registered for two of three occurrences yields `-` in the third cell and a percentage over two.
 - Category constant set rejects `sunday_service`.
+- Offline item classifier: inside window, inside tolerance, outside tolerance, older than the max sync hours, unknown person under each `offline_unknown_policy`.
+- `scan_labels`: label copied for the used method, no label when the method has none, 41 characters rejected.
+- Form types: a valid and an invalid answer for each new type. `{"other": ...}` fails with `allow_other` off and passes with it on. Other text of 201 characters fails.
+- Grid: a missing row with `required` fails. `multiple` on and off. `max_picks` counts per row.
+- Validation rules: each rule at its limit and one past it. Pattern `[0-9]{2}` rejects `123`, because the match covers the whole answer. The custom `message` comes back.
+- Schema: a pattern that does not compile, `max_length` 501 on `text`, and `min` above `max` all fail at save.
+- Conditions: each `source`, `of: registrant`, `department` as "contains", and a companion with no account. All cases live in `testdata/visible_cases.json`.
+- `DiffSafe`: each allowed change passes. Each blocked change fails and names its field. Deleting a field with no answers passes.
+- Desk rule: with `Desk` set, `required_at_desk` applies and `required` does not.
+- `go list -deps ./internal/pkg/form | grep go-community` prints only `go-community/internal/pkg/form`.
 
 Integration, real Postgres:
 
@@ -233,7 +492,17 @@ Integration, real Postgres:
 - An admin patch to `checkin_close_at` writes one `event_audit_logs` row with old and new values.
 - Idempotency: two check-ins with the same `Idempotency-Key` produce one log row.
 - Two hundred concurrent registrations for one seat produce one registration with status `confirmed`.
+- Roster sync: a full call, then a registration and a cancellation, then a `since` call returns exactly those two rows. A second `since` call returns `changed: false`.
+- Batch sync: two batches from two desks with the same attendee give one `ok` and one `duplicate`, and one log row with `offline = true`. Headcount 30 plus 25 gives 55.
+- A batch item with a tampered token returns `QR_INVALID_TOKEN` for that item only, and the other items succeed.
 - Every `EVENT_` code has an `id` message (shared platform test).
+- A file answer with a URL from another host returns 400 with a `FieldError` on that field.
+- After one registration with answers, a patch that deletes an answered field returns 409 `EVENT_FORM_UNSAFE_CHANGE`. Retiring the field returns 200, and the report keeps its column.
+- An option label changed after answers exist shows the new label in the report.
+- A personal QR walk-in on an event with a `required_at_desk` field returns `EVENT_DESK_ANSWERS_REQUIRED`. Desk registration with that field filled returns 201.
+- File delete on a published event returns 409 `EVENT_FILES_IN_USE`. On a completed event, an `httptest` fake of UploadThing receives every file key, the answers become `[]`, and one audit row exists.
+- A second file delete returns 200 and sends no request to the fake.
+- A member aged 16 must answer a consent field shown to `age lt 17`. A member aged 20 submits without it, and an answer sent for the hidden field is dropped.
 
 ## Boundaries
 
@@ -242,13 +511,21 @@ Always:
 - Pass `Resource.Parents` with campus codes and department on every event and session route.
 - Run eligibility before `BEGIN` on every path that creates a registration.
 - Write the audit row in the same `Atomic` transaction as the admin change.
+- Evaluate `show_if` and validation again on the server at submit and at answer edit.
+- Accept a file URL only with the `upload.public_url_prefix` prefix.
+- Return only the viewer's own facts in `viewer_facts`, and only the keys the form uses.
 
 Ask first:
 
 - Adding a category value.
 - Adding a condition kind to eligibility.
 - Adding a fourth `self_scan_protection` value, for example a rotating poster.
-- Any new column on `v3_attendance_logs`.
+- Any new column on `v3_attendance_logs` beyond `label`, `offline`, `device_scanned_at` and `synced_at` from deltas 15 and 16.
+- Letting `session_qr` self-scan work offline.
+- A new form field type, a new person fact, or a new condition source.
+- Private files, or a second file store.
+- Automatic file deletion.
+- Registration approval, quiz mode or standalone forms.
 
 Never:
 
@@ -256,6 +533,12 @@ Never:
 - Accept a session token's window from the client. The server reads the session row.
 - Create a registration that spans more than one session.
 - Purge `v3_attendance_logs` or `event_audit_logs`.
+- Put phone, email or form answers in a roster row.
+- Let a scan label change an attendance count or percentage.
+- Fail a whole batch because one item failed.
+- Store file bytes in the backend or in Postgres.
+- Import a package from `go-community/internal/...` inside `internal/pkg/form`.
+- Rewrite stored answers because the form changed. The file delete in 17.6 is the only exception.
 
 ## Success Criteria
 
@@ -269,6 +552,19 @@ Never:
 8. `GET /api/v2/events` returns 410 `COMMON_DEPRECATED_ENDPOINT`.
 9. Two hundred concurrent registrations for one seat leave `booked_seats = 1`.
 10. `grep -rn 'event_organizers\|UserMiddleware\|userTypes' internal/**/events` returns nothing.
+11. A desk downloads the roster, goes offline, queues 50 check-ins, and one batch call later all 50 rows exist with `offline = true` and `checked_in_at` equal to the device scan time.
+12. The same attendee sent from two desks yields one check-in and one `duplicate` result, with no error shown.
+13. A roster `since` call with no changes returns `changed: false` and zero rows.
+14. An event with `scan_labels = {personal_qr: "Hadir di lokasi", session_qr: "Hadir online"}` shows both counts in the session report and `label_counts` in JSON. An event with no labels shows no label column.
+15. An organizer publishes a form with `radio`, `scale`, `time`, `datetime`, `grid` and `file` fields. A member registers with valid answers. The CSV has one labeled column per field and one per grid row.
+16. A `radio` field with `allow_other` accepts `{"other": "Halal only"}`, and the report prints `Other: Halal only`. Without `allow_other`, the same answer returns `COMMON_INVALID_INPUT` for that field.
+17. A `text` field with pattern `[0-9]{10}` and message `Tulis 10 angka.` rejects `123` with that message.
+18. A consent field shown to `age lt 17` is required for a member aged 16 and absent for a member aged 20.
+19. After one registration, deleting an answered field returns 409 `EVENT_FORM_UNSAFE_CHANGE`. Retiring it returns 200.
+20. A personal QR walk-in on an event with a `required_at_desk` field returns `EVENT_DESK_ANSWERS_REQUIRED`. Desk registration with the field filled succeeds.
+21. A file answer with a URL outside `upload.public_url_prefix` is rejected.
+22. File delete on a completed event empties every file answer and writes one `files_deleted` audit row.
+23. `go list -deps ./internal/pkg/form | grep go-community` prints only the form package itself.
 
 ## Open Questions
 
@@ -276,3 +572,6 @@ Never:
 2. The 5 second in-memory cache of session detail (delta 11) is per process. If the app ever runs more than one instance, the cache is per instance, which is still correct but less effective. Make sure that the free tier runs one instance.
 3. Delta 7 removes `personal_qr` and `session_qr` from `attendance_modes`. Make sure that the admin UI shows them as always-on and only exposes `registration_qr` and `manual` as toggles.
 4. Resolved 2026-09-17: `training` and `class` stay separate categories. The list is `general`, `volunteer`, `training`, `class`, `announcement`.
+5. Before the delete task starts, make sure that the UploadThing delete API matches its current docs. That covers the path, the auth header, and the file key as the last URL segment.
+6. Make sure that `max_mb` up to 10 fits the upload limits of the web app's UploadThing route on the free plan.
+7. The church decides whether "keep files until an organizer deletes them" is acceptable under UU PDP for payment proofs and documents.

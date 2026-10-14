@@ -33,6 +33,8 @@ The six features are half on paper and half inconsistent: the calendar design us
 - Two check-in modes are always available on every event: desk scans the member, and member scans a poster.
 - Self-scan protection is a per-event setting with three levels: none, check-in window (default), and check-in window plus location.
 - Admin changes to sessions and settings (time, capacity, protection level) are audit-logged with who, what and when.
+- Desk check-in works with no network. The desk device syncs the session roster while online, downloading only what changed. Offline it checks scans against that roster and queues them. The server accepts the queue in a batch, keeps the first check-in, adds up headcount taps from several desks, and flags every such row as offline with the device scan time. Clock tolerance is two minutes. Member self-scan of the poster stays online only. What happens to a person who is not on the roster is a per-event setting: let in and review at sync (default), or turn away.
+- An organizer can give each check-in method a free-text label for the event, for example personal QR means "on site" and poster QR means "online". The label is optional, is saved on each check-in, is counted in reports, is carried by templates and recurring events, and never changes the attendance percentage.
 
 ### COOL
 

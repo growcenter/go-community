@@ -17,6 +17,7 @@ Build order: platform, then identity, then permissions, then qr, then events and
 Notes:
 
 - Volunteer is not a module. It is an event category plus eligibility rules inside `events`.
+- Custom registration forms belong to `events` (delta 17 in `SPEC-events.md`). The engine in `internal/pkg/form` imports only the standard library. `cool` or a future `forms` module (standalone forms, quizzes) can reuse it without a change to `events`.
 - The existing event v3 design, implementation plan, check-in spec and ADRs 0001 to 0009 remain the spec for `events`. `SPEC-events.md` is a reconciliation delta on top of them, not a rewrite.
 - `calendar` gets a fix-up delta against `docs/plans/2026-07-20-community-calendar-design.md`.
 - `platform`, `identity`, `permissions`, `qr` and `cool` get fresh specs.

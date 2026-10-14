@@ -20,3 +20,6 @@ config.*
 # Generated output
 /graphify-out/
 /tmp/
+
+# PR Lens writes its previews here. They are rebuilt on demand.
+.pr-lens/

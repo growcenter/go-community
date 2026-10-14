@@ -4,7 +4,7 @@ Source of truth: `docs/intent/v3-platform.md`, `CAPABILITY-MAP.md` and the seven
 
 ## Overview
 
-Build the seven modules of the capability map on `/api/v3`, in dependency order, as 78 small tasks (S or M). Each task is one vertical slice with its own acceptance criteria and verification commands. v1 and v2 stay compiled and return 410 once the deprecation middleware lands in Phase 1.
+Build the seven modules of the capability map on `/api/v3`, in dependency order, as 82 small tasks (S or M). Each task is one vertical slice with its own acceptance criteria and verification commands. v1 and v2 stay compiled and return 410 once the deprecation middleware lands in Phase 1.
 
 ## Architecture decisions
 
@@ -41,10 +41,10 @@ Checkpoint:
 - I3: Models, repositories and audit writer
 - I4: OTP package with limits and cooldown
 - I12: v3 JWT issuer and middleware
-- I5: Register start, verify, complete, with claim
-- I6: Login, device verify, device limit
+- I5: User check, OTP send and verification, create user with claim
+- I6: Login, new device verification, device limit
 - I7: Refresh and logout with device revoke
-- I8: PIN forgot and reset
+- I8: PIN reset
 - I9: Me endpoints and the email-required gate
 
 Checkpoint:
@@ -117,10 +117,14 @@ Checkpoint:
 - E12: Check-in core with personal_qr and session_qr
 - E13: registration_qr, manual lookup and eligibility recheck
 - E14: Checkout, lateness, headcount and undo
+- E21: Scan labels on check-in
+- E22: Roster sync endpoint
+- E23: Offline batch check-in sync
 - E15: QR action registration for events
 - E16: Attendee list, live counts and computed session state
 - E17: Reports CSV, XLSX and JSON
 - E18: Attendance matrix report
+- E24: Label counts in reports
 - E19: Staff dashboard, audit endpoint and permission scopes
 - E20: Pool caps, wiring, seeds and v2 410
 
@@ -485,29 +489,32 @@ Build: `go build ./...`
 - `internal/pkg/otp/otp_test.go`
 **Estimated scope:** S
 
-## Task I5: Register start, verify, complete, with claim
-**Description:** The three public endpoints and the usecase behind them. `start` sends one OTP through the outbox. It sends nothing when the account is `active`, cooled down, or missing an email. It always runs one code path with one timing. `verify` returns a short-lived setup token. `complete` sets the PIN, campus and name and trusts the device. For a `pending` row it sets `active` and `claimed_at`. Then it issues tokens.
+## Task I5: User check, OTP send and verification, create user with claim
+**Description:** The four public endpoints and the usecases behind them. `POST /v3/users/check` returns the next step (`register` or `login`) and the login method. It sends nothing and writes nothing. It sits behind Echo's in-memory rate limiter with `identity.check_max_per_minute` per client IP. `POST /v3/auth/otp` sends one OTP through the outbox for purpose `register` or `pin_reset` and rejects purpose `device`. It returns the real error for an `active` account, a cooled-down identifier or a missing email. `POST /v3/auth/otp/verification` returns a short-lived verification token that holds the identifier and the purpose. `POST /v3/users` takes a `register` token, sets the PIN, campus and name and trusts the device. For a `pending` row it sets `active` and `claimed_at`. Then it issues tokens.
 **Acceptance criteria:**
 - [ ] A new identifier ends with one `users` row, one `auth_challenges` row, one outbox row, one `user_devices` row and a token pair.
 - [ ] A `pending` identifier ends `active` with the same `community_id` and one audit row with action `claimed`.
-- [ ] `start` on an `active` identifier returns 200 and inserts no outbox row. A cooled-down identifier returns 200 and writes one `otp_cooldown` audit row.
+- [ ] `auth/otp` with purpose `register` on an `active` identifier returns 409 `USER_ALREADY_EXISTS` and inserts no outbox row. A cooled-down identifier returns 403 `USER_OTP_COOLDOWN` and writes one `otp_cooldown` audit row.
+- [ ] `users/check` returns `register` for a new and for a `pending` identifier and `login` for an `active` one, and inserts no row. Call 61 inside one minute from one IP returns 403 `USER_TOO_MANY_REQUESTS`.
+- [ ] `POST /v3/users` with a `pin_reset` token returns 401 `USER_VERIFICATION_TOKEN_INVALID`.
 **Verification:**
-- [ ] Integration `TestRegister`, `TestClaim`, `TestStartDoesNotProbe`, `TestOTPCooldown`.
+- [ ] Integration `TestRegister`, `TestClaim`, `TestUsersCheck`, `TestOTPCooldown`.
 - [ ] `make generate-docs`
 **Dependencies:** I2, I3, I4, I12, `platform: outbox producer`, `platform: configdb.GetInt`.
 **Files likely touched:**
-- `internal/usecases/identity/register.go`
+- `internal/usecases/identity/register.go`, `otp.go`
 - `internal/models/identity/dto.go`
-- `internal/deliveries/http/v3/identity/auth_handler.go`
+- `internal/deliveries/http/v3/identity/users_handler.go`, `auth_handler.go`
 - `tests/integration/identity/register_test.go`
 **Estimated scope:** M
 
-## Task I6: Login, device verify, device limit
-**Description:** `login` with identifier plus PIN on a trusted device returns tokens. Unknown device returns `USER_NEW_DEVICE_VERIFICATION_REQUIRED` and sends an OTP. `device/verify` trusts the device. At `max_active_devices` it requires `replace_oldest` before it revokes the oldest row. PIN lockout counts wrong PINs and locks for `pin_lockout_minutes`. Legacy password login works only for rows with a password hash while `password_login_enabled` is true.
+## Task I6: Login, new device verification, device limit
+**Description:** `login` with identifier plus PIN on a trusted device returns tokens. Unknown device returns `USER_NEW_DEVICE_VERIFICATION_REQUIRED` and sends an OTP with purpose `device`. A second `login` call with a `device` verification token trusts the device. At `max_active_devices` it requires `replace_oldest` before it revokes the oldest row. PIN lockout counts wrong PINs and locks for `pin_lockout_minutes`. Legacy password login works only for rows with a password hash while `password_login_enabled` is true.
 **Acceptance criteria:**
 - [ ] Wrong PIN five times returns `USER_PIN_LOCKED` for the configured minutes.
 - [ ] Second device without `replace_oldest` returns 409. With it the first device's row is revoked.
-- [ ] Two concurrent `device/verify` calls for the last slot produce exactly one trusted device (user row locked in `Atomic`).
+- [ ] Two concurrent `login` calls with a `device` token for the last slot produce exactly one trusted device (user row locked in `Atomic`).
+- [ ] `login` with a `register` token returns 401 `USER_VERIFICATION_TOKEN_INVALID`.
 **Verification:**
 - [ ] Integration `TestLogin`, `TestNewDevice`, `TestDeviceLimitRace`, `TestPinLockout`, `TestLegacyPassword`.
 - [ ] Unit test for lockout math in `internal/usecases/identity/pin_test.go`.
@@ -538,11 +545,11 @@ Build: `go build ./...`
 - `tests/integration/identity/session_test.go`
 **Estimated scope:** S
 
-## Task I8: PIN forgot and reset
-**Description:** `pin/forgot` sends an OTP on the same timing path as `register/start`. `pin/reset` verifies the code and sets a new PIN hash. It clears the lockout counter and writes one audit row with action `pin_reset`. When OTP is off it returns `USER_OTP_DISABLED`.
+## Task I8: PIN reset
+**Description:** The code comes from `auth/otp` with purpose `pin_reset` (I5). `POST /v3/auth/pin/reset` takes a `pin_reset` verification token and sets a new PIN hash. It clears the lockout counter and writes one audit row with action `pin_reset`. With OTP off, `auth/otp` with purpose `pin_reset` returns `USER_OTP_DISABLED`.
 **Acceptance criteria:**
 - [ ] After reset the old PIN fails and the new PIN logs in.
-- [ ] `forgot` on an unknown identifier returns 200 and sends nothing.
+- [ ] `auth/otp` with purpose `pin_reset` on an unknown identifier returns 404 `USER_NOT_FOUND` and sends nothing.
 - [ ] One audit row per successful reset, with no `pin_hash` in `changes`.
 **Verification:**
 - [ ] Integration `TestPinReset`.
@@ -576,7 +583,7 @@ Build: `go build ./...`
 - [ ] Human review of the email-required behaviour on a legacy account.
 
 ## Task I10: Admin create-pending, status change, admin reset
-**Description:** `POST /v3/admin/users` creates a `pending` row with a generated `community_id`, a name and one identifier. It sends no OTP. `PATCH .../status` sets account status (`active`, `deactivated`) or `volunteer_status`. Deactivation revokes every device. `POST .../reset` issues a one-time code shown once in the response. The code is stored hashed as an `auth_challenges` row with purpose `admin_reset` and works in `device/verify` and `pin/reset`. Route guards name the actions `user.create_pending` and `user.manage`. The evaluator arrives with `permissions`, so until then the guard is the identity middleware plus a named TODO.
+**Description:** `POST /v3/admin/users` creates a `pending` row with a generated `community_id`, a name and one identifier. It sends no OTP. `PATCH .../status` sets account status (`active`, `deactivated`) or `volunteer_status`. Deactivation revokes every device. `POST .../reset` issues a one-time code shown once in the response. The code is stored hashed as an `auth_challenges` row with purpose `admin_reset` and works in `auth/otp/verification` for the purposes `device` and `pin_reset`. Route guards name the actions `user.create_pending` and `user.manage`. The evaluator arrives with `permissions`, so until then the guard is the identity middleware plus a named TODO.
 **Acceptance criteria:**
 - [ ] Create returns `community_id` and status `pending`, one audit row, no outbox row.
 - [ ] Deactivate revokes all devices, next login and refresh return 403 `USER_ACCOUNT_DEACTIVATED`.
@@ -640,7 +647,7 @@ Build: `go build ./...`
 **Estimated scope:** M
 
 ## Task I14: OTP on/off switch
-**Description:** `identity.otp_enabled` read per request through configdb. When false: `register/start` returns the setup token at once, `login` on an unknown device with the right PIN trusts it, `device/verify` and `pin/reset` return `USER_OTP_DISABLED`. Flipping the key writes one audit row with action `otp_switch`. The audit write hooks the configdb setter for this key.
+**Description:** `identity.otp_enabled` read per request through configdb. When false: `auth/otp` with purpose `register` returns the verification token at once, `login` on an unknown device with the right PIN trusts it, and `auth/otp` with purpose `pin_reset` returns `USER_OTP_DISABLED`. `auth/otp/verification` returns `USER_OTP_DISABLED` for every code except an admin-assisted code. Flipping the key writes one audit row with action `otp_switch`. The audit write hooks the configdb setter for this key.
 **Acceptance criteria:**
 - [ ] With the switch off, register completes with zero `auth_challenges` and zero outbox rows.
 - [ ] With the switch off, a new device is trusted on the first correct PIN.
@@ -655,14 +662,14 @@ Build: `go build ./...`
 **Estimated scope:** S
 
 ## Task I15: Wire v3 identity into the composition root and configdb defaults
-**Description:** Mount `/api/v3/auth`, `/api/v3/me` and `/api/v3/admin` in `main_handler.go`. Construct the identity usecases in `contract.go`. Call `configdb.EnsureDefaults` with every `identity.*` key and default from the spec table. v2 user and token routes are left for the platform 410 middleware.
+**Description:** Mount `/api/v3/users`, `/api/v3/auth`, `/api/v3/me` and `/api/v3/admin` in `main_handler.go`. Construct the identity usecases in `contract.go`. Call `configdb.EnsureDefaults` with every `identity.*` key and default from the spec table. v2 user and token routes are left for the platform 410 middleware.
 **Acceptance criteria:**
 - [ ] App boots with an empty `config` table and every `identity.*` key exists afterwards with its default.
 - [ ] `GET /api/v3/me` without a token returns 401 `COMMON_UNAUTHORIZED`.
 - [ ] Swagger lists every v3 identity route.
 **Verification:**
 - [ ] `go build ./... && make generate-docs`
-- [ ] Manual: `make run`, call `POST /api/v3/auth/register/start` with a test email, see one outbox row.
+- [ ] Manual: `make run`, call `POST /api/v3/auth/otp` with a test email and purpose `register`, see one outbox row.
 **Dependencies:** I5 to I14, `platform: configdb.EnsureDefaults`, `platform: deprecate middleware` (for the v2 410).
 **Files likely touched:**
 - `internal/deliveries/http/main_handler.go`
@@ -695,7 +702,7 @@ Other modules import these:
 |---|---|---|
 | Backfill marks the wrong legacy rows `pending`, locking real members out | High | I1 integration test on a production copy, count reviewed by a human before migration (Open Question 1) |
 | Admin routes in I10, I11 and I13 need a permission guard | High | Resolved by ordering: M1 to M4 are built before I10, so these routes use `permission.Require` from day one. No temporary allow-list. |
-| Timing difference on `register/start` leaks account existence | Medium | One code path that always hashes and always consults the limiter. An integration test asserts no outbox row, and a benchmark compares p50 of both branches |
+| `users/check` lets anyone test an identifier for membership | Medium | Accepted on 2026-10-01 for the identifier-first UI. Per-IP limit `identity.check_max_per_minute`, in memory per app instance. `users/check` sends nothing and writes nothing |
 
 ---
 
@@ -1111,7 +1118,7 @@ make generate-docs
 ```
 
 ## Task E1: Migration 000025 and EVENT_ catalog
-**Description:** Create the v3 event tables (delta 14 names), with `category`, `department_code`, `self_scan_protection` inside `geo_config`, `v3_attendance_logs.idempotency_key` unique nullable, and `v3_event_audit_logs`. No `v3_event_organizers`, no `v3_notification_outbox`. Define every `EVENT_` class from delta 1 with `herrx.Def` plus `id` messages. From plan Task 1 and Task 2, delta 1, 9, 12, 14.
+**Description:** Create the v3 event tables (delta 14 names), with `category`, `department_code`, `self_scan_protection` inside `geo_config`, `v3_attendance_logs.idempotency_key` unique nullable, and `v3_event_audit_logs`. No `v3_event_organizers`, no `v3_notification_outbox`. Define every `EVENT_` class from delta 1 with `herrx.Def` plus `id` messages. From plan Task 1 and Task 2, delta 1, 9, 12, 14. The migration also creates `v3_attendance_logs.label`, `offline`, `device_scanned_at` and `synced_at` (deltas 15 and 16), and the catalog includes `EVENT_OFFLINE_SYNC_EXPIRED` and `EVENT_BATCH_TOO_LARGE`.
 **Acceptance criteria:**
 - [ ] `migrate up` then `down` on a clean DB leaves no v3 table and no error.
 - [ ] `go test ./internal/models/events/` passes the shared completeness test for all 21 `EVENT_` codes.
@@ -1390,6 +1397,78 @@ make generate-docs
 - [ ] All `SPEC-events.md` success criteria 1-10 pass by test or manual check.
 - [ ] `go build ./... && go test ./...` green, docker Postgres integration green.
 - [ ] Human review, then hand table names and `eligibility.Check` to `calendar`.
+
+## Task E21: Scan labels on check-in
+
+**Description:** Add `scan_labels` to the event check-in settings and copy the label for the used method onto each attendance log row as a snapshot. From `SPEC-events.md` delta 16. The `label` column ships in the E1 migration.
+
+**Acceptance criteria:**
+- [ ] Saving `scan_labels` with a 41-character value or an unknown method is rejected with `COMMON_INVALID_INPUT` field errors.
+- [ ] A check-in by `personal_qr` on an event with a label for that method stores the label on the log row. A method with no label stores null.
+- [ ] Changing `scan_labels` after a check-in does not change the stored label. Templates and recurrence carry `scan_labels`.
+
+**Verification:**
+- [ ] `go test ./internal/models/events/... ./internal/usecases/events/...`
+- [ ] `TEST_DATABASE_URL=... go test ./tests/integration/events/ -run TestScanLabels -v`
+
+**Dependencies:** E2, E12
+**Files likely touched:** `internal/models/events/config.go`, `internal/usecases/events/checkin_usecase.go`, `tests/integration/events/checkin_test.go`
+**Estimated scope:** S
+
+## Task E22: Roster sync endpoint
+
+**Description:** `GET /v3/sessions/{code}/roster?since=<cursor>` behind `event.checkin`. Full roster with no `since`, only changed attendee rows with `since`, and `changed: false` with zero rows when nothing moved. From delta 15.
+
+**Acceptance criteria:**
+- [ ] A full call, then one registration and one cancellation, then a `since` call returns exactly those two rows and a newer cursor.
+- [ ] A `since` call with no changes returns `changed: false` and runs one cheap query (`max(updated_at)`), not the row query.
+- [ ] A roster row has no phone, email or form answers. A caller without `event.checkin` gets 403 `PERM_FORBIDDEN`.
+
+**Verification:**
+- [ ] `TEST_DATABASE_URL=... go test ./tests/integration/events/ -run TestRosterSync -v`
+- [ ] `go build ./...`
+
+**Dependencies:** E9, E12, `permissions: permission.Require`
+**Files likely touched:** `internal/repositories/pgsql/events/attendee_repository.go`, `internal/usecases/events/roster_usecase.go`, `internal/deliveries/http/v3/events/checkin_handler.go`, `tests/integration/events/roster_test.go`
+**Estimated scope:** M
+
+## Task E23: Offline batch check-in sync
+
+**Description:** `POST /v3/sessions/{code}/checkin/batch` behind `event.checkin`, up to 200 items, one short transaction per item through the existing check-in usecase. Sets `offline`, `device_scanned_at`, `synced_at`. Applies the clock tolerance, the max sync age, `offline_unknown_policy` and the recheck-as-review rule. Writes one `qr_scan_logs` row per token item with `offline = true`. From delta 15. The three columns ship in the E1 migration.
+
+**Acceptance criteria:**
+- [ ] The same attendee from two batches gives one `ok`, one `duplicate` and one log row. Headcount 30 plus 25 gives 55.
+- [ ] One tampered token returns `QR_INVALID_TOKEN` for that item only. The other items in the batch succeed.
+- [ ] An item outside the window plus tolerance is saved as `needs_review` with reason `outside_window`. An unknown person follows `offline_unknown_policy`. `GET .../attendees?review=true` lists them.
+
+**Verification:**
+- [ ] `go test ./internal/usecases/events/... -run TestOfflineClassifier`
+- [ ] `TEST_DATABASE_URL=... go test ./tests/integration/events/ -run TestBatchSync -v`
+
+**Dependencies:** E12, E13, E14, E22, `qr: qr.Codec`, `qr: migration 000024`, `platform: configdb.GetInt`
+**Files likely touched:** `internal/usecases/events/batch_checkin_usecase.go`, `internal/usecases/events/offline_classifier.go`, `internal/deliveries/http/v3/events/checkin_handler.go`, `tests/integration/events/batch_sync_test.go`
+**Estimated scope:** M
+
+## Task E24: Label counts in reports
+
+**Description:** When an event has at least one scan label, add a `label` column and per-label counts to the session report and the attendance matrix, in CSV, XLSX and JSON (`label` per row, `label_counts` per occurrence). With no labels, output is unchanged. From delta 16.
+
+**Acceptance criteria:**
+- [ ] An event with two labels shows both counts in the session report and `label_counts` in JSON.
+- [ ] An event with no labels produces byte-identical reports to before this task.
+- [ ] Attendance percentage is identical with and without labels.
+
+**Verification:**
+- [ ] `TEST_DATABASE_URL=... go test ./tests/integration/events/ -run 'TestReport|TestMatrix' -v`
+
+**Dependencies:** E17, E18, E21
+**Files likely touched:** `internal/usecases/events/report_usecase.go`, `internal/usecases/events/matrix_usecase.go`, `tests/integration/events/report_test.go`
+**Estimated scope:** S
+
+## Checkpoint: offline and labels
+- [ ] Roster sync, batch sync and label tests pass on real Postgres.
+- [ ] A 200-item batch finishes without holding any transaction longer than one item.
+- [ ] Review with the owner: try a full offline run with the web app before event day.
 
 ## Exports
 - `internal/pkg/eligibility`: `Check(ctx, actor string, e Eligibility) (bool, string, error)`, `ProfileReader`, `CoolReader`, `TitleReader`, `Eligibility` type.

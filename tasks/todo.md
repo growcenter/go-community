@@ -4,8 +4,8 @@ Ordered by dependency. Full task text with acceptance criteria is in `tasks/plan
 
 ## Phase 1: platform foundation
 
-- [ ] P1: Go 1.26 bump and herr dependency compile
-- [ ] P2: herrx registry with COMMON_ classes and completeness test
+- [x] P1: Go 1.26 bump and herr dependency compile
+- [x] P2: herrx registry with COMMON_ classes and completeness test
 - [ ] P3: response.OK/Fail envelope with tests
 - [ ] P5: configdb typed getters and boot-time defaults
 - [ ] P4: deprecation middleware returns 410 on v1 and v2
@@ -26,10 +26,10 @@ Ordered by dependency. Full task text with acceptance criteria is in `tasks/plan
 - [ ] I3: Models, repositories and audit writer
 - [ ] I4: OTP package with limits and cooldown
 - [ ] I12: v3 JWT issuer and middleware
-- [ ] I5: Register start, verify, complete, with claim
-- [ ] I6: Login, device verify, device limit
+- [ ] I5: User check, OTP send and verification, create user with claim
+- [ ] I6: Login, new device verification, device limit
 - [ ] I7: Refresh and logout with device revoke
-- [ ] I8: PIN forgot and reset
+- [ ] I8: PIN reset
 - [ ] I9: Me endpoints and the email-required gate
 
 ### Checkpoint: Phase 2
@@ -102,10 +102,14 @@ Ordered by dependency. Full task text with acceptance criteria is in `tasks/plan
 - [ ] E12: Check-in core with personal_qr and session_qr
 - [ ] E13: registration_qr, manual lookup and eligibility recheck
 - [ ] E14: Checkout, lateness, headcount and undo
+- [ ] E21: Scan labels on check-in
+- [ ] E22: Roster sync endpoint
+- [ ] E23: Offline batch check-in sync
 - [ ] E15: QR action registration for events
 - [ ] E16: Attendee list, live counts and computed session state
 - [ ] E17: Reports CSV, XLSX and JSON
 - [ ] E18: Attendance matrix report
+- [ ] E24: Label counts in reports
 - [ ] E19: Staff dashboard, audit endpoint and permission scopes
 - [ ] E20: Pool caps, wiring, seeds and v2 410
 
@@ -113,6 +117,7 @@ Ordered by dependency. Full task text with acceptance criteria is in `tasks/plan
 - [ ] 200 concurrent registrations for one seat leave `booked_seats = 1`
 - [ ] Poster scan from home with `window_geo` returns `EVENT_GEO_OUT_OF_RANGE`
 - [ ] Matrix report has one column per occurrence in CSV, XLSX and JSON
+- [ ] 50 queued offline check-ins sync in one batch with `offline = true`, and two desks never double-count a person
 - [ ] Review with the owner before the next phase
 
 ## Phase 6b: cool (can run in parallel with 6a)

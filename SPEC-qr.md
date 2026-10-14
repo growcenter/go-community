@@ -80,6 +80,7 @@ Rules:
 - An `attendee` token is one per attendee row, so a family of four gets four codes, never one code for four people. It is shown by the attendee and scanned by desk staff. It is never a self-scan token. `events` mints it only for events that have a registration window.
 - `qr` exposes only `kind`, `ref`, `issued_at` and `expires_at` to a consumer. Whether a scan from home counts is the consumer's rule (events: protection level per event, cool: the leader marks attendance by hand).
 - Size budget: the URL must stay under 160 characters. That fits QR version 7 at error level M. A cheap phone camera then reads it from a printed A4 poster. With a 30 character public URL, a 16 digit ref and an `exp`, the token is about 115 characters. A test asserts the bound for every kind.
+- The payload is signed, not encrypted. Anyone can read `t` and `r` from it without the key. This is on purpose: an offline desk reads `community_id` or the attendee id from a scanned QR and matches its downloaded roster. Only the server can tell a real token from a forged one, and it does so when the desk syncs (`SPEC-events.md` delta 15).
 - Decode fails closed. Wrong part count, unknown `kid`, bad base64, bad signature or unknown kind all return `QR_INVALID_TOKEN`. Only a good signature with `exp` in the past returns `QR_EXPIRED_TOKEN`. Signature comparison uses `hmac.Equal`.
 
 ### Handler registry
@@ -158,9 +159,11 @@ Table `qr_scan_logs`:
 | `action` | text | `resolve`, or the action name |
 | `result` | text | `ok` or the error code |
 | `client_ip` | inet | from the request |
+| `offline` | boolean | true when the scan was made offline and arrived through the events batch sync |
+| `device_scanned_at` | timestamptz | nullable, the device's scan time for an offline scan |
 | `created_at` | timestamptz | |
 
-Index on `(ref, created_at)` and `(scanner, created_at)`. Written on every `resolve` and `act`, inside the same `Atomic` transaction as the handler when there is one. Purged by `platform.retention_days.scan_logs` (default 90). This is the trail an admin reads when someone asks "who scanned this poster from home".
+Index on `(ref, created_at)` and `(scanner, created_at)`. The events batch sync decodes each offline token through `qr.Codec` and writes one row per item with `offline = true`, so the trail is complete even for scans made with no signal. Written on every `resolve` and `act`, inside the same `Atomic` transaction as the handler when there is one. Purged by `platform.retention_days.scan_logs` (default 90). This is the trail an admin reads when someone asks "who scanned this poster from home".
 
 ### Errors
 
