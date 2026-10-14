@@ -1,10 +1,11 @@
 module go-community
 
-go 1.23.0
+go 1.26.1
 
 require (
 	github.com/golang-jwt/jwt v3.2.2+incompatible
 	github.com/golang-jwt/jwt/v5 v5.2.1
+	github.com/jeremygprawira/herr v0.2.0
 	github.com/labstack/echo/v4 v4.12.0
 	github.com/lib/pq v1.10.9
 	github.com/nyaruka/phonenumbers v1.6.0
